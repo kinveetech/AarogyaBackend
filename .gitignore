@@ -115,6 +115,9 @@ secrets.json
 .AppleDouble
 .LSOverride
 
+# Local agent worktree metadata
+.claude/worktrees/
+
 # Windows
 Thumbs.db
 ehthumbs.db
