@@ -266,7 +266,7 @@ WS1-1 → WS1-2 → WS1-4 → WS3-1 → WS3-3 → WS3-4 → WS3-6 → WS4-8 → 
 
 1. **Solo developer** building MVP — parallelization applies when hiring
 2. **AWS Activate credits** cover infrastructure costs for 6+ years at MVP scale
-3. **.NET 8 + C#** is the backend language (founder's strongest skill)
+3. **.NET 9 + C#** is the backend language (founder's strongest skill)
 4. **PostgreSQL** is the primary database with JSONB for flexible report data
 5. **AWS Mumbai region** for India data residency compliance
 6. **Aadhaar e-KYC provider** (DigiLocker vs NSDL) decided during implementation

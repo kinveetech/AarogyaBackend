@@ -3,12 +3,12 @@
 ## Overview
 Setting up the local development environment and project scaffolding for the Aarogya healthcare backend.
 
-**Tech Stack:** ASP.NET Core 8 (C#), PostgreSQL, AWS (Cognito, S3, SQS, KMS), Redis, .NET Aspire, LocalStack, Dev Containers
+**Tech Stack:** ASP.NET Core 9 (C#), PostgreSQL, AWS (Cognito, S3, SQS, KMS), Redis, .NET Aspire, LocalStack, Dev Containers
 
 ## Tasks
 
 ### 1. Initialize .NET Solution Structure
-**Description:** Create Aarogya.sln with projects: Aarogya.Api, Aarogya.Domain, Aarogya.Infrastructure, Aarogya.Tests. Use .NET 8 SDK.
+**Description:** Create Aarogya.sln with projects: Aarogya.Api, Aarogya.Domain, Aarogya.Infrastructure, Aarogya.Tests. Use .NET 9 SDK.
 
 **Acceptance Criteria:**
 - Solution file exists with all four projects
@@ -32,7 +32,7 @@ Setting up the local development environment and project scaffolding for the Aar
 ---
 
 ### 3. Set Up Dev Containers
-**Description:** Create .devcontainer/devcontainer.json and docker-compose.yml with .NET 8 SDK, AWS CLI, PostgreSQL client.
+**Description:** Create .devcontainer/devcontainer.json and docker-compose.yml with .NET 9 SDK, AWS CLI, PostgreSQL client.
 
 **Acceptance Criteria:**
 - VS Code "Reopen in Container" works
@@ -105,7 +105,7 @@ Setting up the local development environment and project scaffolding for the Aar
 
 ## Assumptions
 - Docker Desktop installed
-- .NET 8 SDK installed locally
+- .NET 9 SDK installed locally
 - VS Code with C# Dev Kit is the primary IDE
 - LocalStack free tier sufficient for development
 

@@ -1,6 +1,6 @@
 # Mobile App Backend API
 
-ASP.NET Core 8.0 REST API following Clean Architecture principles.
+ASP.NET Core 9.0 REST API following Clean Architecture principles.
 
 ## 🏗️ Architecture
 
@@ -27,7 +27,7 @@ tests/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 - SQL Server or PostgreSQL
 - Visual Studio 2022 / VS Code / Rider
 

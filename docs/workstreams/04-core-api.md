@@ -1,7 +1,7 @@
 # Workstream 4: Core API
 
 ## Overview
-Implement the core REST API endpoints for user management, report management, and access control using ASP.NET Core 8 Minimal APIs.
+Implement the core REST API endpoints for user management, report management, and access control using ASP.NET Core 9 Minimal APIs.
 
 ## Tasks
 

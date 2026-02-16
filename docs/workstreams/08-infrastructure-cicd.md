@@ -18,7 +18,7 @@ Set up CI/CD pipelines, Docker containerization, AWS infrastructure provisioning
 ---
 
 ### 2. Create Dockerfile for API
-**Description:** Multi-stage Dockerfile for ASP.NET Core 8. Optimize for size (Native AOT if feasible).
+**Description:** Multi-stage Dockerfile for ASP.NET Core 9. Optimize for size (Native AOT if feasible).
 
 **Acceptance Criteria:**
 - Docker image builds and runs locally
