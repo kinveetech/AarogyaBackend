@@ -33,7 +33,7 @@ jobs:
         files: '**/coverage.cobertura.xml'
 
     - name: Publish
-      run: dotnet publish src/API/API.csproj --configuration Release --output ./publish
+      run: dotnet publish src/Aarogya.Api/Aarogya.Api.csproj --configuration Release --output ./publish
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4

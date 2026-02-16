@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Aarogya.Domain\Aarogya.Domain.csproj" />
   </ItemGroup>
 
 </Project>
