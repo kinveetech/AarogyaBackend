@@ -529,6 +529,10 @@ dotnet_diagnostic.IDE0270.severity = suggestion
 dotnet_diagnostic.IDE0280.severity = suggestion
 dotnet_diagnostic.IDE0290.severity = suggestion
 
+# Configuration options classes must be public for IOptions<T> binding
+[src/**/Configuration/*.cs]
+dotnet_diagnostic.CA1515.severity = none
+
 # Suppress specific rules for test projects
 [tests/**/*.cs]
 dotnet_diagnostic.CA1707.severity = none

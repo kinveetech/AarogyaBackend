@@ -1,17 +1,43 @@
+using Aarogya.Api.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add AAROGYA_ prefixed environment variables as a configuration source.
+// This allows deployment environments to set AAROGYA_Jwt__Key instead of Jwt__Key,
+// avoiding collisions with other applications on the same host.
+builder.Configuration.AddEnvironmentVariables(prefix: "AAROGYA_");
+
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .CreateLogger();
+  .ReadFrom.Configuration(builder.Configuration)
+  .Enrich.FromLogContext()
+  .WriteTo.Console()
+  .CreateLogger();
 
 builder.Host.UseSerilog();
+
+// Bind and validate strongly-typed configuration options
+builder.Services
+  .AddOptionsWithValidateOnStart<JwtOptions>()
+  .BindConfiguration(JwtOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
+  .AddOptionsWithValidateOnStart<AwsOptions>()
+  .BindConfiguration(AwsOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
+  .AddOptionsWithValidateOnStart<RedisOptions>()
+  .BindConfiguration(RedisOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
+  .AddOptionsWithValidateOnStart<CorsOptions>()
+  .BindConfiguration(CorsOptions.SectionName);
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -22,9 +48,9 @@ builder.Services.AddSwaggerGen(c =>
 {
   c.SwaggerDoc("v1", new OpenApiInfo
   {
-    Title = "Mobile App API",
+    Title = "Aarogya API",
     Version = "v1",
-    Description = "Backend API for mobile application"
+    Description = "Backend API for Aarogya mobile application"
   });
 
   // Add JWT Authentication to Swagger
@@ -38,50 +64,71 @@ builder.Services.AddSwaggerGen(c =>
   });
 
   c.AddSecurityRequirement(new OpenApiSecurityRequirement
+  {
     {
+      new OpenApiSecurityScheme
+      {
+        Reference = new OpenApiReference
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
+          Type = ReferenceType.SecurityScheme,
+          Id = "Bearer"
         }
-    });
+      },
+      Array.Empty<string>()
+    }
+  });
 });
 
 // Configure JWT Authentication
+var jwtKey = builder.Configuration["Jwt:Key"]
+  ?? throw new InvalidOperationException(
+    "JWT Key is not configured. Set via user-secrets, env var (Jwt__Key or AAROGYA_Jwt__Key), or appsettings.");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+  .AddJwtBearer(options =>
+  {
+    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
     {
-      options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-      {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-              System.Text.Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured")))
-      };
-    });
+      ValidateIssuer = true,
+      ValidateAudience = true,
+      ValidateLifetime = true,
+      ValidateIssuerSigningKey = true,
+      ValidIssuer = builder.Configuration["Jwt:Issuer"],
+      ValidAudience = builder.Configuration["Jwt:Audience"],
+      IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+        System.Text.Encoding.UTF8.GetBytes(jwtKey))
+    };
+  });
 
 // Add CORS
+var corsConfig = builder.Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>();
 builder.Services.AddCors(options =>
 {
   options.AddPolicy("AarogyaPolicy", policy =>
   {
-    policy.AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader();
+    var origins = corsConfig?.AllowedOrigins ?? [];
+    if (origins.Length > 0)
+    {
+      policy.WithOrigins(origins);
+    }
+    else
+    {
+      policy.AllowAnyOrigin();
+    }
+
+    policy.AllowAnyMethod().AllowAnyHeader();
+
+    if (corsConfig?.AllowCredentials == true && origins.Length > 0)
+    {
+      policy.AllowCredentials();
+    }
   });
 });
 
 var app = builder.Build();
+
+// Validate required configuration at startup
+ValidateRequiredConfiguration(app.Configuration, app.Environment);
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -89,7 +136,7 @@ if (app.Environment.IsDevelopment())
   app.UseSwagger();
   app.UseSwaggerUI(c =>
   {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Mobile App API v1");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Aarogya API v1");
   });
 }
 
@@ -101,7 +148,7 @@ app.MapControllers();
 
 try
 {
-  Log.Information("Starting Mobile App API");
+  Log.Information("Starting Aarogya API ({Environment})", app.Environment.EnvironmentName);
   app.Run();
 }
 catch (Exception ex)
@@ -111,4 +158,37 @@ catch (Exception ex)
 finally
 {
   Log.CloseAndFlush();
+}
+
+static void ValidateRequiredConfiguration(IConfiguration configuration, IHostEnvironment environment)
+{
+  var missingKeys = new List<string>();
+
+  if (string.IsNullOrWhiteSpace(configuration["ConnectionStrings:DefaultConnection"]))
+  {
+    missingKeys.Add("ConnectionStrings:DefaultConnection");
+  }
+
+  var jwtKeyValue = configuration["Jwt:Key"];
+  if (string.IsNullOrWhiteSpace(jwtKeyValue) || jwtKeyValue == "SET_VIA_USER_SECRETS_OR_ENV_VAR")
+  {
+    missingKeys.Add("Jwt:Key");
+  }
+
+  if (missingKeys.Count <= 0)
+  {
+    return;
+  }
+
+  var message = $"Missing required configuration: {string.Join(", ", missingKeys)}. "
+    + "Set via user-secrets, environment variables (prefix AAROGYA_), or appsettings.";
+
+  if (environment.IsDevelopment())
+  {
+    Log.Warning(message);
+  }
+  else
+  {
+    throw new InvalidOperationException(message);
+  }
 }
