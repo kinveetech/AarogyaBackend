@@ -283,7 +283,6 @@ Current PR checks:
 - `.NET Backend CI / lint`
 - `PR Guardrails / semantic-pr-title`
 - `PR Guardrails / dependency-review-disabled` (or `dependency-review` when enabled)
-- `SonarQube Analysis / sonarqube` (when Sonar credentials are valid)
 
 See `/docs/github-main-guardrails.md` for full guardrail and ruleset setup details.
 
