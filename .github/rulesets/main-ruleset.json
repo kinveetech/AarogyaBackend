@@ -43,6 +43,9 @@
           },
           {
             "context": "PR Guardrails / dependency-review"
+          },
+          {
+            "context": "SonarQube Analysis / sonarqube"
           }
         ]
       }

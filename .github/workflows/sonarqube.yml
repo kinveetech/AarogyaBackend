@@ -1,0 +1,84 @@
+name: SonarQube Analysis
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonarqube-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sonarqube:
+    if: ${{ secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install SonarScanner for .NET
+        run: |
+          dotnet tool update --global dotnet-sonarscanner
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Begin SonarQube analysis
+        env:
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'kinveetech_AarogyaBackend' }}
+          SONAR_PROJECT_NAME: ${{ vars.SONAR_PROJECT_NAME || 'AarogyaBackend' }}
+        run: |
+          dotnet sonarscanner begin \
+            /k:"$SONAR_PROJECT_KEY" \
+            /n:"$SONAR_PROJECT_NAME" \
+            /v:"${{ github.run_number }}" \
+            /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.qualitygate.wait=true \
+            /d:sonar.cs.vstest.reportsPaths="**/*.trx" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+
+      - name: Restore
+        run: dotnet restore Aarogya.sln
+
+      - name: Build
+        run: dotnet build Aarogya.sln --no-restore --configuration Release
+
+      - name: Test with coverage
+        run: |
+          dotnet test Aarogya.sln \
+            --no-build \
+            --configuration Release \
+            --logger "trx;LogFileName=test-results.trx" \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=./TestResults/coverage/
+
+      - name: End SonarQube analysis
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+  sonarqube-not-configured:
+    if: ${{ secrets.SONAR_TOKEN == '' || secrets.SONAR_HOST_URL == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: SonarQube not configured
+        run: |
+          echo "SONAR_HOST_URL and/or SONAR_TOKEN is not configured."
+          echo "Skipping SonarQube analysis."
