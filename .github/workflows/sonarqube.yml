@@ -16,7 +16,6 @@ concurrency:
 
 jobs:
   sonarqube:
-    if: ${{ secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -24,34 +23,55 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check Sonar configuration
+        id: sonar-config
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "$SONAR_HOST_URL" ] && [ -n "$SONAR_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup .NET
+        if: steps.sonar-config.outputs.configured == 'true'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
 
       - name: Setup Java
+        if: steps.sonar-config.outputs.configured == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Install SonarScanner for .NET
+        if: steps.sonar-config.outputs.configured == 'true'
         run: |
           dotnet tool update --global dotnet-sonarscanner
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Begin SonarQube analysis
+        if: steps.sonar-config.outputs.configured == 'true'
         env:
-          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'kinveetech_AarogyaBackend' }}
-          SONAR_PROJECT_NAME: ${{ vars.SONAR_PROJECT_NAME || 'AarogyaBackend' }}
-          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || '' }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_PROJECT_NAME: ${{ vars.SONAR_PROJECT_NAME }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
         run: |
+          PROJECT_KEY="${SONAR_PROJECT_KEY:-kinveetech_AarogyaBackend}"
+          PROJECT_NAME="${SONAR_PROJECT_NAME:-AarogyaBackend}"
+
           ARGS=(
-            /k:"$SONAR_PROJECT_KEY"
-            /n:"$SONAR_PROJECT_NAME"
+            /k:"$PROJECT_KEY"
+            /n:"$PROJECT_NAME"
             /v:"${{ github.run_number }}"
-            /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}"
-            /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+            /d:sonar.host.url="$SONAR_HOST_URL"
+            /d:sonar.token="$SONAR_TOKEN"
             /d:sonar.qualitygate.wait=true
             /d:sonar.cs.vstest.reportsPaths="**/*.trx"
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
@@ -64,12 +84,15 @@ jobs:
           dotnet sonarscanner begin "${ARGS[@]}"
 
       - name: Restore
+        if: steps.sonar-config.outputs.configured == 'true'
         run: dotnet restore Aarogya.sln
 
       - name: Build
+        if: steps.sonar-config.outputs.configured == 'true'
         run: dotnet build Aarogya.sln --no-restore --configuration Release
 
       - name: Test with coverage
+        if: steps.sonar-config.outputs.configured == 'true'
         run: |
           dotnet test Aarogya.sln \
             --no-build \
@@ -80,13 +103,13 @@ jobs:
             /p:CoverletOutput=./TestResults/coverage/
 
       - name: End SonarQube analysis
-        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        if: steps.sonar-config.outputs.configured == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
-  sonarqube-not-configured:
-    if: ${{ secrets.SONAR_TOKEN == '' || secrets.SONAR_HOST_URL == '' }}
-    runs-on: ubuntu-latest
-    steps:
       - name: SonarQube not configured
+        if: steps.sonar-config.outputs.configured != 'true'
         run: |
           echo "SONAR_HOST_URL and/or SONAR_TOKEN is not configured."
           echo "Skipping SonarQube analysis."
