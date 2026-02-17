@@ -3,6 +3,8 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 COPY ["Aarogya.sln", "./"]
+COPY ["Directory.Build.props", "./"]
+COPY ["Directory.Packages.props", "./"]
 COPY ["src/Aarogya.Api/Aarogya.Api.csproj", "src/Aarogya.Api/"]
 COPY ["src/Aarogya.Domain/Aarogya.Domain.csproj", "src/Aarogya.Domain/"]
 COPY ["src/Aarogya.Infrastructure/Aarogya.Infrastructure.csproj", "src/Aarogya.Infrastructure/"]
