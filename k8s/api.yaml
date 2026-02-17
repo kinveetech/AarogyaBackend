@@ -46,9 +46,21 @@ spec:
                 secretKeyRef:
                   name: api-secret
                   key: Jwt__Key
+            - name: Database__EnableDetailedErrors
+              value: "true"
+            - name: Database__EnableSensitiveDataLogging
+              value: "true"
+            - name: Database__AutoMigrateOnStartup
+              value: "true"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
           readinessProbe:
             httpGet:
-              path: /swagger/index.html
+              path: /health/ready
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
