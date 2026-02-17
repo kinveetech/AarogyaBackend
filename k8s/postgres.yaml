@@ -9,6 +9,15 @@ stringData:
   POSTGRES_USER: aarogya
   POSTGRES_PASSWORD: aarogya_dev_password
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-sql
+  namespace: aarogya
+data:
+  001-enable-pgcrypto.sql: |
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,6 +44,8 @@ spec:
           volumeMounts:
             - name: pgdata
               mountPath: /var/lib/postgresql/data
+            - name: postgres-init-sql
+              mountPath: /docker-entrypoint-initdb.d
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "aarogya", "-d", "aarogya"]
@@ -43,6 +54,9 @@ spec:
       volumes:
         - name: pgdata
           emptyDir: {}
+        - name: postgres-init-sql
+          configMap:
+            name: postgres-init-sql
 ---
 apiVersion: v1
 kind: Service

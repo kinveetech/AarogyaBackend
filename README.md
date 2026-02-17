@@ -30,7 +30,7 @@ tests/
 |------|----------|--------|
 | Local .NET | `Aarogya.Api` only | `http://localhost:5000` / `https://localhost:5001` |
 | Docker Compose | `aarogya-api`, `aarogya-postgres`, `aarogya-redis`, `aarogya-pgadmin` | API: `http://localhost:8080/swagger/index.html`, pgAdmin: `http://localhost:5050` |
-| Kubernetes (`kind`) | `aarogya-api` + `postgres` in namespace `aarogya` | `kubectl port-forward svc/aarogya-api 8080:80` |
+| Kubernetes (`kind`) | `aarogya-api`, `postgres`, `redis`, `pgadmin` in namespace `aarogya` | API: `kubectl -n aarogya port-forward svc/aarogya-api 8080:80`, pgAdmin: `kubectl -n aarogya port-forward svc/pgadmin 5050:80` |
 
 ## 🚀 Getting Started
 
@@ -260,6 +260,15 @@ kubectl -n aarogya port-forward svc/aarogya-api 8080:80
 ```
 
 Then open `http://localhost:8080/swagger/index.html`.
+
+To access pgAdmin in Kubernetes:
+```bash
+kubectl -n aarogya port-forward svc/pgadmin 5050:80
+```
+
+Then open `http://localhost:5050` with:
+- Email: `admin@aarogya.com`
+- Password: `admin`
 
 If using `k9s`, switch namespace to `aarogya` to view these pods.
 
