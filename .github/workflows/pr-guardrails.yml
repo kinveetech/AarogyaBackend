@@ -35,7 +35,7 @@ jobs:
             ci
 
   dependency-review:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && vars.ENABLE_DEPENDENCY_REVIEW == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -43,3 +43,12 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
+
+  dependency-review-disabled:
+    if: github.event.pull_request.draft == false && vars.ENABLE_DEPENDENCY_REVIEW != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dependency review disabled
+        run: |
+          echo "Dependency review skipped."
+          echo "Set repository variable ENABLE_DEPENDENCY_REVIEW=true to enable this job."
