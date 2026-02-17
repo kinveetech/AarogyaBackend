@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/*.user
+**/*.suo
+**/*.swp
+**/*.tmp
+.git
+.gitignore
+.claude
+README.md
+docs/

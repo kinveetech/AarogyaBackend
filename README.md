@@ -6,22 +6,22 @@ ASP.NET Core 9.0 REST API following Clean Architecture principles.
 
 ```
 src/
-├── API/                    # Web API Layer
+├── Aarogya.Api/            # Web API Layer
 │   ├── Controllers/        # API endpoints
 │   ├── Middleware/         # Custom middleware
 │   └── Program.cs          # Application startup
-├── Core/                   # Domain Layer
+├── Aarogya.Domain/         # Domain Layer
 │   ├── Entities/           # Domain models
 │   ├── Interfaces/         # Contracts
 │   └── Services/           # Business logic
-└── Infrastructure/         # Data & External Services
+└── Aarogya.Infrastructure/ # Data & External Services
     ├── Data/               # EF Core context
     ├── Repositories/       # Data access
     └── Services/           # External integrations
 
 tests/
-├── API.Tests/              # API integration tests
-└── Core.Tests/             # Unit tests
+├── Aarogya.Api.Tests/      # API integration tests
+└── Aarogya.Domain.Tests/   # Unit tests
 ```
 
 ## 🚀 Getting Started
@@ -46,7 +46,7 @@ tests/
 
 3. **Update connection string**
 
-   Edit `src/API/appsettings.json`:
+   Edit `src/Aarogya.Api/appsettings.json`:
    ```json
    {
      "ConnectionStrings": {
@@ -57,12 +57,12 @@ tests/
 
 4. **Run database migrations** (when available)
    ```bash
-   dotnet ef database update --project src/Infrastructure --startup-project src/API
+   dotnet ef database update --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Api
    ```
 
 5. **Run the application**
    ```bash
-   dotnet run --project src/API
+   dotnet run --project src/Aarogya.Api
    ```
 
    API will be available at:
@@ -138,7 +138,7 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ### Run specific test project
 ```bash
-dotnet test tests/API.Tests
+dotnet test tests/Aarogya.Api.Tests
 ```
 
 ## 🔧 Development Tools
@@ -152,17 +152,17 @@ dotnet format
 
 Create migration:
 ```bash
-dotnet ef migrations add MigrationName --project src/Infrastructure --startup-project src/API
+dotnet ef migrations add MigrationName --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Api
 ```
 
 Apply migration:
 ```bash
-dotnet ef database update --project src/Infrastructure --startup-project src/API
+dotnet ef database update --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Api
 ```
 
 Remove last migration:
 ```bash
-dotnet ef migrations remove --project src/Infrastructure --startup-project src/API
+dotnet ef migrations remove --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Api
 ```
 
 ## 📦 Dependencies
@@ -178,20 +178,53 @@ dotnet ef migrations remove --project src/Infrastructure --startup-project src/A
 - Microsoft.EntityFrameworkCore.SqlServer
 - Npgsql.EntityFrameworkCore.PostgreSQL
 
-## 🏃 Running in Production
+## 🐳 Local Docker Run
 
-### Using Docker (when Dockerfile is added)
+### Docker Compose (API + PostgreSQL)
 ```bash
-docker build -t mobile-app-api .
-docker run -p 8080:80 mobile-app-api
+docker compose up --build -d
+curl http://localhost:8080/swagger/index.html
 ```
 
-### Environment Variables
+### Docker only (API)
 ```bash
-export ConnectionStrings__DefaultConnection="..."
-export Jwt__Key="..."
-dotnet run --project src/API
+docker build -t aarogya-api:dev .
+docker run --rm -p 8080:8080 \
+  -e ASPNETCORE_ENVIRONMENT=Development \
+  -e Jwt__Key=development-key-change-this-to-32-plus-chars \
+  aarogya-api:dev
 ```
+
+## ☸️ Local Kubernetes Run
+
+### 1. Build image
+```bash
+docker build -t aarogya-api:dev .
+```
+
+### 2. Load image into your local cluster
+For `kind`:
+```bash
+kind load docker-image aarogya-api:dev
+```
+
+For `minikube`:
+```bash
+minikube image load aarogya-api:dev
+```
+
+### 3. Apply manifests
+```bash
+kubectl apply -k k8s
+kubectl -n aarogya get pods
+```
+
+### 4. Access API
+```bash
+kubectl -n aarogya port-forward svc/aarogya-api 8080:80
+```
+
+Then open `http://localhost:8080/swagger/index.html`.
 
 ## 📊 Logging
 
@@ -220,7 +253,7 @@ Once running, visit Swagger UI:
 ## 🐛 Troubleshooting
 
 ### Port already in use
-Change ports in `src/API/Properties/launchSettings.json`
+Change ports in `src/Aarogya.Api/Properties/launchSettings.json`
 
 ### Database connection fails
 1. Verify SQL Server is running

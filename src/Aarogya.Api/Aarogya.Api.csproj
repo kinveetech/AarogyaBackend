@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Aarogya.API</RootNamespace>
+    <RootNamespace>Aarogya.Api</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\Core.csproj" />
-    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Aarogya.Domain\Aarogya.Domain.csproj" />
+    <ProjectReference Include="..\Aarogya.Infrastructure\Aarogya.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
