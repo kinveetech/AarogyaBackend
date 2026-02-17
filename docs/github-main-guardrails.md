@@ -9,6 +9,7 @@ To enable SonarQube analysis workflow (`.github/workflows/sonarqube.yml`), confi
 - Repository secret: `SONAR_TOKEN`
 - Optional repository variable: `SONAR_PROJECT_KEY` (default: `kinveetech_AarogyaBackend`)
 - Optional repository variable: `SONAR_PROJECT_NAME` (default: `AarogyaBackend`)
+- Optional repository variable: `SONAR_ORGANIZATION` (required for SonarCloud; not needed for self-hosted SonarQube)
 
 The workflow blocks on quality gate (`sonar.qualitygate.wait=true`) and should be required for merges to `main`.
 

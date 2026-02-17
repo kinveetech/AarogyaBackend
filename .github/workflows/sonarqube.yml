@@ -44,16 +44,24 @@ jobs:
         env:
           SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'kinveetech_AarogyaBackend' }}
           SONAR_PROJECT_NAME: ${{ vars.SONAR_PROJECT_NAME || 'AarogyaBackend' }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || '' }}
         run: |
-          dotnet sonarscanner begin \
-            /k:"$SONAR_PROJECT_KEY" \
-            /n:"$SONAR_PROJECT_NAME" \
-            /v:"${{ github.run_number }}" \
-            /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}" \
-            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-            /d:sonar.qualitygate.wait=true \
-            /d:sonar.cs.vstest.reportsPaths="**/*.trx" \
+          ARGS=(
+            /k:"$SONAR_PROJECT_KEY"
+            /n:"$SONAR_PROJECT_NAME"
+            /v:"${{ github.run_number }}"
+            /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}"
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+            /d:sonar.qualitygate.wait=true
+            /d:sonar.cs.vstest.reportsPaths="**/*.trx"
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+          )
+
+          if [ -n "$SONAR_ORGANIZATION" ]; then
+            ARGS+=(/o:"$SONAR_ORGANIZATION")
+          fi
+
+          dotnet sonarscanner begin "${ARGS[@]}"
 
       - name: Restore
         run: dotnet restore Aarogya.sln
