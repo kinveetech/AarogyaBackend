@@ -29,7 +29,7 @@ tests/
 | Mode | Services | Access |
 |------|----------|--------|
 | Local .NET | `Aarogya.Api` only | `http://localhost:5000` / `https://localhost:5001` |
-| Docker Compose | `aarogya-api`, `aarogya-postgres` | `http://localhost:8080/swagger/index.html` |
+| Docker Compose | `aarogya-api`, `aarogya-postgres`, `aarogya-redis`, `aarogya-pgadmin` | API: `http://localhost:8080/swagger/index.html`, pgAdmin: `http://localhost:5050` |
 | Kubernetes (`kind`) | `aarogya-api` + `postgres` in namespace `aarogya` | `kubectl port-forward svc/aarogya-api 8080:80` |
 
 ## 🚀 Getting Started
@@ -190,12 +190,23 @@ dotnet ef migrations remove --project src/Aarogya.Infrastructure --startup-proje
 
 ## 🐳 Local Docker Run
 
-### Docker Compose (API + PostgreSQL)
+### Docker Compose (API + PostgreSQL + Redis + pgAdmin)
 ```bash
 docker compose up --build -d
 docker compose ps
 curl http://localhost:8080/swagger/index.html
 ```
+
+Compose services:
+- API: `aarogya-api` (`8080`)
+- PostgreSQL 16 + `pgcrypto`: `aarogya-postgres` (`5432`)
+- PostgreSQL extension bootstrap: `aarogya-postgres-init` (one-shot `CREATE EXTENSION IF NOT EXISTS pgcrypto`)
+- Redis 7: `aarogya-redis` (`6379`)
+- pgAdmin: `aarogya-pgadmin` (`5050`)
+
+pgAdmin default login:
+- Email: `admin@aarogya.com`
+- Password: `admin`
 
 Useful commands:
 ```bash
@@ -293,8 +304,9 @@ Change ports in `src/Aarogya.Api/Properties/launchSettings.json`
 
 ### Database connection fails
 1. For Docker: verify `aarogya-postgres` is healthy (`docker compose ps`)
-2. For Kubernetes: verify `postgres` pod is running in namespace `aarogya`
-3. Check `ConnectionStrings__DefaultConnection` override in your runtime environment
+2. Verify `aarogya-redis` is healthy if Redis-backed features are enabled
+3. For Kubernetes: verify `postgres` pod is running in namespace `aarogya`
+4. Check `ConnectionStrings__DefaultConnection` override in your runtime environment
 
 ### JWT token errors
 Ensure JWT:Key in appsettings.json is at least 32 characters
