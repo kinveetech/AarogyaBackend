@@ -1,5 +1,7 @@
 using Aarogya.Api.Configuration;
+using Aarogya.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
@@ -38,6 +40,14 @@ builder.Services
 builder.Services
   .AddOptionsWithValidateOnStart<CorsOptions>()
   .BindConfiguration(CorsOptions.SectionName);
+
+builder.Services
+  .AddOptionsWithValidateOnStart<DatabaseOptions>()
+  .BindConfiguration(DatabaseOptions.SectionName)
+  .ValidateDataAnnotations();
+
+// Add Infrastructure services (DbContext, health checks, etc.)
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -146,6 +156,16 @@ app.UseCors("AarogyaPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Health check endpoints
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+  Predicate = _ => true
+});
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+  Predicate = check => check.Tags.Contains("ready")
+});
 
 try
 {
