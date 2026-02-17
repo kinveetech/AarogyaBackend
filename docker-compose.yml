@@ -9,11 +9,11 @@ services:
       - "8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=aarogya;Username=aarogya;Password=aarogya_dev_password
-      ConnectionStrings__Redis: redis:6379
-      Jwt__Key: development-key-change-this-to-32-plus-chars
-      Jwt__Issuer: AarogyaAPI
-      Jwt__Audience: AarogyaClients
+      ConnectionStrings__DefaultConnection: ${DEFAULT_CONNECTION_STRING:-Host=postgres;Port=5432;Database=aarogya;Username=aarogya;Password=aarogya_dev_password}
+      ConnectionStrings__Redis: ${REDIS_CONNECTION_STRING:-redis:6379}
+      Jwt__Key: ${JWT_KEY:-development-key-change-this-to-32-plus-chars}
+      Jwt__Issuer: ${JWT_ISSUER:-AarogyaAPI}
+      Jwt__Audience: ${JWT_AUDIENCE:-AarogyaClients}
     depends_on:
       postgres:
         condition: service_healthy
@@ -28,9 +28,9 @@ services:
     image: postgres:16
     container_name: aarogya-postgres
     environment:
-      POSTGRES_DB: aarogya
-      POSTGRES_USER: aarogya
-      POSTGRES_PASSWORD: aarogya_dev_password
+      POSTGRES_DB: ${POSTGRES_DB:-aarogya}
+      POSTGRES_USER: ${POSTGRES_USER:-aarogya}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aarogya_dev_password}
     ports:
       - "5432:5432"
     volumes:
@@ -51,10 +51,10 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      PGPASSWORD: aarogya_dev_password
+      PGPASSWORD: ${POSTGRES_PASSWORD:-aarogya_dev_password}
     command: >
-      sh -c "until pg_isready -h postgres -U aarogya -d aarogya; do sleep 1; done &&
-      psql -h postgres -U aarogya -d aarogya -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'"
+      sh -c "until pg_isready -h postgres -U ${POSTGRES_USER:-aarogya} -d ${POSTGRES_DB:-aarogya}; do sleep 1; done &&
+      psql -h postgres -U ${POSTGRES_USER:-aarogya} -d ${POSTGRES_DB:-aarogya} -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'"
     restart: "no"
     networks:
       - aarogya-net
@@ -79,8 +79,8 @@ services:
     image: dpage/pgadmin4:8
     container_name: aarogya-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@aarogya.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@aarogya.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - "5050:80"
@@ -89,6 +89,11 @@ services:
         condition: service_healthy
     volumes:
       - pgadmindata:/var/lib/pgadmin
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost/misc/ping').read().decode().strip()=='OK' else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks:
       - aarogya-net
 

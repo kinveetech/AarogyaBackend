@@ -208,6 +208,15 @@ pgAdmin default login:
 - Email: `admin@aarogya.com`
 - Password: `admin`
 
+Environment configuration:
+- Copy `.env.example` to `.env` and customize values as needed.
+- `docker-compose.yml` reads DB, pgAdmin, Redis, and JWT settings from `.env` with safe defaults.
+
+Named volumes used for persistence:
+- `aarogyabackend_pgdata` (PostgreSQL data)
+- `aarogyabackend_redisdata` (Redis AOF/persistence data)
+- `aarogyabackend_pgadmindata` (pgAdmin settings and state)
+
 Useful commands:
 ```bash
 docker compose logs -f api
