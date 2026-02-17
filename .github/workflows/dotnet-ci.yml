@@ -5,10 +5,18 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: dotnet-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
@@ -28,6 +36,7 @@ jobs:
       run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
 
     - name: Code Coverage Report
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: codecov/codecov-action@v3
       with:
         files: '**/coverage.cobertura.xml'
@@ -43,6 +52,9 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
