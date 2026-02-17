@@ -111,7 +111,7 @@ builder.Services.AddCors(options =>
     {
       policy.WithOrigins(origins);
 
-      if (corsConfig?.AllowCredentials == true)
+      if (corsConfig!.AllowCredentials)
       {
         policy.AllowCredentials();
       }
