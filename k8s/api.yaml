@@ -35,6 +35,8 @@ spec:
               value: http://+:8080
             - name: ConnectionStrings__DefaultConnection
               value: Host=postgres;Port=5432;Database=aarogya;Username=aarogya;Password=aarogya_dev_password
+            - name: ConnectionStrings__Redis
+              value: redis:6379
             - name: Jwt__Issuer
               value: AarogyaAPI
             - name: Jwt__Audience
