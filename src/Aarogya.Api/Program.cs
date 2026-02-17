@@ -110,18 +110,19 @@ builder.Services.AddCors(options =>
     if (origins.Length > 0)
     {
       policy.WithOrigins(origins);
+
+      if (corsConfig?.AllowCredentials == true)
+      {
+        policy.AllowCredentials();
+      }
     }
     else
     {
-      policy.AllowAnyOrigin();
+      Log.Warning("No CORS origins configured — all cross-origin requests will be blocked. "
+        + "Set Cors:AllowedOrigins in appsettings or AAROGYA_Cors__AllowedOrigins__0 env var.");
     }
 
     policy.AllowAnyMethod().AllowAnyHeader();
-
-    if (corsConfig?.AllowCredentials == true && origins.Length > 0)
-    {
-      policy.AllowCredentials();
-    }
   });
 });
 
