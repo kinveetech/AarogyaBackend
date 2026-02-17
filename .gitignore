@@ -91,8 +91,9 @@ TestResult.xml
 .env
 .env.local
 .env.production
-appsettings.Development.json
-appsettings.*.json
+appsettings.Local.json
+appsettings.Production.json
+appsettings.Staging.json
 secrets.json
 *.pfx
 *.p12
