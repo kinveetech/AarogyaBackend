@@ -1,4 +1,4 @@
-# Mobile App Backend API
+# Aarogya Backend API
 
 ASP.NET Core 9.0 REST API following Clean Architecture principles.
 
@@ -24,11 +24,21 @@ tests/
 └── Aarogya.Domain.Tests/   # Unit tests
 ```
 
+## ⚙️ Current Service Setup
+
+| Mode | Services | Access |
+|------|----------|--------|
+| Local .NET | `Aarogya.Api` only | `http://localhost:5000` / `https://localhost:5001` |
+| Docker Compose | `aarogya-api`, `aarogya-postgres` | `http://localhost:8080/swagger/index.html` |
+| Kubernetes (`kind`) | `aarogya-api` + `postgres` in namespace `aarogya` | `kubectl port-forward svc/aarogya-api 8080:80` |
+
 ## 🚀 Getting Started
 
 ### Prerequisites
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- SQL Server or PostgreSQL
+- Docker Desktop
+- `kubectl` (for Kubernetes setup)
+- `kind` (for local Kubernetes setup)
 - Visual Studio 2022 / VS Code / Rider
 
 ### Installation
@@ -183,7 +193,14 @@ dotnet ef migrations remove --project src/Aarogya.Infrastructure --startup-proje
 ### Docker Compose (API + PostgreSQL)
 ```bash
 docker compose up --build -d
+docker compose ps
 curl http://localhost:8080/swagger/index.html
+```
+
+Useful commands:
+```bash
+docker compose logs -f api
+docker compose down -v
 ```
 
 ### Docker only (API)
@@ -197,15 +214,21 @@ docker run --rm -p 8080:8080 \
 
 ## ☸️ Local Kubernetes Run
 
-### 1. Build image
+### 1. Create cluster (first time only)
+```bash
+kind create cluster --name aarogya-backend
+kubectl config use-context kind-aarogya-backend
+```
+
+### 2. Build image
 ```bash
 docker build -t aarogya-api:dev .
 ```
 
-### 2. Load image into your local cluster
-For `kind`:
+### 3. Load image into your local cluster
+For `kind` (cluster created above):
 ```bash
-kind load docker-image aarogya-api:dev
+kind load docker-image aarogya-api:dev --name aarogya-backend
 ```
 
 For `minikube`:
@@ -213,18 +236,21 @@ For `minikube`:
 minikube image load aarogya-api:dev
 ```
 
-### 3. Apply manifests
+### 4. Apply manifests
 ```bash
 kubectl apply -k k8s
 kubectl -n aarogya get pods
+kubectl -n aarogya get svc
 ```
 
-### 4. Access API
+### 5. Access API
 ```bash
 kubectl -n aarogya port-forward svc/aarogya-api 8080:80
 ```
 
 Then open `http://localhost:8080/swagger/index.html`.
+
+If using `k9s`, switch namespace to `aarogya` to view these pods.
 
 ## 📊 Logging
 
@@ -250,15 +276,26 @@ Once running, visit Swagger UI:
 - Development: `https://localhost:5001/swagger`
 - Production: `https://your-domain.com/swagger` (if enabled)
 
+## ✅ PR Quality Gates
+
+Current PR checks:
+- `.NET Backend CI / build-and-test`
+- `.NET Backend CI / lint`
+- `PR Guardrails / semantic-pr-title`
+- `PR Guardrails / dependency-review-disabled` (or `dependency-review` when enabled)
+- `SonarQube Analysis / sonarqube` (when Sonar credentials are valid)
+
+See `/docs/github-main-guardrails.md` for full guardrail and ruleset setup details.
+
 ## 🐛 Troubleshooting
 
 ### Port already in use
 Change ports in `src/Aarogya.Api/Properties/launchSettings.json`
 
 ### Database connection fails
-1. Verify SQL Server is running
-2. Check connection string in appsettings.json
-3. Ensure database exists or run migrations
+1. For Docker: verify `aarogya-postgres` is healthy (`docker compose ps`)
+2. For Kubernetes: verify `postgres` pod is running in namespace `aarogya`
+3. Check `ConnectionStrings__DefaultConnection` override in your runtime environment
 
 ### JWT token errors
 Ensure JWT:Key in appsettings.json is at least 32 characters
