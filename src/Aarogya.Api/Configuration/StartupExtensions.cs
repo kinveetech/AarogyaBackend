@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Serilog;
 using Serilog.Events;
 
@@ -71,25 +72,18 @@ public static class StartupExtensions
 
   public static void ValidateRequiredConfiguration(IConfiguration configuration, IHostEnvironment environment)
   {
-    var missingKeys = new List<string>();
+    var violations = new List<string>();
 
-    if (string.IsNullOrWhiteSpace(configuration["ConnectionStrings:DefaultConnection"]))
-    {
-      missingKeys.Add("ConnectionStrings:DefaultConnection");
-    }
+    violations.AddRange(GetMissingRequiredConfiguration(configuration));
+    violations.AddRange(GetSecurityConfigurationViolations(configuration, environment));
 
-    var jwtKeyValue = configuration["Jwt:Key"];
-    if (string.IsNullOrWhiteSpace(jwtKeyValue) || jwtKeyValue == "SET_VIA_USER_SECRETS_OR_ENV_VAR")
-    {
-      missingKeys.Add("Jwt:Key");
-    }
-
-    if (missingKeys.Count <= 0)
+    var joinedViolations = string.Join("; ", violations);
+    if (string.IsNullOrWhiteSpace(joinedViolations))
     {
       return;
     }
 
-    var message = $"Missing required configuration: {string.Join(", ", missingKeys)}. "
+    var message = $"Invalid configuration: {joinedViolations}. "
       + "Set via user-secrets, environment variables (prefix AAROGYA_), or appsettings.";
 
     if (environment.IsDevelopment())
@@ -100,5 +94,81 @@ public static class StartupExtensions
     {
       throw new InvalidOperationException(message);
     }
+  }
+
+  private static List<string> GetMissingRequiredConfiguration(IConfiguration configuration)
+  {
+    var violations = new List<string>();
+
+    if (string.IsNullOrWhiteSpace(configuration["ConnectionStrings:DefaultConnection"]))
+    {
+      violations.Add("Missing ConnectionStrings:DefaultConnection");
+    }
+
+    var jwtKeyValue = configuration["Jwt:Key"];
+    if (string.IsNullOrWhiteSpace(jwtKeyValue) || jwtKeyValue == "SET_VIA_USER_SECRETS_OR_ENV_VAR")
+    {
+      violations.Add("Missing Jwt:Key");
+    }
+
+    return violations;
+  }
+
+  [SuppressMessage(
+    "Security",
+    "S2068:Credentials should not be hard-coded",
+    Justification = "These are sentinel placeholders used to detect insecure default configuration values.")]
+  private static List<string> GetSecurityConfigurationViolations(
+    IConfiguration configuration,
+    IHostEnvironment environment)
+  {
+    var violations = new List<string>();
+    var jwtKeyValue = configuration["Jwt:Key"];
+
+    if (!string.IsNullOrWhiteSpace(jwtKeyValue)
+      && jwtKeyValue != "SET_VIA_USER_SECRETS_OR_ENV_VAR"
+      && jwtKeyValue.Length < 32)
+    {
+      violations.Add("Jwt:Key must be at least 32 characters long");
+    }
+
+    var defaultConnection = configuration["ConnectionStrings:DefaultConnection"] ?? string.Empty;
+    if (!environment.IsDevelopment()
+      && ContainsAny(defaultConnection, "aarogya_dev_password", "your_password", "password=changeme"))
+    {
+      violations.Add("ConnectionStrings:DefaultConnection contains insecure default credentials");
+    }
+
+    var redisConnection = configuration["ConnectionStrings:Redis"] ?? string.Empty;
+    if (!environment.IsDevelopment()
+      && ContainsAny(redisConnection, "redis_password", "changeme", "SET_VIA_USER_SECRETS_OR_ENV_VAR"))
+    {
+      violations.Add("ConnectionStrings:Redis contains insecure default credentials");
+    }
+
+    var awsServiceUrl = configuration["Aws:ServiceUrl"];
+    if (!string.IsNullOrWhiteSpace(awsServiceUrl)
+      && (!Uri.TryCreate(awsServiceUrl, UriKind.Absolute, out var parsed)
+      || (parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps)))
+    {
+      violations.Add("Aws:ServiceUrl must be a valid absolute HTTP/HTTPS URL");
+    }
+
+    var corsOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+    foreach (var origin in corsOrigins)
+    {
+      if (!Uri.TryCreate(origin, UriKind.Absolute, out var originUri)
+        || (originUri.Scheme != Uri.UriSchemeHttp && originUri.Scheme != Uri.UriSchemeHttps))
+      {
+        violations.Add($"Cors:AllowedOrigins contains invalid URL: {origin}");
+      }
+    }
+
+    return violations;
+  }
+
+  private static bool ContainsAny(string value, params string[] patterns)
+  {
+    return Array.Exists(patterns, pattern => value.Contains(pattern, StringComparison.OrdinalIgnoreCase));
   }
 }
