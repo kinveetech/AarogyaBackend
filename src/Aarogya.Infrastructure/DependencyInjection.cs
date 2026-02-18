@@ -1,4 +1,5 @@
 using Aarogya.Infrastructure.Aws;
+using Aarogya.Infrastructure.Caching;
 using Aarogya.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -29,6 +30,13 @@ public static class DependencyInjection
     var enableSensitiveDataLogging = dbSection.GetSection("EnableSensitiveDataLogging").Get<bool?>() ?? false;
     var maxRetryCount = dbSection.GetSection("MaxRetryCount").Get<int?>() ?? 3;
     var maxRetryDelaySeconds = dbSection.GetSection("MaxRetryDelaySeconds").Get<int?>() ?? 5;
+    var redisSection = configuration.GetSection("Redis");
+    var redisConnectionString = configuration.GetConnectionString("Redis");
+    var redisInstanceName = redisSection.GetSection("InstanceName").Get<string>() ?? "aarogya_";
+    var redisDatabase = redisSection.GetSection("Database").Get<int?>() ?? 0;
+    var redisConnectTimeout = redisSection.GetSection("ConnectTimeoutMilliseconds").Get<int?>() ?? 5000;
+    var redisConnectRetry = redisSection.GetSection("ConnectRetry").Get<int?>() ?? 3;
+    var redisSyncTimeout = redisSection.GetSection("SyncTimeoutMilliseconds").Get<int?>() ?? 5000;
 
     services.AddDbContextPool<AarogyaDbContext>(options =>
     {
@@ -56,9 +64,31 @@ public static class DependencyInjection
       }
     });
 
+    if (!string.IsNullOrWhiteSpace(redisConnectionString))
+    {
+      services.AddStackExchangeRedisCache(options =>
+      {
+        options.Configuration = redisConnectionString;
+        options.InstanceName = redisInstanceName;
+
+        var redisConfiguration = StackExchange.Redis.ConfigurationOptions.Parse(redisConnectionString);
+        redisConfiguration.ConnectTimeout = redisConnectTimeout;
+        redisConfiguration.ConnectRetry = redisConnectRetry;
+        redisConfiguration.SyncTimeout = redisSyncTimeout;
+        redisConfiguration.DefaultDatabase = redisDatabase;
+        redisConfiguration.AbortOnConnectFail = false;
+        options.ConfigurationOptions = redisConfiguration;
+      });
+    }
+
     // Register a health check for PostgreSQL
-    services.AddHealthChecks()
+    var healthChecks = services.AddHealthChecks()
       .AddDbContextCheck<AarogyaDbContext>("postgresql", tags: ["db", "ready"]);
+
+    if (!string.IsNullOrWhiteSpace(redisConnectionString))
+    {
+      healthChecks.AddCheck<RedisDistributedCacheHealthCheck>("redis", tags: ["cache", "ready"]);
+    }
 
     // Register AWS services (S3, SES)
     services.AddAwsServices(configuration);

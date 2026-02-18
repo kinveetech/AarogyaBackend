@@ -281,6 +281,32 @@ Then open `http://localhost:5050` with:
 
 If using `k9s`, switch namespace to `aarogya` to view these pods.
 
+## 🧰 Redis Cache Configuration
+
+Redis settings are configured in:
+- `src/Aarogya.Api/appsettings.json`
+- `src/Aarogya.Api/appsettings.Development.json`
+
+Core keys:
+- `ConnectionStrings:Redis`
+- `Redis:InstanceName`
+- `Redis:Database`
+- `Redis:ConnectTimeoutMilliseconds`
+- `Redis:ConnectRetry`
+- `Redis:SyncTimeoutMilliseconds`
+- `Redis:DefaultExpirationMinutes`
+- `Redis:KeyPrefix`
+
+For local secrets, use `src/Aarogya.Api/secrets.template.json` and set with:
+```bash
+dotnet user-secrets set "ConnectionStrings:Redis" "localhost:6379,abortConnect=false,connectTimeout=5000" --project src/Aarogya.Api
+```
+
+Redis key naming convention:
+- Format: `<Redis:KeyPrefix>:<bounded-context>:<resource>:<id>`
+- Development example: `aarogya:dev:reports:12345`
+- Production example: `aarogya:prod:reports:12345`
+
 ## 📊 Logging
 
 This project uses Serilog for structured logging.
