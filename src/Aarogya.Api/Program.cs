@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,6 @@ builder.Configuration.AddEnvironmentVariables(prefix: "AAROGYA_");
 Log.Logger = new LoggerConfiguration()
   .ReadFrom.Configuration(builder.Configuration)
   .Enrich.FromLogContext()
-  .WriteTo.Console()
   .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -150,6 +150,32 @@ if (app.Environment.IsDevelopment())
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Aarogya API v1");
   });
 }
+
+app.UseSerilogRequestLogging(options =>
+{
+  options.MessageTemplate =
+    "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+  options.GetLevel = static (_, elapsed, ex) =>
+  {
+    if (ex is not null)
+    {
+      return LogEventLevel.Error;
+    }
+
+    return elapsed > 1000 ? LogEventLevel.Warning : LogEventLevel.Information;
+  };
+  options.EnrichDiagnosticContext = static (diagnosticContext, httpContext) =>
+  {
+    diagnosticContext.Set("TraceIdentifier", httpContext.TraceIdentifier);
+    diagnosticContext.Set("ClientIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+    diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+    diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
+    diagnosticContext.Set(
+      "SensitiveHeadersPresent",
+      httpContext.Request.Headers.ContainsKey("Authorization")
+      || httpContext.Request.Headers.ContainsKey("Cookie"));
+  };
+});
 
 app.UseHttpsRedirection();
 app.UseCors("AarogyaPolicy");

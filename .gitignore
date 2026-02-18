@@ -94,6 +94,8 @@ TestResult.xml
 appsettings.Local.json
 appsettings.Production.json
 appsettings.Staging.json
+!src/Aarogya.Api/appsettings.Production.json
+!src/Aarogya.Api/appsettings.Staging.json
 secrets.json
 *.pfx
 *.p12

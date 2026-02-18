@@ -13,6 +13,7 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="FluentValidation.AspNetCore" />
   </ItemGroup>
 
