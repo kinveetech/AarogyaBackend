@@ -16,7 +16,6 @@ builder.Configuration.AddEnvironmentVariables(prefix: "AAROGYA_");
 Log.Logger = new LoggerConfiguration()
   .ReadFrom.Configuration(builder.Configuration)
   .Enrich.FromLogContext()
-  .WriteTo.Console()
   .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -110,36 +109,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     };
   });
 
-// Add CORS
-var corsConfig = builder.Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>();
-builder.Services.AddCors(options =>
-{
-  options.AddPolicy("AarogyaPolicy", policy =>
-  {
-    var origins = corsConfig?.AllowedOrigins ?? [];
-    if (origins.Length > 0)
-    {
-      policy.WithOrigins(origins);
-
-      if (corsConfig!.AllowCredentials)
-      {
-        policy.AllowCredentials();
-      }
-    }
-    else
-    {
-      Log.Warning("No CORS origins configured — all cross-origin requests will be blocked. "
-        + "Set Cors:AllowedOrigins in appsettings or AAROGYA_Cors__AllowedOrigins__0 env var.");
-    }
-
-    policy.AllowAnyMethod().AllowAnyHeader();
-  });
-});
+builder.Services.AddAarogyaCorsPolicy(builder.Configuration);
 
 var app = builder.Build();
 
 // Validate required configuration at startup
-ValidateRequiredConfiguration(app.Configuration, app.Environment);
+StartupExtensions.ValidateRequiredConfiguration(app.Configuration, app.Environment);
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -150,6 +125,8 @@ if (app.Environment.IsDevelopment())
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Aarogya API v1");
   });
 }
+
+app.UseAarogyaRequestLogging();
 
 app.UseHttpsRedirection();
 app.UseCors("AarogyaPolicy");
@@ -179,37 +156,4 @@ catch (Exception ex)
 finally
 {
   Log.CloseAndFlush();
-}
-
-static void ValidateRequiredConfiguration(IConfiguration configuration, IHostEnvironment environment)
-{
-  var missingKeys = new List<string>();
-
-  if (string.IsNullOrWhiteSpace(configuration["ConnectionStrings:DefaultConnection"]))
-  {
-    missingKeys.Add("ConnectionStrings:DefaultConnection");
-  }
-
-  var jwtKeyValue = configuration["Jwt:Key"];
-  if (string.IsNullOrWhiteSpace(jwtKeyValue) || jwtKeyValue == "SET_VIA_USER_SECRETS_OR_ENV_VAR")
-  {
-    missingKeys.Add("Jwt:Key");
-  }
-
-  if (missingKeys.Count <= 0)
-  {
-    return;
-  }
-
-  var message = $"Missing required configuration: {string.Join(", ", missingKeys)}. "
-    + "Set via user-secrets, environment variables (prefix AAROGYA_), or appsettings.";
-
-  if (environment.IsDevelopment())
-  {
-    Log.Warning(message);
-  }
-  else
-  {
-    throw new InvalidOperationException(message);
-  }
 }

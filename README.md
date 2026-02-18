@@ -311,19 +311,24 @@ Redis key naming convention:
 
 This project uses Serilog for structured logging.
 
-Configuration in `appsettings.json`:
-```json
-{
-  "Serilog": {
-    "MinimumLevel": {
-      "Default": "Information",
-      "Override": {
-        "Microsoft": "Warning"
-      }
-    }
-  }
-}
-```
+Environment-specific logging configuration files:
+- `src/Aarogya.Api/appsettings.Development.json`
+- `src/Aarogya.Api/appsettings.Staging.json`
+- `src/Aarogya.Api/appsettings.Production.json`
+
+Logging profile:
+- Development: `Debug` default level, console sink
+- Staging: `Information` default level, console + rolling file sink
+- Production: `Information` default level, console + rolling file sink
+
+Request logging:
+- Enabled via `UseSerilogRequestLogging()` in `src/Aarogya.Api/Program.cs`
+- Logs method, path, status code, elapsed time, trace id, and client IP
+- Does not log `Authorization` or `Cookie` values; only records if sensitive headers are present
+
+Log retention:
+- Staging file logs keep 14 rolling daily files
+- Production file logs keep 30 rolling daily files
 
 ## 🔍 API Documentation
 
