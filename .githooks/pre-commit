@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if ! command -v rg >/dev/null 2>&1; then
+  echo "pre-commit: ripgrep (rg) is required to scan for secrets."
+  exit 1
+fi
+
+readonly ALLOWED_FILE_REGEX='(secrets\.template\.json|\.env\.example|README\.md)$'
+readonly SECRET_REGEX='(AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|-----BEGIN( [A-Z]+)? PRIVATE KEY-----|(?i)(aws|sonar|jwt).{0,24}(secret|token|key).{0,8}[:=].{0,4}[A-Za-z0-9_\/+=.-]{16,})'
+
+has_issues=0
+
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+
+  if [[ "${file}" =~ ${ALLOWED_FILE_REGEX} ]]; then
+    continue
+  fi
+
+  if git show ":${file}" | rg -n -e "${SECRET_REGEX}" >/dev/null; then
+    echo "pre-commit: potential secret detected in staged file '${file}'."
+    has_issues=1
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACM)
+
+if [[ ${has_issues} -eq 1 ]]; then
+  echo "pre-commit: commit blocked. Remove secrets or move them to user-secrets/environment variables."
+  exit 1
+fi
+
+exit 0

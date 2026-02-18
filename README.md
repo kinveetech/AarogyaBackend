@@ -346,6 +346,26 @@ Current PR checks:
 
 See `/docs/github-main-guardrails.md` for full guardrail and ruleset setup details.
 
+## 🔒 Configuration Security
+
+Configuration validation runs at startup and enforces:
+- required keys (`ConnectionStrings:DefaultConnection`, `Jwt:Key`)
+- secure JWT key length
+- secure connection string values (non-default credentials in non-development environments)
+- valid URL formats for configurable endpoints (for example `Aws:ServiceUrl`, CORS origins)
+
+Sensitive configuration guidance:
+- keep secrets in user-secrets or environment variables, not committed JSON files
+- use placeholder values only in templates (`secrets.template.json`, `.env.example`)
+- prefer `AAROGYA_`-prefixed environment variables in deployed environments
+
+Install local git hooks to prevent accidental secret commits:
+```bash
+./scripts/install-git-hooks.sh
+```
+
+The pre-commit hook scans staged files for common secret patterns and blocks unsafe commits.
+
 ## 🐛 Troubleshooting
 
 ### Port already in use

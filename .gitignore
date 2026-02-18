@@ -89,9 +89,14 @@ TestResult.xml
 
 # Environment variables and secrets
 .env
+.env.*
+.envrc
 .env.local
 .env.production
+.env.example
+!.env.example
 appsettings.Local.json
+appsettings.*.local.json
 appsettings.Production.json
 appsettings.Staging.json
 !src/Aarogya.Api/appsettings.Production.json
@@ -120,6 +125,8 @@ secrets.json
 
 # Local agent worktree metadata
 .claude/worktrees/
+.sonar/
+.sonarqube/
 
 # Windows
 Thumbs.db
