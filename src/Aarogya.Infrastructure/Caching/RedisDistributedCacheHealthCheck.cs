@@ -25,7 +25,7 @@ public sealed class RedisDistributedCacheHealthCheck(IDistributedCache cache) : 
         ? HealthCheckResult.Healthy("Redis cache is reachable.")
         : HealthCheckResult.Unhealthy("Redis cache read/write validation failed.");
     }
-    catch (Exception ex)
+    catch (Exception ex) when (ex is not OperationCanceledException)
     {
       return HealthCheckResult.Unhealthy("Redis cache health check failed.", ex);
     }
