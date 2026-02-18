@@ -240,6 +240,19 @@ Aspire dashboard:
 - URL is printed in AppHost startup logs
 - Default HTTP profile is `http://localhost:15236`
 
+To stop running AppHost instances:
+```bash
+# If AppHost is running in current terminal
+# Press Ctrl+C
+
+# If running in another terminal/background
+pkill -f "AppHost/AppHost.csproj" || true
+pkill -f "AppHost.dll" || true
+
+# Clean up AppHost-created containers
+docker ps -a --format '{{.Names}}' | grep -E '^(postgres|redis|localstack|api)-' | xargs -r docker rm -f
+```
+
 ### Docker only (API)
 ```bash
 docker build -t aarogya-api:dev .
