@@ -1,3 +1,4 @@
+using Aarogya.Infrastructure.Aws;
 using Aarogya.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -58,6 +59,9 @@ public static class DependencyInjection
     // Register a health check for PostgreSQL
     services.AddHealthChecks()
       .AddDbContextCheck<AarogyaDbContext>("postgresql", tags: ["db", "ready"]);
+
+    // Register AWS services (S3, SES)
+    services.AddAwsServices(configuration);
 
     return services;
   }

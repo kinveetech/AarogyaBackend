@@ -30,6 +30,11 @@ public sealed class S3Options
 
   [Range(1, 10080)]
   public int PresignedUrlExpiryMinutes { get; set; } = 60;
+
+  /// <summary>
+  /// Default object access: "private" or "public-read".
+  /// </summary>
+  public string DefaultAcl { get; set; } = "private";
 }
 
 public sealed class SesOptions
