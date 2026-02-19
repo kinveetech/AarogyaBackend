@@ -7,3 +7,5 @@ RUN rm -f /etc/apt/sources.list.d/yarn.list \
       postgresql-client \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+USER vscode
