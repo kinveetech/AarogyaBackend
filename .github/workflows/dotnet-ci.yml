@@ -62,6 +62,63 @@ jobs:
         reporter: dotnet-trx
         fail-on-error: true
 
+    - name: Coverage summary
+      if: always() && github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        mapfile -t coverage_files < <(find ./.testresults -type f -name 'coverage.cobertura.xml' | sort)
+
+        if [ "${#coverage_files[@]}" -eq 0 ]; then
+          {
+            echo "## Code Coverage Summary"
+            echo ""
+            echo "No Cobertura coverage files were found in \`./.testresults\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        total_covered=0
+        total_valid=0
+
+        {
+          echo "## Code Coverage Summary"
+          echo ""
+          echo "| File | Line Coverage | Covered / Valid |"
+          echo "|---|---:|---:|"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        for file in "${coverage_files[@]}"; do
+          covered="$(grep -o 'lines-covered="[0-9]*"' "$file" | head -n1 | grep -o '[0-9]*' || true)"
+          valid="$(grep -o 'lines-valid="[0-9]*"' "$file" | head -n1 | grep -o '[0-9]*' || true)"
+
+          covered="${covered:-0}"
+          valid="${valid:-0}"
+
+          total_covered=$((total_covered + covered))
+          total_valid=$((total_valid + valid))
+
+          if [ "$valid" -gt 0 ]; then
+            pct="$(awk "BEGIN { printf \"%.2f\", (${covered}/${valid}) * 100 }")"
+          else
+            pct="0.00"
+          fi
+
+          echo "| \`${file#./}\` | ${pct}% | ${covered} / ${valid} |" >> "$GITHUB_STEP_SUMMARY"
+        done
+
+        if [ "$total_valid" -gt 0 ]; then
+          total_pct="$(awk "BEGIN { printf \"%.2f\", (${total_covered}/${total_valid}) * 100 }")"
+        else
+          total_pct="0.00"
+        fi
+
+        {
+          echo ""
+          echo "**Total line coverage: ${total_pct}% (${total_covered} / ${total_valid})**"
+        } >> "$GITHUB_STEP_SUMMARY"
+
     - name: Code Coverage Report
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: codecov/codecov-action@v3
