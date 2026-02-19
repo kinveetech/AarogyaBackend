@@ -12,6 +12,10 @@ namespace Aarogya.Api.Controllers;
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "ASP.NET Core controllers must be public to be discovered by the framework.")]
+[SuppressMessage(
+  "Minor Code Smell",
+  "S6960:Controllers should not have too many responsibilities",
+  Justification = "Authentication endpoints are intentionally grouped under a single auth controller route.")]
 public sealed class AuthController : ControllerBase
 {
   private readonly IPhoneOtpService _phoneOtpService;
