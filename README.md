@@ -62,12 +62,12 @@ tests/
    ```json
    {
      "ConnectionStrings": {
-       "DefaultConnection": "Server=localhost;Database=MobileAppDb;..."
+       "DefaultConnection": "Host=localhost;Port=5432;Database=aarogya;Username=aarogya;Password=aarogya_dev_password"
      }
    }
    ```
 
-4. **Run database migrations** (when available)
+4. **Run database migrations**
    ```bash
    dotnet tool restore
    dotnet ef database update --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Infrastructure --msbuildprojectextensionspath artifacts/obj/Aarogya.Infrastructure/
