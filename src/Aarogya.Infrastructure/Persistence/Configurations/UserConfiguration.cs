@@ -1,0 +1,52 @@
+using Aarogya.Domain.Entities;
+using Aarogya.Domain.Enums;
+using Aarogya.Infrastructure.Persistence.Converters;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Aarogya.Infrastructure.Persistence.Configurations;
+
+internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
+{
+  private const string ByteaType = "bytea";
+
+  public void Configure(EntityTypeBuilder<User> builder)
+  {
+    builder.ToTable("users", t =>
+      t.HasCheckConstraint("users_gender_chk", "gender IS NULL OR gender IN ('male', 'female', 'other', 'unknown')"));
+
+    builder.HasKey(x => x.Id);
+    builder.Property(x => x.Id).HasColumnName("id");
+
+    builder.Property(x => x.ExternalAuthId).HasColumnName("external_auth_id");
+    builder.HasIndex(x => x.ExternalAuthId).IsUnique();
+
+    builder.Property(x => x.Role)
+      .HasColumnName("role")
+      .HasColumnType("user_role")
+      .HasConversion(EnumSnakeCaseConverter.Create<UserRole>());
+
+    builder.Property(x => x.FirstNameEncrypted).HasColumnName("first_name_encrypted").HasColumnType(ByteaType).IsRequired();
+    builder.Property(x => x.LastNameEncrypted).HasColumnName("last_name_encrypted").HasColumnType(ByteaType).IsRequired();
+    builder.Property(x => x.EmailEncrypted).HasColumnName("email_encrypted").HasColumnType(ByteaType).IsRequired();
+    builder.Property(x => x.PhoneEncrypted).HasColumnName("phone_encrypted").HasColumnType(ByteaType);
+
+    builder.Property(x => x.DateOfBirth).HasColumnName("date_of_birth");
+    builder.Property(x => x.Gender).HasColumnName("gender");
+
+    builder.Property(x => x.EmailHash).HasColumnName("email_hash").HasColumnType(ByteaType);
+    builder.Property(x => x.PhoneHash).HasColumnName("phone_hash").HasColumnType(ByteaType);
+    builder.Property(x => x.AadhaarRefToken).HasColumnName("aadhaar_ref_token");
+    builder.Property(x => x.AadhaarSha256).HasColumnName("aadhaar_sha256").HasColumnType(ByteaType);
+
+    builder.Property(x => x.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+    builder.Property(x => x.CreatedAt).HasColumnName("created_at");
+    builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+    builder.HasIndex(x => x.EmailHash).HasDatabaseName("ix_users_email_hash");
+    builder.HasIndex(x => x.PhoneHash).HasDatabaseName("ix_users_phone_hash");
+    builder.HasIndex(x => x.AadhaarSha256).HasDatabaseName("ix_users_aadhaar_sha256");
+    builder.HasIndex(x => new { x.Role, x.IsActive }).HasDatabaseName("ix_users_role_active");
+
+  }
+}
