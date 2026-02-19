@@ -8,6 +8,10 @@ Design and implement the PostgreSQL database schema, EF Core data access layer, 
 ### 1. Design Core Database Schema
 **Description:** Design tables: users, test_reports, access_grants, emergency_contacts, audit_logs. Include ENUM types for roles, report_type, status.
 
+**Design Artifacts:**
+- `docs/database/core-schema.md`
+- `docs/database/core-schema.sql`
+
 **Acceptance Criteria:**
 - ERD documented, schema SQL reviewed
 - All tables, relationships, and constraints defined
