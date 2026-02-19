@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aarogya.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AarogyaDbContext))]
-    [Migration("20260219042427_AddAadhaarVaultUserForeignKey")]
-    partial class AddAadhaarVaultUserForeignKey
+    [Migration("20260219043224_AddAadhaarVault")]
+    partial class AddAadhaarVault
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

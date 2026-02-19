@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aarogya.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AarogyaDbContext))]
-    [Migration("20260219042215_AddAadhaarVault")]
-    partial class AddAadhaarVault
+    [Migration("20260219043317_AddAadhaarVaultUserForeignKey")]
+    partial class AddAadhaarVaultUserForeignKey
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -619,6 +619,8 @@ namespace Aarogya.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AadhaarRefToken");
+
                     b.HasIndex("AadhaarSha256")
                         .HasDatabaseName("ix_users_aadhaar_sha256");
 
@@ -735,6 +737,15 @@ namespace Aarogya.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Report");
+                });
+
+            modelBuilder.Entity("Aarogya.Domain.Entities.User", b =>
+                {
+                    b.HasOne("Aarogya.Domain.Entities.AadhaarVaultRecord", null)
+                        .WithMany()
+                        .HasForeignKey("AadhaarRefToken")
+                        .HasPrincipalKey("ReferenceToken")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Aarogya.Domain.Entities.AadhaarVaultRecord", b =>
