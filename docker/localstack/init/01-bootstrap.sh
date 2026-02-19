@@ -68,8 +68,7 @@ if existing_pool_id="$(aws --endpoint-url "$AWS_ENDPOINT_URL" cognito-idp list-u
       --user-pool-id "$existing_pool_id" \
       --mfa-configuration "$COGNITO_MFA_CONFIGURATION" \
       --policies "PasswordPolicy={${password_policy}}" \
-      --auto-verified-attributes "${auto_verified_attributes[@]}" \
-      --schema "$schema" >/tmp/localstack-cognito.err 2>&1; then
+      --auto-verified-attributes "${auto_verified_attributes[@]}" >/tmp/localstack-cognito.err 2>&1; then
       log "Updated Cognito user pool: ${COGNITO_USER_POOL_NAME} (${existing_pool_id})"
     else
       log "Cognito pool update skipped (likely LocalStack limitation): $(tr '\n' ' ' </tmp/localstack-cognito.err)"
