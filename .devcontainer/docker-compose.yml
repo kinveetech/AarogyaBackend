@@ -1,0 +1,38 @@
+services:
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspaces/AarogyaBackend:cached
+    command: sleep infinity
+    networks:
+      - aarogya-devcontainer-net
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    container_name: aarogya-devcontainer-postgres
+    environment:
+      POSTGRES_DB: aarogya
+      POSTGRES_USER: aarogya
+      POSTGRES_PASSWORD: aarogya_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - aarogya-devcontainer-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aarogya -d aarogya"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aarogya-devcontainer-net
+
+networks:
+  aarogya-devcontainer-net:
+    name: aarogya-devcontainer-net
+
+volumes:
+  aarogya-devcontainer-pgdata:
