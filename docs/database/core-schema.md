@@ -21,30 +21,30 @@ erDiagram
   USERS ||--o{ AUDIT_LOGS : creates
 
   USERS {
-    uuid id PK
-    string external_auth_id UK
-    enum role "user_role"
+    uuid id
+    string external_auth_id
+    string role
     bytea first_name_encrypted
     bytea last_name_encrypted
     bytea email_encrypted
     bytea phone_encrypted
-    bytea email_hash UK
+    bytea email_hash
     bytea phone_hash
-    uuid aadhaar_ref_token UK
-    bytea aadhaar_sha256 UK
+    uuid aadhaar_ref_token
+    bytea aadhaar_sha256
     bool is_active
     datetime created_at
     datetime updated_at
   }
 
   REPORTS {
-    uuid id PK
-    string report_number UK
-    uuid patient_id FK
-    uuid doctor_id FK
-    uuid uploaded_by_user_id FK
-    enum report_type "report_type"
-    enum status "report_status"
+    uuid id
+    string report_number
+    uuid patient_id
+    uuid doctor_id
+    uuid uploaded_by_user_id
+    string report_type
+    string status
     datetime collected_at
     datetime reported_at
     datetime uploaded_at
@@ -55,8 +55,8 @@ erDiagram
   }
 
   REPORT_PARAMETERS {
-    uuid id PK
-    uuid report_id FK
+    uuid id
+    uuid report_id
     string parameter_code
     string parameter_name
     decimal measured_value_numeric
@@ -69,13 +69,13 @@ erDiagram
   }
 
   ACCESS_GRANTS {
-    uuid id PK
-    uuid patient_id FK
-    uuid granted_to_user_id FK
-    uuid granted_by_user_id FK
+    uuid id
+    uuid patient_id
+    uuid granted_to_user_id
+    uuid granted_by_user_id
     string grant_reason
     jsonb scope
-    enum status "access_grant_status"
+    string status
     datetime starts_at
     datetime expires_at
     datetime revoked_at
@@ -83,8 +83,8 @@ erDiagram
   }
 
   EMERGENCY_CONTACTS {
-    uuid id PK
-    uuid user_id FK
+    uuid id
+    uuid user_id
     bytea name_encrypted
     string relationship
     bytea phone_encrypted
@@ -95,17 +95,17 @@ erDiagram
   }
 
   AUDIT_LOGS {
-    uuid id PK
+    uuid id
     datetime occurred_at
-    uuid actor_user_id FK
-    enum actor_role "user_role"
+    uuid actor_user_id
+    string actor_role
     string action
     string entity_type
     uuid entity_id
     uuid correlation_id
     string request_path
     string request_method
-    string client_ip "inet"
+    string client_ip
     string user_agent
     int result_status
     jsonb details
