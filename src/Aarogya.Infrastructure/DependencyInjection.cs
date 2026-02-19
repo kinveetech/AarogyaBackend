@@ -1,6 +1,8 @@
+using Aarogya.Domain.Repositories;
 using Aarogya.Infrastructure.Aws;
 using Aarogya.Infrastructure.Caching;
 using Aarogya.Infrastructure.Persistence;
+using Aarogya.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,6 +67,13 @@ public static class DependencyInjection
         options.EnableSensitiveDataLogging();
       }
     });
+
+    services.AddScoped<IUserRepository, UserRepository>();
+    services.AddScoped<IReportRepository, ReportRepository>();
+    services.AddScoped<IAccessGrantRepository, AccessGrantRepository>();
+    services.AddScoped<IEmergencyContactRepository, EmergencyContactRepository>();
+    services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+    services.AddScoped<IUnitOfWork, UnitOfWork>();
 
     if (!string.IsNullOrWhiteSpace(redisConnectionString))
     {
