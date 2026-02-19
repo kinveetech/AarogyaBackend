@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+      checks: write
 
     steps:
     - uses: actions/checkout@v4
@@ -25,6 +26,11 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
+        cache: true
+        cache-dependency-path: |
+          **/*.csproj
+          global.json
+          nuget.config
 
     - name: Restore dependencies
       run: dotnet restore
@@ -33,7 +39,28 @@ jobs:
       run: dotnet build --no-restore --configuration Release
 
     - name: Run tests
-      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
+      run: |
+        dotnet test --no-build --configuration Release --verbosity normal \
+          --collect:"XPlat Code Coverage" \
+          --logger "trx;LogFileName=test-results.trx" \
+          --results-directory ./.testresults
+
+    - name: Upload test results artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: ./.testresults/**/*.trx
+        if-no-files-found: warn
+
+    - name: Publish test results
+      if: always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: .NET Test Results
+        path: ./.testresults/**/*.trx
+        reporter: dotnet-trx
+        fail-on-error: true
 
     - name: Code Coverage Report
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -63,6 +90,11 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
+        cache: true
+        cache-dependency-path: |
+          **/*.csproj
+          global.json
+          nuget.config
 
     - name: Check code formatting
       run: dotnet format --verify-no-changes --verbosity diagnostic
