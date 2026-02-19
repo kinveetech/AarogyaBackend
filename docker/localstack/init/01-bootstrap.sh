@@ -13,7 +13,9 @@ export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-test}"
 export AWS_DEFAULT_REGION="$AWS_REGION"
 
 log() {
-  echo "[localstack-init] $1"
+  local message="$1"
+  echo "[localstack-init] ${message}"
+  return 0
 }
 
 log "Bootstrapping LocalStack resources in region ${AWS_REGION}"
@@ -36,7 +38,7 @@ else
 fi
 
 existing_kms_alias="$(aws --endpoint-url "$AWS_ENDPOINT_URL" kms list-aliases --query "Aliases[?AliasName=='${KMS_ALIAS_NAME}'].AliasName | [0]" --output text 2>/dev/null || true)"
-if [ -n "$existing_kms_alias" ] && [ "$existing_kms_alias" != "None" ]; then
+if [[ -n "$existing_kms_alias" ]] && [[ "$existing_kms_alias" != "None" ]]; then
   log "KMS alias already exists: ${KMS_ALIAS_NAME}"
 else
   kms_key_id="$(aws --endpoint-url "$AWS_ENDPOINT_URL" kms create-key --description "Aarogya LocalStack dev key" --query 'KeyMetadata.KeyId' --output text)"
@@ -45,7 +47,7 @@ else
 fi
 
 if existing_pool_id="$(aws --endpoint-url "$AWS_ENDPOINT_URL" cognito-idp list-user-pools --max-results 60 --query "UserPools[?Name=='${COGNITO_USER_POOL_NAME}'].Id | [0]" --output text 2>/tmp/localstack-cognito.err)"; then
-  if [ -n "$existing_pool_id" ] && [ "$existing_pool_id" != "None" ]; then
+  if [[ -n "$existing_pool_id" ]] && [[ "$existing_pool_id" != "None" ]]; then
     log "Cognito user pool already exists: ${COGNITO_USER_POOL_NAME} (${existing_pool_id})"
   else
     aws --endpoint-url "$AWS_ENDPOINT_URL" cognito-idp create-user-pool --pool-name "$COGNITO_USER_POOL_NAME" >/dev/null
