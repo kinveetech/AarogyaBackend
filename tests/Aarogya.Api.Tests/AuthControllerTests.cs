@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Aarogya.Api.Authentication;
 using Aarogya.Api.Controllers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
@@ -22,7 +23,7 @@ public sealed class AuthControllerTests
       new Claim("cognito:groups", "Admin")
     ], "TestAuth"));
 
-    var controller = new AuthController
+    var controller = new AuthController(new NoopPhoneOtpService())
     {
       ControllerContext = new ControllerContext
       {
@@ -44,5 +45,14 @@ public sealed class AuthControllerTests
       Email = "user@example.com",
       Roles = ExpectedRoles
     });
+  }
+
+  private sealed class NoopPhoneOtpService : IPhoneOtpService
+  {
+    public Task<OtpRequestResult> RequestOtpAsync(string phoneNumber, CancellationToken cancellationToken = default)
+      => Task.FromResult(new OtpRequestResult(true, false, "ok"));
+
+    public Task<OtpVerificationResult> VerifyOtpAsync(string phoneNumber, string otp, CancellationToken cancellationToken = default)
+      => Task.FromResult(new OtpVerificationResult(true, "ok"));
   }
 }
