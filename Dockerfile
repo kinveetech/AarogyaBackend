@@ -1,5 +1,4 @@
-# Build stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
 WORKDIR /src
 
 COPY ["Aarogya.sln", "./"]
@@ -12,14 +11,20 @@ COPY ["src/Aarogya.Infrastructure/Aarogya.Infrastructure.csproj", "src/Aarogya.I
 RUN dotnet restore "src/Aarogya.Api/Aarogya.Api.csproj"
 
 COPY . .
-RUN dotnet publish "src/Aarogya.Api/Aarogya.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "src/Aarogya.Api/Aarogya.Api.csproj" \
+  -c Release \
+  -o /app/publish \
+  /p:UseAppHost=false \
+  /p:DebugType=None \
+  /p:DebugSymbols=false
 
-# Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS final
 WORKDIR /app
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
 COPY --from=build /app/publish .
+USER $APP_UID
+
 ENTRYPOINT ["dotnet", "Aarogya.Api.dll"]
