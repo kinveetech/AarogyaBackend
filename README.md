@@ -156,6 +156,26 @@ Edit `appsettings.json`:
 }
 ```
 
+### PII Encryption Configuration
+PII fields (`first_name`, `last_name`, `email`, `phone`, emergency-contact `name/phone`) are encrypted at the application layer and stored in `bytea` columns. Blind indexes are generated for searchable fields (`email_hash`, `phone_hash`).
+
+Configure encryption via `Encryption` settings:
+```json
+{
+  "Encryption": {
+    "UseAwsKms": true,
+    "KmsKeyId": "alias/aarogya-prod-data-key",
+    "LocalDataKey": "dev-only-local-fallback-key",
+    "BlindIndexKey": "hmac-secret-for-blind-indexes"
+  }
+}
+```
+
+Notes:
+- Production: keep `UseAwsKms=true` and set `KmsKeyId`.
+- Local/dev: set `UseAwsKms=false` and provide `LocalDataKey`.
+- Always set a strong `BlindIndexKey` via user-secrets or environment variables.
+
 ## 🧪 Testing
 
 ### Run all tests

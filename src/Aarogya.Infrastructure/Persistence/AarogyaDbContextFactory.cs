@@ -1,5 +1,7 @@
+using Aarogya.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Options;
 
 namespace Aarogya.Infrastructure.Persistence;
 
@@ -22,6 +24,16 @@ public sealed class AarogyaDbContextFactory : IDesignTimeDbContextFactory<Aarogy
       npgsqlOptions.CommandTimeout(30);
     });
 
-    return new AarogyaDbContext(optionsBuilder.Options);
+    var encryptionOptions = Options.Create(new EncryptionOptions
+    {
+      UseAwsKms = false,
+      LocalDataKey = "design-time-local-encryption-key",
+      BlindIndexKey = "design-time-local-blind-index-key"
+    });
+
+    var encryptionService = new PiiFieldEncryptionService(encryptionOptions);
+    var blindIndexService = new BlindIndexService(encryptionOptions);
+
+    return new AarogyaDbContext(optionsBuilder.Options, encryptionService, blindIndexService);
   }
 }

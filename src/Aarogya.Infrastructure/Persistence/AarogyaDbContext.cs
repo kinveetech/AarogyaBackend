@@ -1,4 +1,6 @@
 using Aarogya.Domain.Entities;
+using Aarogya.Infrastructure.Persistence.Configurations;
+using Aarogya.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aarogya.Infrastructure.Persistence;
@@ -7,9 +9,15 @@ namespace Aarogya.Infrastructure.Persistence;
 /// Entity Framework Core database context for the Aarogya application.
 /// DbSet properties will be added as domain entities are created.
 /// </summary>
-public sealed class AarogyaDbContext(DbContextOptions<AarogyaDbContext> options)
+public sealed class AarogyaDbContext(
+  DbContextOptions<AarogyaDbContext> options,
+  IPiiFieldEncryptionService piiFieldEncryptionService,
+  IBlindIndexService blindIndexService)
   : DbContext(options)
 {
+  private readonly IPiiFieldEncryptionService _piiFieldEncryptionService = piiFieldEncryptionService;
+  private readonly IBlindIndexService _blindIndexService = blindIndexService;
+
   public DbSet<User> Users => Set<User>();
 
   public DbSet<Report> Reports => Set<Report>();
@@ -31,20 +39,53 @@ public sealed class AarogyaDbContext(DbContextOptions<AarogyaDbContext> options)
     // Enable pgcrypto extension for UUID generation
     modelBuilder.HasPostgresExtension("pgcrypto");
 
-    // Apply all IEntityTypeConfiguration<T> implementations from this assembly
-    modelBuilder.ApplyConfigurationsFromAssembly(typeof(AarogyaDbContext).Assembly);
+    // Apply IEntityTypeConfiguration<T> implementations.
+    modelBuilder.ApplyConfiguration(new UserConfiguration(_piiFieldEncryptionService));
+    modelBuilder.ApplyConfiguration(new EmergencyContactConfiguration(_piiFieldEncryptionService));
+    modelBuilder.ApplyConfiguration(new ReportConfiguration());
+    modelBuilder.ApplyConfiguration(new ReportParameterConfiguration());
+    modelBuilder.ApplyConfiguration(new AccessGrantConfiguration());
+    modelBuilder.ApplyConfiguration(new AuditLogConfiguration());
   }
 
   public override int SaveChanges(bool acceptAllChangesOnSuccess)
   {
     ApplyAuditTimestamps();
+    ApplyBlindIndexes();
     return base.SaveChanges(acceptAllChangesOnSuccess);
   }
 
   public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
   {
     ApplyAuditTimestamps();
+    ApplyBlindIndexes();
     return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+  }
+
+  private void ApplyBlindIndexes()
+  {
+    foreach (var entry in ChangeTracker.Entries<User>())
+    {
+      if (entry.State is not (EntityState.Added or EntityState.Modified))
+      {
+        continue;
+      }
+
+      var user = entry.Entity;
+      user.EmailHash = _blindIndexService.Compute(user.Email, "users.email");
+      user.PhoneHash = _blindIndexService.Compute(user.Phone, "users.phone");
+    }
+
+    foreach (var entry in ChangeTracker.Entries<EmergencyContact>())
+    {
+      if (entry.State is not (EntityState.Added or EntityState.Modified))
+      {
+        continue;
+      }
+
+      var contact = entry.Entity;
+      contact.PhoneHash = _blindIndexService.Compute(contact.Phone, "emergency_contacts.phone");
+    }
   }
 
   private void ApplyAuditTimestamps()

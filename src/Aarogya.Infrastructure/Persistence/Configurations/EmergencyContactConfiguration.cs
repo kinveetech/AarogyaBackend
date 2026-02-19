@@ -1,11 +1,15 @@
 using Aarogya.Domain.Entities;
+using Aarogya.Infrastructure.Persistence.Converters;
+using Aarogya.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Aarogya.Infrastructure.Persistence.Configurations;
 
-internal sealed class EmergencyContactConfiguration : IEntityTypeConfiguration<EmergencyContact>
+internal sealed class EmergencyContactConfiguration(IPiiFieldEncryptionService encryptionService) : IEntityTypeConfiguration<EmergencyContact>
 {
+  private readonly EncryptedRequiredStringToBytesConverter _encryptedStringConverter = new(encryptionService);
+
   public void Configure(EntityTypeBuilder<EmergencyContact> builder)
   {
     builder.ToTable("emergency_contacts");
@@ -14,9 +18,9 @@ internal sealed class EmergencyContactConfiguration : IEntityTypeConfiguration<E
     builder.Property(x => x.Id).HasColumnName("id");
 
     builder.Property(x => x.UserId).HasColumnName("user_id");
-    builder.Property(x => x.NameEncrypted).HasColumnName("name_encrypted").HasColumnType("bytea").IsRequired();
+    builder.Property(x => x.Name).HasColumnName("name_encrypted").HasColumnType("bytea").HasConversion(_encryptedStringConverter).IsRequired();
     builder.Property(x => x.Relationship).HasColumnName("relationship").IsRequired();
-    builder.Property(x => x.PhoneEncrypted).HasColumnName("phone_encrypted").HasColumnType("bytea").IsRequired();
+    builder.Property(x => x.Phone).HasColumnName("phone_encrypted").HasColumnType("bytea").HasConversion(_encryptedStringConverter).IsRequired();
     builder.Property(x => x.PhoneHash).HasColumnName("phone_hash").HasColumnType("bytea");
     builder.Property(x => x.IsPrimary).HasColumnName("is_primary").HasDefaultValue(false);
     builder.Property(x => x.CreatedAt).HasColumnName("created_at");
