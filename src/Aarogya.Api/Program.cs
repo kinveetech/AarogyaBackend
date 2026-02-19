@@ -1,3 +1,4 @@
+using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Health;
 using Aarogya.Infrastructure;
@@ -41,12 +42,21 @@ builder.Services
   .BindConfiguration(DatabaseOptions.SectionName)
   .ValidateDataAnnotations();
 
+builder.Services
+  .AddOptionsWithValidateOnStart<OtpOptions>()
+  .BindConfiguration(OtpOptions.SectionName)
+  .ValidateDataAnnotations();
+
 // Add Infrastructure services (DbContext, health checks, etc.)
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Add services to the container
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSingleton<IUtcClock, SystemUtcClock>();
+builder.Services.AddSingleton<IPhoneOtpSender, MockPhoneOtpSender>();
+builder.Services.AddSingleton<IPhoneOtpService, InMemoryPhoneOtpService>();
 
 // Configure Swagger
 builder.Services.AddSwaggerGen(c =>
