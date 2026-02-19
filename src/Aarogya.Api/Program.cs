@@ -116,6 +116,7 @@ var app = builder.Build();
 
 // Validate required configuration at startup
 StartupExtensions.ValidateRequiredConfiguration(app.Configuration, app.Environment);
+await StartupExtensions.InitializeDatabaseAsync(app);
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

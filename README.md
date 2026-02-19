@@ -193,6 +193,27 @@ Configure mock Aadhaar API endpoints:
 }
 ```
 
+### Seed Data (Development/Test)
+Seed generation is idempotent and faker-based. It creates realistic fake users, reports, report parameters, access grants, emergency contacts, audit logs, and Aadhaar vault records.
+
+Configuration:
+```json
+{
+  "SeedData": {
+    "EnableOnStartup": true,
+    "PatientsCount": 24,
+    "DoctorsCount": 6,
+    "LabTechniciansCount": 4,
+    "AdminsCount": 1,
+    "ReportsPerPatient": 3
+  }
+}
+```
+
+Notes:
+- `EnableOnStartup` is `true` in Development and `false` in base config.
+- Seeding skips when seed users already exist (`external_auth_id` prefixed with `seed-`), so it is safe to re-run.
+
 ## 🧪 Testing
 
 ### Run all tests
