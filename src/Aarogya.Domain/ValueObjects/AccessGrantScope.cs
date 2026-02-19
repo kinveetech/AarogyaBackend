@@ -6,5 +6,5 @@ public sealed class AccessGrantScope
 
   public bool CanDownloadReports { get; set; } = true;
 
-  public List<string> AllowedReportTypes { get; set; } = [];
+  public ICollection<string> AllowedReportTypes { get; set; } = [];
 }

@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Aarogya.Domain.Entities;
 
+[SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "EF Core bytea columns are mapped as byte[] properties.")]
 public sealed class EmergencyContact : IAuditableEntity
 {
   public Guid Id { get; set; }

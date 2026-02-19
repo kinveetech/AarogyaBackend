@@ -6,7 +6,7 @@ public sealed class ReportResults
 
   public string? Notes { get; set; }
 
-  public List<ReportResultParameter> Parameters { get; set; } = [];
+  public ICollection<ReportResultParameter> Parameters { get; set; } = [];
 }
 
 public sealed class ReportResultParameter

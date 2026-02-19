@@ -1,7 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using Aarogya.Domain.Enums;
 
 namespace Aarogya.Domain.Entities;
 
+[SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "EF Core bytea columns are mapped as byte[] properties.")]
 public sealed class User : IAuditableEntity
 {
   public Guid Id { get; set; }

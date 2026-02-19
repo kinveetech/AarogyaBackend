@@ -19,8 +19,9 @@ internal static class EnumSnakeCaseConverter
       throw new InvalidOperationException($"Cannot map empty value to enum {typeof(TEnum).Name}.");
     }
 
-    var enumName = Enum.GetNames<TEnum>()
-      .FirstOrDefault(name => string.Equals(ToSnakeCase(name), dbValue, StringComparison.OrdinalIgnoreCase));
+    var enumName = Array.Find(
+      Enum.GetNames<TEnum>(),
+      name => string.Equals(ToSnakeCase(name), dbValue, StringComparison.OrdinalIgnoreCase));
 
     if (enumName is null)
     {
