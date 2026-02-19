@@ -3,7 +3,7 @@ using Aarogya.Domain.Enums;
 
 namespace Aarogya.Domain.Entities;
 
-[SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "EF Core bytea columns are mapped as byte[] properties.")]
+[SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "EF Core bytea hash columns are mapped as byte[] properties.")]
 public sealed class User : IAuditableEntity
 {
   public Guid Id { get; set; }
@@ -12,13 +12,13 @@ public sealed class User : IAuditableEntity
 
   public UserRole Role { get; set; }
 
-  public byte[] FirstNameEncrypted { get; set; } = [];
+  public string FirstName { get; set; } = string.Empty;
 
-  public byte[] LastNameEncrypted { get; set; } = [];
+  public string LastName { get; set; } = string.Empty;
 
-  public byte[] EmailEncrypted { get; set; } = [];
+  public string Email { get; set; } = string.Empty;
 
-  public byte[]? PhoneEncrypted { get; set; }
+  public string? Phone { get; set; }
 
   public DateOnly? DateOfBirth { get; set; }
 

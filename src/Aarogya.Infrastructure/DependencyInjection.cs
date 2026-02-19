@@ -3,10 +3,12 @@ using Aarogya.Infrastructure.Aws;
 using Aarogya.Infrastructure.Caching;
 using Aarogya.Infrastructure.Persistence;
 using Aarogya.Infrastructure.Persistence.Repositories;
+using Aarogya.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 
 namespace Aarogya.Infrastructure;
 
@@ -74,6 +76,11 @@ public static class DependencyInjection
     services.AddScoped<IEmergencyContactRepository, EmergencyContactRepository>();
     services.AddScoped<IAuditLogRepository, AuditLogRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
+    var encryptionOptions = new EncryptionOptions();
+    configuration.GetSection(EncryptionOptions.SectionName).Bind(encryptionOptions);
+    services.AddSingleton(Options.Create(encryptionOptions));
+    services.AddSingleton<IPiiFieldEncryptionService, PiiFieldEncryptionService>();
+    services.AddSingleton<IBlindIndexService, BlindIndexService>();
 
     if (!string.IsNullOrWhiteSpace(redisConnectionString))
     {

@@ -1,5 +1,6 @@
 using Amazon;
 using Amazon.Extensions.NETCore.Setup;
+using Amazon.KeyManagementService;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.SimpleEmailV2;
@@ -67,6 +68,22 @@ public static class AwsServiceRegistration
     else
     {
       services.AddAWSService<IAmazonSimpleEmailServiceV2>();
+    }
+
+    // Register AWS KMS client
+    if (useLocalStack && !string.IsNullOrWhiteSpace(serviceUrl))
+    {
+      services.AddSingleton<IAmazonKeyManagementService>(_ => new AmazonKeyManagementServiceClient(
+        awsOptions.Credentials ?? new BasicAWSCredentials("test", "test"),
+        new AmazonKeyManagementServiceConfig
+        {
+          RegionEndpoint = awsOptions.Region,
+          ServiceURL = serviceUrl
+        }));
+    }
+    else
+    {
+      services.AddAWSService<IAmazonKeyManagementService>();
     }
 
     return services;
