@@ -4,6 +4,7 @@ using Aarogya.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Aarogya.Infrastructure;
 
@@ -30,6 +31,7 @@ public static class DependencyInjection
     var enableSensitiveDataLogging = dbSection.GetSection("EnableSensitiveDataLogging").Get<bool?>() ?? false;
     var maxRetryCount = dbSection.GetSection("MaxRetryCount").Get<int?>() ?? 3;
     var maxRetryDelaySeconds = dbSection.GetSection("MaxRetryDelaySeconds").Get<int?>() ?? 5;
+    var healthCheckTimeoutSeconds = dbSection.GetSection("HealthCheckTimeoutSeconds").Get<int?>() ?? 5;
     var redisSection = configuration.GetSection("Redis");
     var redisConnectionString = configuration.GetConnectionString("Redis");
     var redisInstanceName = redisSection.GetSection("InstanceName").Get<string>() ?? "aarogya_";
@@ -83,7 +85,11 @@ public static class DependencyInjection
 
     // Register a health check for PostgreSQL
     var healthChecks = services.AddHealthChecks()
-      .AddDbContextCheck<AarogyaDbContext>("postgresql", tags: ["db", "ready"]);
+      .AddCheck<PostgreSqlConnectionHealthCheck>(
+        "postgresql",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["db", "ready"],
+        timeout: TimeSpan.FromSeconds(healthCheckTimeoutSeconds));
 
     if (!string.IsNullOrWhiteSpace(redisConnectionString))
     {
