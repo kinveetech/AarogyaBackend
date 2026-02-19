@@ -202,6 +202,11 @@ Remove last migration:
 dotnet ef migrations remove --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Infrastructure --msbuildprojectextensionspath artifacts/obj/Aarogya.Infrastructure/
 ```
 
+JSONB index verification:
+```bash
+psql "<connection-string>" -f docs/database/jsonb-index-verification.sql
+```
+
 ## 📦 Dependencies
 
 ### API Layer
