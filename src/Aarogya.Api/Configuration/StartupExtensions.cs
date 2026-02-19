@@ -1,7 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using Aarogya.Infrastructure.Persistence;
 using Aarogya.Infrastructure.Seeding;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics.CodeAnalysis;
 using Serilog;
 using Serilog.Events;
 
