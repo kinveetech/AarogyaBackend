@@ -55,7 +55,7 @@ jobs:
 
     - name: Publish test results
       if: always()
-      uses: dorny/test-reporter@v1
+      uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5
       with:
         name: .NET Test Results
         path: ./.testresults/**/*.trx
