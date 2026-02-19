@@ -3,6 +3,7 @@
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS citext;
+CREATE SCHEMA IF NOT EXISTS aadhaar_vault;
 
 DO $$ BEGIN
   CREATE TYPE user_role AS ENUM ('patient', 'doctor', 'lab_technician', 'admin');
@@ -49,6 +50,29 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   CONSTRAINT users_gender_chk CHECK (gender IS NULL OR gender IN ('male', 'female', 'other', 'unknown'))
+);
+
+CREATE TABLE IF NOT EXISTS aadhaar_vault.aadhaar_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reference_token UUID NOT NULL UNIQUE,
+  aadhaar_encrypted BYTEA NOT NULL,
+  aadhaar_sha256 BYTEA NOT NULL UNIQUE,
+  provider_request_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS aadhaar_vault.access_audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reference_token UUID NOT NULL REFERENCES aadhaar_vault.aadhaar_records(reference_token) ON DELETE CASCADE,
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  actor_user_id UUID,
+  action TEXT NOT NULL,
+  request_path TEXT,
+  request_method TEXT,
+  client_ip INET,
+  result_status INTEGER,
+  details TEXT
 );
 
 CREATE TABLE IF NOT EXISTS reports (
@@ -161,6 +185,11 @@ CREATE INDEX IF NOT EXISTS ix_users_role_active ON users(role, is_active);
 CREATE INDEX IF NOT EXISTS ix_users_email_hash ON users(email_hash);
 CREATE INDEX IF NOT EXISTS ix_users_phone_hash ON users(phone_hash);
 CREATE INDEX IF NOT EXISTS ix_users_aadhaar_sha256 ON users(aadhaar_sha256);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_aadhaar_records_reference_token ON aadhaar_vault.aadhaar_records(reference_token);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_aadhaar_records_sha256 ON aadhaar_vault.aadhaar_records(aadhaar_sha256);
+CREATE INDEX IF NOT EXISTS ix_aadhaar_access_logs_reference_token ON aadhaar_vault.access_audit_logs(reference_token);
+CREATE INDEX IF NOT EXISTS ix_aadhaar_access_logs_occurred_at ON aadhaar_vault.access_audit_logs(occurred_at DESC);
+CREATE INDEX IF NOT EXISTS ix_aadhaar_access_logs_reference_token_time ON aadhaar_vault.access_audit_logs(reference_token, occurred_at DESC);
 
 CREATE INDEX IF NOT EXISTS ix_reports_patient_uploaded_at ON reports(patient_id, uploaded_at DESC);
 CREATE INDEX IF NOT EXISTS ix_reports_status_uploaded_at ON reports(status, uploaded_at DESC);

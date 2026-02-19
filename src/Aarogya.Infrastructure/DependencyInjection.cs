@@ -1,4 +1,5 @@
 using Aarogya.Domain.Repositories;
+using Aarogya.Infrastructure.Aadhaar;
 using Aarogya.Infrastructure.Aws;
 using Aarogya.Infrastructure.Caching;
 using Aarogya.Infrastructure.Persistence;
@@ -71,11 +72,21 @@ public static class DependencyInjection
     });
 
     services.AddScoped<IUserRepository, UserRepository>();
+    services.AddScoped<IAadhaarVaultRepository, AadhaarVaultRepository>();
     services.AddScoped<IReportRepository, ReportRepository>();
     services.AddScoped<IAccessGrantRepository, AccessGrantRepository>();
     services.AddScoped<IEmergencyContactRepository, EmergencyContactRepository>();
     services.AddScoped<IAuditLogRepository, AuditLogRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
+    var aadhaarVaultOptions = new AadhaarVaultOptions();
+    configuration.GetSection(AadhaarVaultOptions.SectionName).Bind(aadhaarVaultOptions);
+    services.AddSingleton(Options.Create(aadhaarVaultOptions));
+    services.AddHttpClient<IMockAadhaarApiClient, MockAadhaarApiClient>(client =>
+    {
+      client.BaseAddress = new Uri(aadhaarVaultOptions.MockApiBaseUrl);
+      client.Timeout = TimeSpan.FromSeconds(10);
+    });
+    services.AddScoped<IAadhaarVaultService, AadhaarVaultService>();
     var encryptionOptions = new EncryptionOptions();
     configuration.GetSection(EncryptionOptions.SectionName).Bind(encryptionOptions);
     services.AddSingleton(Options.Create(encryptionOptions));

@@ -7,6 +7,8 @@ This document defines the proposed PostgreSQL schema for:
 - `access_grants`
 - `emergency_contacts`
 - `audit_logs`
+- `aadhaar_vault.aadhaar_records`
+- `aadhaar_vault.access_audit_logs`
 
 Supporting enum types, constraints, JSONB shape, and indexing strategy are included.
 
@@ -118,6 +120,7 @@ Detailed FK mappings represented in SQL:
 - `emergency_contacts.user_id` -> `users.id`
 - `audit_logs.actor_user_id` -> `users.id`
 - `report_parameters.report_id` -> `reports.id`
+- `aadhaar_vault.access_audit_logs.reference_token` -> `aadhaar_vault.aadhaar_records.reference_token`
 
 ## SQL Definition
 

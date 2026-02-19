@@ -30,6 +30,10 @@ public sealed class AarogyaDbContext(
 
   public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+  public DbSet<AadhaarVaultRecord> AadhaarVaultRecords => Set<AadhaarVaultRecord>();
+
+  public DbSet<AadhaarVaultAccessLog> AadhaarVaultAccessLogs => Set<AadhaarVaultAccessLog>();
+
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
     ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -42,6 +46,8 @@ public sealed class AarogyaDbContext(
     // Apply IEntityTypeConfiguration<T> implementations.
     modelBuilder.ApplyConfiguration(new UserConfiguration(_piiFieldEncryptionService));
     modelBuilder.ApplyConfiguration(new EmergencyContactConfiguration(_piiFieldEncryptionService));
+    modelBuilder.ApplyConfiguration(new AadhaarVaultRecordConfiguration(_piiFieldEncryptionService));
+    modelBuilder.ApplyConfiguration(new AadhaarVaultAccessLogConfiguration());
     modelBuilder.ApplyConfiguration(new ReportConfiguration());
     modelBuilder.ApplyConfiguration(new ReportParameterConfiguration());
     modelBuilder.ApplyConfiguration(new AccessGrantConfiguration());

@@ -4,6 +4,7 @@ using System.Net;
 using Aarogya.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aarogya.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AarogyaDbContext))]
-    partial class AarogyaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260219042215_AddAadhaarVault")]
+    partial class AddAadhaarVault
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -616,8 +619,6 @@ namespace Aarogya.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AadhaarRefToken");
-
                     b.HasIndex("AadhaarSha256")
                         .HasDatabaseName("ix_users_aadhaar_sha256");
 
@@ -734,15 +735,6 @@ namespace Aarogya.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Report");
-                });
-
-            modelBuilder.Entity("Aarogya.Domain.Entities.User", b =>
-                {
-                    b.HasOne("Aarogya.Domain.Entities.AadhaarVaultRecord", null)
-                        .WithMany()
-                        .HasForeignKey("AadhaarRefToken")
-                        .HasPrincipalKey("ReferenceToken")
-                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Aarogya.Domain.Entities.AadhaarVaultRecord", b =>
