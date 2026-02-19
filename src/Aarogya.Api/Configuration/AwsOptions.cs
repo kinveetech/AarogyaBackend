@@ -21,6 +21,8 @@ public sealed class AwsOptions
   public S3Options S3 { get; set; } = new();
 
   public SesOptions Ses { get; set; } = new();
+
+  public CognitoOptions Cognito { get; set; } = new();
 }
 
 public sealed class S3Options
@@ -45,4 +47,33 @@ public sealed class SesOptions
 
   [Required]
   public string SenderName { get; set; } = string.Empty;
+}
+
+public sealed class CognitoOptions
+{
+  [Required]
+  public string UserPoolName { get; set; } = string.Empty;
+
+  public string? UserPoolId { get; set; }
+
+  public string? AppClientId { get; set; }
+
+  [RegularExpression("^(OFF|ON|OPTIONAL)$", ErrorMessage = "MfaConfiguration must be OFF, ON, or OPTIONAL.")]
+  public string MfaConfiguration { get; set; } = "OPTIONAL";
+
+  public CognitoPasswordPolicyOptions PasswordPolicy { get; set; } = new();
+}
+
+public sealed class CognitoPasswordPolicyOptions
+{
+  [Range(8, 99)]
+  public int MinimumLength { get; set; } = 8;
+
+  public bool RequireLowercase { get; set; } = true;
+
+  public bool RequireUppercase { get; set; } = true;
+
+  public bool RequireNumbers { get; set; } = true;
+
+  public bool RequireSymbols { get; set; } = true;
 }

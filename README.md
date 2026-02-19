@@ -156,6 +156,34 @@ Edit `appsettings.json`:
 }
 ```
 
+### Cognito Configuration
+Configure Cognito under the `Aws:Cognito` section:
+
+```json
+{
+  "Aws": {
+    "Cognito": {
+      "UserPoolName": "aarogya-dev-users",
+      "UserPoolId": "SET_VIA_ENV_VAR",
+      "AppClientId": "SET_VIA_ENV_VAR",
+      "MfaConfiguration": "OPTIONAL",
+      "PasswordPolicy": {
+        "MinimumLength": 8,
+        "RequireLowercase": true,
+        "RequireUppercase": true,
+        "RequireNumbers": true,
+        "RequireSymbols": true
+      }
+    }
+  }
+}
+```
+
+Notes:
+- `MfaConfiguration` supports `OFF`, `ON`, or `OPTIONAL`.
+- LocalStack bootstrap attempts to create/update the user pool with email + phone sign-up attributes.
+- In local/dev, these values can be overridden via `.env` (`AWS_COGNITO_*`) or environment variables.
+
 ### PII Encryption Configuration
 PII fields (`first_name`, `last_name`, `email`, `phone`, emergency-contact `name/phone`) are encrypted at the application layer and stored in `bytea` columns. Blind indexes are generated for searchable fields (`email_hash`, `phone_hash`).
 
@@ -307,7 +335,8 @@ pgAdmin default login:
 
 Environment configuration:
 - Copy `.env.example` to `.env` and customize values as needed.
-- `docker-compose.yml` reads DB, pgAdmin, Redis, and JWT settings from `.env` with safe defaults.
+- `docker-compose.yml` reads DB, pgAdmin, Redis, JWT, and AWS/Cognito settings from `.env` with safe defaults.
+- Cognito-specific toggles include: `AWS_COGNITO_USER_POOL_NAME`, `AWS_COGNITO_MFA_CONFIGURATION`, `AWS_COGNITO_PASSWORD_MIN_LENGTH`, and `AWS_COGNITO_PASSWORD_REQUIRE_*`.
 
 Named volumes used for persistence:
 - `aarogyabackend_pgdata` (PostgreSQL data)
@@ -322,6 +351,7 @@ curl http://localhost:4566/_localstack/health
 docker compose exec localstack aws --endpoint-url http://localhost:4566 s3api list-buckets
 docker compose exec localstack aws --endpoint-url http://localhost:4566 sqs list-queues
 docker compose exec localstack aws --endpoint-url http://localhost:4566 kms list-aliases
+docker compose exec localstack aws --endpoint-url http://localhost:4566 cognito-idp list-user-pools --max-results 60
 docker compose down -v
 ```
 

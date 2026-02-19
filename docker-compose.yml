@@ -22,6 +22,13 @@ services:
       Aws__UseLocalStack: ${AWS_USE_LOCALSTACK:-true}
       Aws__AccessKey: ${AWS_ACCESS_KEY:-test}
       Aws__SecretKey: ${AWS_SECRET_KEY:-test}
+      Aws__Cognito__UserPoolName: ${AWS_COGNITO_USER_POOL_NAME:-aarogya-dev-users}
+      Aws__Cognito__MfaConfiguration: ${AWS_COGNITO_MFA_CONFIGURATION:-OPTIONAL}
+      Aws__Cognito__PasswordPolicy__MinimumLength: ${AWS_COGNITO_PASSWORD_MIN_LENGTH:-8}
+      Aws__Cognito__PasswordPolicy__RequireLowercase: ${AWS_COGNITO_PASSWORD_REQUIRE_LOWERCASE:-true}
+      Aws__Cognito__PasswordPolicy__RequireUppercase: ${AWS_COGNITO_PASSWORD_REQUIRE_UPPERCASE:-true}
+      Aws__Cognito__PasswordPolicy__RequireNumbers: ${AWS_COGNITO_PASSWORD_REQUIRE_NUMBERS:-true}
+      Aws__Cognito__PasswordPolicy__RequireSymbols: ${AWS_COGNITO_PASSWORD_REQUIRE_SYMBOLS:-true}
       Aws__S3__BucketName: ${AWS_S3_BUCKET_NAME:-aarogya-dev}
     depends_on:
       postgres:
@@ -98,6 +105,12 @@ services:
       LOCALSTACK_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-aarogya-dev}
       LOCALSTACK_SQS_QUEUE_NAME: ${AWS_SQS_QUEUE_NAME:-aarogya-dev-queue}
       LOCALSTACK_COGNITO_USER_POOL_NAME: ${AWS_COGNITO_USER_POOL_NAME:-aarogya-dev-users}
+      LOCALSTACK_COGNITO_MFA_CONFIGURATION: ${AWS_COGNITO_MFA_CONFIGURATION:-OPTIONAL}
+      LOCALSTACK_COGNITO_PASSWORD_MIN_LENGTH: ${AWS_COGNITO_PASSWORD_MIN_LENGTH:-8}
+      LOCALSTACK_COGNITO_PASSWORD_REQUIRE_LOWERCASE: ${AWS_COGNITO_PASSWORD_REQUIRE_LOWERCASE:-true}
+      LOCALSTACK_COGNITO_PASSWORD_REQUIRE_UPPERCASE: ${AWS_COGNITO_PASSWORD_REQUIRE_UPPERCASE:-true}
+      LOCALSTACK_COGNITO_PASSWORD_REQUIRE_NUMBERS: ${AWS_COGNITO_PASSWORD_REQUIRE_NUMBERS:-true}
+      LOCALSTACK_COGNITO_PASSWORD_REQUIRE_SYMBOLS: ${AWS_COGNITO_PASSWORD_REQUIRE_SYMBOLS:-true}
       LOCALSTACK_KMS_ALIAS: ${AWS_KMS_ALIAS:-alias/aarogya-dev}
     ports:
       - "4566:4566"
