@@ -215,6 +215,12 @@ dotnet ef migrations remove --project src/Aarogya.Infrastructure --startup-proje
 - Microsoft.EntityFrameworkCore.SqlServer
 - Npgsql.EntityFrameworkCore.PostgreSQL
 
+### Data Access Abstractions
+- Generic repository contract: `IRepository<T>`
+- Unit of work contract: `IUnitOfWork`
+- Specification pattern contracts: `ISpecification<T>` + `BaseSpecification<T>`
+- EF Core implementations live under `src/Aarogya.Infrastructure/Persistence/Repositories`
+
 ## 🐳 Local Docker Run
 
 ### Docker Compose (API + PostgreSQL + Redis + LocalStack + pgAdmin)
