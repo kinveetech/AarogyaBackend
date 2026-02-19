@@ -29,7 +29,7 @@ tests/
 | Mode | Services | Access |
 |------|----------|--------|
 | Local .NET | `Aarogya.Api` only | `http://localhost:5000` / `https://localhost:5001` |
-| Docker Compose | `aarogya-api`, `aarogya-postgres`, `aarogya-redis`, `aarogya-pgadmin` | API: `http://localhost:8080/swagger/index.html`, pgAdmin: `http://localhost:5050` |
+| Docker Compose | `aarogya-api`, `aarogya-postgres`, `aarogya-redis`, `aarogya-localstack`, `aarogya-pgadmin` | API: `http://localhost:8080/swagger/index.html`, LocalStack: `http://localhost:4566/_localstack/health`, pgAdmin: `http://localhost:5050` |
 | .NET Aspire AppHost | `api`, `postgres`, `redis`, `localstack` | `dotnet run --project AppHost` (dashboard URL shown in console) |
 | Kubernetes (`kind`) | `aarogya-api`, `postgres`, `redis`, `pgadmin` in namespace `aarogya` | API: `kubectl -n aarogya port-forward svc/aarogya-api 8080:80`, pgAdmin: `kubectl -n aarogya port-forward svc/pgadmin 5050:80` |
 
@@ -209,7 +209,7 @@ dotnet ef migrations remove --project src/Aarogya.Infrastructure --startup-proje
 
 ## 🐳 Local Docker Run
 
-### Docker Compose (API + PostgreSQL + Redis + pgAdmin)
+### Docker Compose (API + PostgreSQL + Redis + LocalStack + pgAdmin)
 ```bash
 docker compose up --build -d
 docker compose ps
@@ -221,6 +221,7 @@ Compose services:
 - PostgreSQL 16 + `pgcrypto`: `aarogya-postgres` (`5432`)
 - PostgreSQL extension bootstrap: `aarogya-postgres-init` (one-shot `CREATE EXTENSION IF NOT EXISTS pgcrypto`)
 - Redis 7: `aarogya-redis` (`6379`)
+- LocalStack 3: `aarogya-localstack` (`4566`) with init script for S3/SQS/Cognito/KMS
 - pgAdmin: `aarogya-pgadmin` (`5050`)
 
 pgAdmin default login:
@@ -234,13 +235,22 @@ Environment configuration:
 Named volumes used for persistence:
 - `aarogyabackend_pgdata` (PostgreSQL data)
 - `aarogyabackend_redisdata` (Redis AOF/persistence data)
+- `aarogyabackend_localstackdata` (LocalStack state)
 - `aarogyabackend_pgadmindata` (pgAdmin settings and state)
 
 Useful commands:
 ```bash
 docker compose logs -f api
+curl http://localhost:4566/_localstack/health
+docker compose exec localstack aws --endpoint-url http://localhost:4566 s3api list-buckets
+docker compose exec localstack aws --endpoint-url http://localhost:4566 sqs list-queues
+docker compose exec localstack aws --endpoint-url http://localhost:4566 kms list-aliases
 docker compose down -v
 ```
+
+LocalStack note:
+- `cognito-idp` calls may require LocalStack Pro depending on your image/license.
+- This repo's init script attempts Cognito provisioning and logs a warning when the API is unavailable.
 
 ### .NET Aspire AppHost (API + PostgreSQL + Redis + LocalStack)
 ```bash
@@ -251,7 +261,7 @@ AppHost services:
 - `api` (Aarogya API)
 - `postgres` (PostgreSQL 16)
 - `redis` (Redis 7)
-- `localstack` (S3 + SES emulation)
+- `localstack` (S3 + SQS + Cognito + KMS + SES emulation)
 
 Aspire dashboard:
 - URL is printed in AppHost startup logs

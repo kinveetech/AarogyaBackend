@@ -17,6 +17,12 @@ services:
       Database__EnableDetailedErrors: "true"
       Database__EnableSensitiveDataLogging: "true"
       Database__AutoMigrateOnStartup: "true"
+      Aws__Region: ${AWS_REGION:-ap-south-1}
+      Aws__ServiceUrl: ${AWS_SERVICE_URL:-http://localstack:4566}
+      Aws__UseLocalStack: ${AWS_USE_LOCALSTACK:-true}
+      Aws__AccessKey: ${AWS_ACCESS_KEY:-test}
+      Aws__SecretKey: ${AWS_SECRET_KEY:-test}
+      Aws__S3__BucketName: ${AWS_S3_BUCKET_NAME:-aarogya-dev}
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,6 +30,8 @@ services:
         condition: service_healthy
       postgres-init:
         condition: service_completed_successfully
+      localstack:
+        condition: service_healthy
     networks:
       - aarogya-net
 
@@ -78,6 +86,32 @@ services:
     networks:
       - aarogya-net
 
+  localstack:
+    image: localstack/localstack:3
+    container_name: aarogya-localstack
+    environment:
+      SERVICES: s3,sqs,cognito,kms,ses
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-south-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_KEY:-test}
+      LOCALSTACK_HOST: localstack
+      LOCALSTACK_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-aarogya-dev}
+      LOCALSTACK_SQS_QUEUE_NAME: ${AWS_SQS_QUEUE_NAME:-aarogya-dev-queue}
+      LOCALSTACK_COGNITO_USER_POOL_NAME: ${AWS_COGNITO_USER_POOL_NAME:-aarogya-dev-users}
+      LOCALSTACK_KMS_ALIAS: ${AWS_KMS_ALIAS:-alias/aarogya-dev}
+    ports:
+      - "4566:4566"
+    volumes:
+      - ./docker/localstack/init:/etc/localstack/init/ready.d:ro
+      - localstackdata:/var/lib/localstack
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    networks:
+      - aarogya-net
+
   pgadmin:
     image: dpage/pgadmin4:8
     container_name: aarogya-pgadmin
@@ -104,6 +138,7 @@ volumes:
   pgdata:
   redisdata:
   pgadmindata:
+  localstackdata:
 
 networks:
   aarogya-net:
