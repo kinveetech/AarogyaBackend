@@ -15,8 +15,8 @@ var redis = builder.AddContainer("redis", "redis")
 
 var localStack = builder.AddContainer("localstack", "localstack/localstack")
   .WithImageTag("3")
-  .WithEnvironment("SERVICES", "s3,ses")
-  .WithEnvironment("DEFAULT_REGION", "ap-south-1")
+  .WithEnvironment("SERVICES", "s3,sqs,cognito,kms,ses")
+  .WithEnvironment("AWS_DEFAULT_REGION", "ap-south-1")
   .WithEnvironment("AWS_ACCESS_KEY_ID", "test")
   .WithEnvironment("AWS_SECRET_ACCESS_KEY", "test")
   .WithEndpoint(name: "http", port: 4566, targetPort: 4566);
