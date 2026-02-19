@@ -1,7 +1,7 @@
+using Aarogya.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Options;
-using Aarogya.Infrastructure.Security;
 
 namespace Aarogya.Infrastructure.Persistence;
 
