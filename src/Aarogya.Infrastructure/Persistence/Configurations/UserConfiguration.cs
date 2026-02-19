@@ -51,5 +51,11 @@ internal sealed class UserConfiguration(IPiiFieldEncryptionService encryptionSer
     builder.HasIndex(x => x.AadhaarSha256).HasDatabaseName("ix_users_aadhaar_sha256");
     builder.HasIndex(x => new { x.Role, x.IsActive }).HasDatabaseName("ix_users_role_active");
 
+    builder.HasOne<AadhaarVaultRecord>()
+      .WithMany()
+      .HasForeignKey(x => x.AadhaarRefToken)
+      .HasPrincipalKey(x => x.ReferenceToken)
+      .OnDelete(DeleteBehavior.SetNull);
+
   }
 }

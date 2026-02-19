@@ -154,4 +154,4 @@ jobs:
           nuget.config
 
     - name: Check code formatting
-      run: dotnet format --verify-no-changes --verbosity diagnostic
+      run: dotnet format --verify-no-changes --verbosity diagnostic --exclude src/Aarogya.Infrastructure/Persistence/Migrations

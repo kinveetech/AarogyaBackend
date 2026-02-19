@@ -176,6 +176,23 @@ Notes:
 - Local/dev: set `UseAwsKms=false` and provide `LocalDataKey`.
 - Always set a strong `BlindIndexKey` via user-secrets or environment variables.
 
+### Aadhaar Vault Configuration
+Issue #19 introduces a dedicated Aadhaar vault schema with:
+- `aadhaar_vault.aadhaar_records` for encrypted Aadhaar + SHA-256 lookup + reference token
+- `aadhaar_vault.access_audit_logs` for separate vault access auditing
+
+Configure mock Aadhaar API endpoints:
+```json
+{
+  "AadhaarVault": {
+    "UseMockApi": true,
+    "MockApiBaseUrl": "http://localhost:5099",
+    "ValidateEndpoint": "/api/mock/uidai/validate",
+    "TokenizeEndpoint": "/api/mock/uidai/tokenize"
+  }
+}
+```
+
 ## 🧪 Testing
 
 ### Run all tests
