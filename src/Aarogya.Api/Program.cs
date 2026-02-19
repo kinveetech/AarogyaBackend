@@ -1,4 +1,5 @@
 using Aarogya.Api.Configuration;
+using Aarogya.Api.Health;
 using Aarogya.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -137,11 +138,13 @@ app.MapControllers();
 // Health check endpoints
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
-  Predicate = _ => true
+  Predicate = _ => true,
+  ResponseWriter = HealthCheckResponseWriter.WriteResponse
 });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
-  Predicate = check => check.Tags.Contains("ready")
+  Predicate = check => check.Tags.Contains("ready"),
+  ResponseWriter = HealthCheckResponseWriter.WriteResponse
 });
 
 try

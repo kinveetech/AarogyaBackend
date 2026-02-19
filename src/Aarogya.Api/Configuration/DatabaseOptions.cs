@@ -41,4 +41,10 @@ public sealed class DatabaseOptions
   /// Should only be true in Development.
   /// </summary>
   public bool AutoMigrateOnStartup { get; set; }
+
+  /// <summary>
+  /// Timeout in seconds for database health check execution.
+  /// </summary>
+  [Range(1, 60)]
+  public int HealthCheckTimeoutSeconds { get; set; } = 5;
 }

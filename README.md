@@ -82,6 +82,8 @@ tests/
    - HTTPS: `https://localhost:5001`
    - HTTP: `http://localhost:5000`
    - Swagger UI: `https://localhost:5001/swagger`
+   - Health (all checks): `https://localhost:5001/health`
+   - Health (readiness): `https://localhost:5001/health/ready`
 
 ## 🧪 Dev Container
 
@@ -343,6 +345,20 @@ Then open `http://localhost:5050` with:
 - Password: `admin`
 
 If using `k9s`, switch namespace to `aarogya` to view these pods.
+
+## 🩺 Health Checks
+
+Health checks are configured via ASP.NET Core health check middleware.
+
+Endpoints:
+- `/health` (all checks)
+- `/health/ready` (checks tagged as `ready`)
+
+Database health check:
+- Name: `postgresql`
+- Includes a configurable timeout via `Database:HealthCheckTimeoutSeconds` in:
+  - `src/Aarogya.Api/appsettings.json`
+  - `src/Aarogya.Api/appsettings.Development.json`
 
 ## 🧰 Redis Cache Configuration
 
