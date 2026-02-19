@@ -28,7 +28,11 @@ internal sealed class InMemoryPhoneOtpService(
     }
 
     var now = clock.UtcNow;
+    EvictStaleEntries(now);
+
     var entry = _entries.GetOrAdd(normalizedPhone, _ => new OtpEntry());
+    string? otpToSend = null;
+    DateTimeOffset? expiresAt = null;
 
     lock (entry.Lock)
     {
@@ -43,15 +47,17 @@ internal sealed class InMemoryPhoneOtpService(
       entry.RequestTimestamps.Add(now);
       entry.OtpCode = GenerateOtp(_options.CodeLength);
       entry.ExpiresAt = now.AddSeconds(_options.CodeExpirySeconds);
+      otpToSend = entry.OtpCode;
+      expiresAt = entry.ExpiresAt;
     }
 
-    await otpSender.SendOtpAsync(normalizedPhone, entry.OtpCode!, entry.ExpiresAt!.Value, cancellationToken);
+    await otpSender.SendOtpAsync(normalizedPhone, otpToSend!, expiresAt!.Value, cancellationToken);
 
     return new OtpRequestResult(
       true,
       false,
       "OTP sent successfully (mocked delivery).",
-      entry.ExpiresAt);
+      expiresAt);
   }
 
   public Task<OtpVerificationResult> VerifyOtpAsync(string phoneNumber, string otp, CancellationToken cancellationToken = default)
@@ -84,6 +90,10 @@ internal sealed class InMemoryPhoneOtpService(
       {
         entry.OtpCode = null;
         entry.ExpiresAt = null;
+        if (entry.RequestTimestamps.Count == 0)
+        {
+          _entries.TryRemove(normalizedPhone, out _);
+        }
         return Task.FromResult(new OtpVerificationResult(false, "OTP expired."));
       }
 
@@ -94,7 +104,29 @@ internal sealed class InMemoryPhoneOtpService(
 
       entry.OtpCode = null;
       entry.ExpiresAt = null;
+      _entries.TryRemove(normalizedPhone, out _);
       return Task.FromResult(new OtpVerificationResult(true, "Phone number verified."));
+    }
+  }
+
+  private void EvictStaleEntries(DateTimeOffset now)
+  {
+    foreach (var kvp in _entries)
+    {
+      var phoneNumber = kvp.Key;
+      var entry = kvp.Value;
+
+      lock (entry.Lock)
+      {
+        var windowStart = now.AddSeconds(-_options.RateLimitWindowSeconds);
+        entry.RequestTimestamps.RemoveAll(timestamp => timestamp < windowStart);
+
+        var hasActiveOtp = entry.ExpiresAt is not null && entry.ExpiresAt.Value >= now;
+        if (!hasActiveOtp && entry.RequestTimestamps.Count == 0)
+        {
+          _entries.TryRemove(phoneNumber, out _);
+        }
+      }
     }
   }
 
