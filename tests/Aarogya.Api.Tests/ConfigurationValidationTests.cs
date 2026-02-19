@@ -10,7 +10,7 @@ namespace Aarogya.Api.Tests;
 public class ConfigurationValidationTests
 {
   [Fact]
-  public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenJwtKeyMissing()
+  public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenCognitoUserPoolIdMissing()
   {
     var configuration = BuildConfiguration(new Dictionary<string, string?>
     {
@@ -20,7 +20,7 @@ public class ConfigurationValidationTests
     var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
 
     action.Should().Throw<InvalidOperationException>()
-      .WithMessage("*Missing Jwt:Key*");
+      .WithMessage("*Missing Aws:Cognito:UserPoolId*");
   }
 
   [Fact]
@@ -30,7 +30,8 @@ public class ConfigurationValidationTests
     {
       ["ConnectionStrings:DefaultConnection"] =
         "Host=db;Port=5432;Database=aarogya;Username=aarogya;Password=aarogya_dev_password",
-      ["Jwt:Key"] = "this-is-a-valid-jwt-key-with-more-than-thirty-two-characters"
+      ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId",
+      ["Aws:Cognito:AppClientId"] = "example-app-client-id"
     });
 
     var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
@@ -40,12 +41,28 @@ public class ConfigurationValidationTests
   }
 
   [Fact]
+  public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenCognitoAppClientIdMissing()
+  {
+    var configuration = BuildConfiguration(new Dictionary<string, string?>
+    {
+      ["ConnectionStrings:DefaultConnection"] = "Host=db;Username=user;Password=strong-password",
+      ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId"
+    });
+
+    var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
+
+    action.Should().Throw<InvalidOperationException>()
+      .WithMessage("*Missing Aws:Cognito:AppClientId*");
+  }
+
+  [Fact]
   public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenAwsServiceUrlIsInvalid()
   {
     var configuration = BuildConfiguration(new Dictionary<string, string?>
     {
       ["ConnectionStrings:DefaultConnection"] = "Host=db;Username=user;Password=strong-password",
-      ["Jwt:Key"] = "this-is-a-valid-jwt-key-with-more-than-thirty-two-characters",
+      ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId",
+      ["Aws:Cognito:AppClientId"] = "example-app-client-id",
       ["Aws:ServiceUrl"] = "not-a-url"
     });
 

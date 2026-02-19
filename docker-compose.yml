@@ -11,9 +11,6 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: ${DEFAULT_CONNECTION_STRING:-Host=postgres;Port=5432;Database=aarogya;Username=aarogya;Password=aarogya_dev_password}
       ConnectionStrings__Redis: ${REDIS_CONNECTION_STRING:-redis:6379}
-      Jwt__Key: ${JWT_KEY:-development-key-change-this-to-32-plus-chars}
-      Jwt__Issuer: ${JWT_ISSUER:-AarogyaAPI}
-      Jwt__Audience: ${JWT_AUDIENCE:-AarogyaClients}
       Database__EnableDetailedErrors: "true"
       Database__EnableSensitiveDataLogging: "true"
       Database__AutoMigrateOnStartup: "true"
@@ -23,6 +20,9 @@ services:
       Aws__AccessKey: ${AWS_ACCESS_KEY:-test}
       Aws__SecretKey: ${AWS_SECRET_KEY:-test}
       Aws__Cognito__UserPoolName: ${AWS_COGNITO_USER_POOL_NAME:-aarogya-dev-users}
+      Aws__Cognito__UserPoolId: ${AWS_COGNITO_USER_POOL_ID:-SET_VIA_USER_SECRETS_OR_ENV_VAR}
+      Aws__Cognito__AppClientId: ${AWS_COGNITO_APP_CLIENT_ID:-SET_VIA_USER_SECRETS_OR_ENV_VAR}
+      Aws__Cognito__Issuer: ${AWS_COGNITO_ISSUER:-http://localstack:4566/SET_VIA_USER_SECRETS_OR_ENV_VAR}
       Aws__Cognito__MfaConfiguration: ${AWS_COGNITO_MFA_CONFIGURATION:-OPTIONAL}
       Aws__Cognito__PasswordPolicy__MinimumLength: ${AWS_COGNITO_PASSWORD_MIN_LENGTH:-8}
       Aws__Cognito__PasswordPolicy__RequireLowercase: ${AWS_COGNITO_PASSWORD_REQUIRE_LOWERCASE:-true}

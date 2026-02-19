@@ -125,10 +125,16 @@ public static class StartupExtensions
       violations.Add("Missing ConnectionStrings:DefaultConnection");
     }
 
-    var jwtKeyValue = configuration["Jwt:Key"];
-    if (string.IsNullOrWhiteSpace(jwtKeyValue) || jwtKeyValue == "SET_VIA_USER_SECRETS_OR_ENV_VAR")
+    var cognitoUserPoolId = configuration["Aws:Cognito:UserPoolId"];
+    if (string.IsNullOrWhiteSpace(cognitoUserPoolId) || cognitoUserPoolId == "SET_VIA_USER_SECRETS_OR_ENV_VAR")
     {
-      violations.Add("Missing Jwt:Key");
+      violations.Add("Missing Aws:Cognito:UserPoolId");
+    }
+
+    var cognitoAppClientId = configuration["Aws:Cognito:AppClientId"];
+    if (string.IsNullOrWhiteSpace(cognitoAppClientId) || cognitoAppClientId == "SET_VIA_USER_SECRETS_OR_ENV_VAR")
+    {
+      violations.Add("Missing Aws:Cognito:AppClientId");
     }
 
     return violations;
@@ -143,14 +149,6 @@ public static class StartupExtensions
     IHostEnvironment environment)
   {
     var violations = new List<string>();
-    var jwtKeyValue = configuration["Jwt:Key"];
-
-    if (!string.IsNullOrWhiteSpace(jwtKeyValue)
-      && jwtKeyValue != "SET_VIA_USER_SECRETS_OR_ENV_VAR"
-      && jwtKeyValue.Length < 32)
-    {
-      violations.Add("Jwt:Key must be at least 32 characters long");
-    }
 
     var defaultConnection = configuration["ConnectionStrings:DefaultConnection"] ?? string.Empty;
     if (!environment.IsDevelopment()
