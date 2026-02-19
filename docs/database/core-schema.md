@@ -14,18 +14,13 @@ Supporting enum types, constraints, JSONB shape, and indexing strategy are inclu
 
 ```mermaid
 erDiagram
-  users ||--o{ reports : "patient_id"
-  users ||--o{ reports : "uploaded_by_user_id"
-  users ||--o{ reports : "doctor_id"
-  users ||--o{ access_grants : "patient_id"
-  users ||--o{ access_grants : "granted_to_user_id"
-  users ||--o{ access_grants : "granted_by_user_id"
-  users ||--o{ emergency_contacts : "user_id"
-  users ||--o{ audit_logs : "actor_user_id"
+  USERS ||--o{ REPORTS : has
+  REPORTS ||--o{ REPORT_PARAMETERS : has
+  USERS ||--o{ ACCESS_GRANTS : grants
+  USERS ||--o{ EMERGENCY_CONTACTS : has
+  USERS ||--o{ AUDIT_LOGS : creates
 
-  reports ||--o{ report_parameters : "report_id"
-
-  users {
+  USERS {
     uuid id PK
     text external_auth_id UK
     user_role role
@@ -42,7 +37,7 @@ erDiagram
     timestamptz updated_at
   }
 
-  reports {
+  REPORTS {
     uuid id PK
     text report_number UK
     uuid patient_id FK
@@ -59,7 +54,7 @@ erDiagram
     timestamptz updated_at
   }
 
-  report_parameters {
+  REPORT_PARAMETERS {
     uuid id PK
     uuid report_id FK
     text parameter_code
@@ -73,7 +68,7 @@ erDiagram
     timestamptz created_at
   }
 
-  access_grants {
+  ACCESS_GRANTS {
     uuid id PK
     uuid patient_id FK
     uuid granted_to_user_id FK
@@ -86,7 +81,7 @@ erDiagram
     timestamptz created_at
   }
 
-  emergency_contacts {
+  EMERGENCY_CONTACTS {
     uuid id PK
     uuid user_id FK
     bytea name_encrypted
@@ -98,7 +93,7 @@ erDiagram
     timestamptz updated_at
   }
 
-  audit_logs {
+  AUDIT_LOGS {
     uuid id PK
     timestamptz occurred_at
     uuid actor_user_id FK
@@ -115,6 +110,13 @@ erDiagram
     jsonb details
   }
 ```
+
+Detailed FK mappings represented in SQL:
+- `reports.patient_id`, `reports.uploaded_by_user_id`, `reports.doctor_id` -> `users.id`
+- `access_grants.patient_id`, `access_grants.granted_to_user_id`, `access_grants.granted_by_user_id` -> `users.id`
+- `emergency_contacts.user_id` -> `users.id`
+- `audit_logs.actor_user_id` -> `users.id`
+- `report_parameters.report_id` -> `reports.id`
 
 ## SQL Definition
 
