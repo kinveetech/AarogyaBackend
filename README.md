@@ -69,7 +69,8 @@ tests/
 
 4. **Run database migrations** (when available)
    ```bash
-   dotnet ef database update --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Api
+   dotnet tool restore
+   dotnet ef database update --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Infrastructure --msbuildprojectextensionspath artifacts/obj/Aarogya.Infrastructure/
    ```
 
 5. **Run the application**
@@ -179,19 +180,24 @@ dotnet format
 
 ### Database Migrations
 
+Restore local tools first:
+```bash
+dotnet tool restore
+```
+
 Create migration:
 ```bash
-dotnet ef migrations add MigrationName --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Api
+dotnet ef migrations add MigrationName --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Infrastructure --msbuildprojectextensionspath artifacts/obj/Aarogya.Infrastructure/
 ```
 
 Apply migration:
 ```bash
-dotnet ef database update --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Api
+dotnet ef database update --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Infrastructure --msbuildprojectextensionspath artifacts/obj/Aarogya.Infrastructure/
 ```
 
 Remove last migration:
 ```bash
-dotnet ef migrations remove --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Api
+dotnet ef migrations remove --project src/Aarogya.Infrastructure --startup-project src/Aarogya.Infrastructure --msbuildprojectextensionspath artifacts/obj/Aarogya.Infrastructure/
 ```
 
 ## 📦 Dependencies
