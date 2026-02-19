@@ -126,13 +126,13 @@ public static class StartupExtensions
     }
 
     var cognitoUserPoolId = configuration["Aws:Cognito:UserPoolId"];
-    if (string.IsNullOrWhiteSpace(cognitoUserPoolId) || cognitoUserPoolId == "SET_VIA_USER_SECRETS_OR_ENV_VAR")
+    if (IsMissingConfigurationValue(cognitoUserPoolId))
     {
       violations.Add("Missing Aws:Cognito:UserPoolId");
     }
 
     var cognitoAppClientId = configuration["Aws:Cognito:AppClientId"];
-    if (string.IsNullOrWhiteSpace(cognitoAppClientId) || cognitoAppClientId == "SET_VIA_USER_SECRETS_OR_ENV_VAR")
+    if (IsMissingConfigurationValue(cognitoAppClientId))
     {
       violations.Add("Missing Aws:Cognito:AppClientId");
     }
@@ -188,5 +188,16 @@ public static class StartupExtensions
   private static bool ContainsAny(string value, params string[] patterns)
   {
     return Array.Exists(patterns, pattern => value.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+  }
+
+  private static bool IsMissingConfigurationValue(string? value)
+  {
+    if (string.IsNullOrWhiteSpace(value))
+    {
+      return true;
+    }
+
+    return value.Equals("SET_VIA_USER_SECRETS_OR_ENV_VAR", StringComparison.OrdinalIgnoreCase)
+      || value.Equals("SET_VIA_ENV_VAR", StringComparison.OrdinalIgnoreCase);
   }
 }

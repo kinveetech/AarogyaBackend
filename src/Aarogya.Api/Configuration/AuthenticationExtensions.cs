@@ -54,9 +54,12 @@ public static class AuthenticationExtensions
   {
     ArgumentNullException.ThrowIfNull(awsOptions);
 
-    if (!string.IsNullOrWhiteSpace(awsOptions.Cognito.Issuer))
+    var configuredIssuer = awsOptions.Cognito.Issuer;
+    if (!string.IsNullOrWhiteSpace(configuredIssuer)
+      && !IsPlaceholderValue(configuredIssuer)
+      && Uri.TryCreate(configuredIssuer, UriKind.Absolute, out var parsedIssuer))
     {
-      return awsOptions.Cognito.Issuer.TrimEnd('/');
+      return parsedIssuer.ToString().TrimEnd('/');
     }
 
     if (string.IsNullOrWhiteSpace(awsOptions.Cognito.UserPoolId))
@@ -79,5 +82,16 @@ public static class AuthenticationExtensions
 
     return !awsOptions.UseLocalStack
       && !issuer.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+  }
+
+  private static bool IsPlaceholderValue(string? value)
+  {
+    if (string.IsNullOrWhiteSpace(value))
+    {
+      return true;
+    }
+
+    return value.Contains("SET_VIA_ENV_VAR", StringComparison.OrdinalIgnoreCase)
+      || value.Contains("SET_VIA_USER_SECRETS_OR_ENV_VAR", StringComparison.OrdinalIgnoreCase);
   }
 }

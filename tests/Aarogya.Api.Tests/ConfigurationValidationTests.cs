@@ -56,6 +56,23 @@ public class ConfigurationValidationTests
   }
 
   [Fact]
+  public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenCognitoValuesUseEnvPlaceholders()
+  {
+    var configuration = BuildConfiguration(new Dictionary<string, string?>
+    {
+      ["ConnectionStrings:DefaultConnection"] = "Host=db;Username=user;Password=strong-password",
+      ["Aws:Cognito:UserPoolId"] = "SET_VIA_ENV_VAR",
+      ["Aws:Cognito:AppClientId"] = "SET_VIA_ENV_VAR"
+    });
+
+    var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
+
+    action.Should().Throw<InvalidOperationException>()
+      .WithMessage("*Missing Aws:Cognito:UserPoolId*")
+      .WithMessage("*Missing Aws:Cognito:AppClientId*");
+  }
+
+  [Fact]
   public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenAwsServiceUrlIsInvalid()
   {
     var configuration = BuildConfiguration(new Dictionary<string, string?>

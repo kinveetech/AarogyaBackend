@@ -30,6 +30,19 @@ public sealed class AuthenticationExtensionsTests
   }
 
   [Fact]
+  public void ResolveCognitoIssuer_ShouldIgnorePlaceholderIssuer_AndUseDerivedLocalStackIssuer()
+  {
+    var options = CreateOptions();
+    options.UseLocalStack = true;
+    options.ServiceUrl = "http://localhost:4566";
+    options.Cognito.Issuer = "http://localhost:4566/SET_VIA_USER_SECRETS_OR_ENV_VAR";
+
+    var issuer = AuthenticationExtensions.ResolveCognitoIssuer(options);
+
+    issuer.Should().Be("http://localhost:4566/ap-south-1_examplePoolId");
+  }
+
+  [Fact]
   public void ResolveCognitoIssuer_ShouldUseAwsIssuer_WhenLocalStackDisabled()
   {
     var options = CreateOptions();
