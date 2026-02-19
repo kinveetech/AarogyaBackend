@@ -12,7 +12,11 @@ internal sealed class InMemoryPhoneOtpService(
   IUtcClock clock)
   : IPhoneOtpService
 {
-  private static readonly Regex IndianPhoneRegex = new(@"^\+91[6-9]\d{9}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+  private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromMilliseconds(200);
+  private static readonly Regex IndianPhoneRegex = new(
+    @"^\+91[6-9]\d{9}$",
+    RegexOptions.Compiled | RegexOptions.CultureInvariant,
+    RegexMatchTimeout);
   private readonly OtpOptions _options = options.Value;
   private readonly ConcurrentDictionary<string, OtpEntry> _entries = new(StringComparer.Ordinal);
 
