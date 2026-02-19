@@ -30,12 +30,14 @@ tests/
 |------|----------|--------|
 | Local .NET | `Aarogya.Api` only | `http://localhost:5000` / `https://localhost:5001` |
 | Docker Compose | `aarogya-api`, `aarogya-postgres`, `aarogya-redis`, `aarogya-pgadmin` | API: `http://localhost:8080/swagger/index.html`, pgAdmin: `http://localhost:5050` |
+| .NET Aspire AppHost | `api`, `postgres`, `redis`, `localstack` | `dotnet run --project AppHost` (dashboard URL shown in console) |
 | Kubernetes (`kind`) | `aarogya-api`, `postgres`, `redis`, `pgadmin` in namespace `aarogya` | API: `kubectl -n aarogya port-forward svc/aarogya-api 8080:80`, pgAdmin: `kubectl -n aarogya port-forward svc/pgadmin 5050:80` |
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- .NET Aspire workload (`dotnet workload install aspire`)
 - Docker Desktop
 - `kubectl` (for Kubernetes setup)
 - `kind` (for local Kubernetes setup)
@@ -221,6 +223,34 @@ Useful commands:
 ```bash
 docker compose logs -f api
 docker compose down -v
+```
+
+### .NET Aspire AppHost (API + PostgreSQL + Redis + LocalStack)
+```bash
+dotnet run --project AppHost
+```
+
+AppHost services:
+- `api` (Aarogya API)
+- `postgres` (PostgreSQL 16)
+- `redis` (Redis 7)
+- `localstack` (S3 + SES emulation)
+
+Aspire dashboard:
+- URL is printed in AppHost startup logs
+- Default HTTP profile is `http://localhost:15236`
+
+To stop running AppHost instances:
+```bash
+# If AppHost is running in current terminal
+# Press Ctrl+C
+
+# If running in another terminal/background
+pkill -f "AppHost/AppHost.csproj" || true
+pkill -f "AppHost.dll" || true
+
+# Clean up AppHost-created containers
+docker ps -a --format '{{.Names}}' | grep -E '^(postgres|redis|localstack|api)-' | xargs -r docker rm -f
 ```
 
 ### Docker only (API)
