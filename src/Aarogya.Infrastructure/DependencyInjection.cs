@@ -5,6 +5,7 @@ using Aarogya.Infrastructure.Caching;
 using Aarogya.Infrastructure.Persistence;
 using Aarogya.Infrastructure.Persistence.Repositories;
 using Aarogya.Infrastructure.Security;
+using Aarogya.Infrastructure.Seeding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,6 +79,10 @@ public static class DependencyInjection
     services.AddScoped<IEmergencyContactRepository, EmergencyContactRepository>();
     services.AddScoped<IAuditLogRepository, AuditLogRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
+    var seedDataOptions = new SeedDataOptions();
+    configuration.GetSection(SeedDataOptions.SectionName).Bind(seedDataOptions);
+    services.AddSingleton(Options.Create(seedDataOptions));
+    services.AddScoped<IDataSeeder, DevelopmentDataSeeder>();
     var aadhaarVaultOptions = new AadhaarVaultOptions();
     configuration.GetSection(AadhaarVaultOptions.SectionName).Bind(aadhaarVaultOptions);
     services.AddSingleton(Options.Create(aadhaarVaultOptions));

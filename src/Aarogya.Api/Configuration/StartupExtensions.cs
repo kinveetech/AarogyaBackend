@@ -1,4 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using Aarogya.Infrastructure.Persistence;
+using Aarogya.Infrastructure.Seeding;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
 
@@ -68,6 +71,23 @@ public static class StartupExtensions
     });
 
     return app;
+  }
+
+  public static async Task InitializeDatabaseAsync(WebApplication app, CancellationToken cancellationToken = default)
+  {
+    await using var scope = app.Services.CreateAsyncScope();
+    var services = scope.ServiceProvider;
+    var dbContext = services.GetRequiredService<AarogyaDbContext>();
+    var configuration = services.GetRequiredService<IConfiguration>();
+
+    var autoMigrate = configuration.GetSection("Database:AutoMigrateOnStartup").Get<bool?>();
+    if (autoMigrate ?? false)
+    {
+      await dbContext.Database.MigrateAsync(cancellationToken);
+    }
+
+    var seeder = services.GetRequiredService<IDataSeeder>();
+    await seeder.SeedAsync(cancellationToken);
   }
 
   public static void ValidateRequiredConfiguration(IConfiguration configuration, IHostEnvironment environment)

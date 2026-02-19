@@ -116,6 +116,7 @@ var app = builder.Build();
 
 // Validate required configuration at startup
 StartupExtensions.ValidateRequiredConfiguration(app.Configuration, app.Environment);
+await StartupExtensions.InitializeDatabaseAsync(app);
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -150,7 +151,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 try
 {
   Log.Information("Starting Aarogya API ({Environment})", app.Environment.EnvironmentName);
-  app.Run();
+  await app.RunAsync();
 }
 catch (Exception ex)
 {
@@ -158,5 +159,5 @@ catch (Exception ex)
 }
 finally
 {
-  Log.CloseAndFlush();
+  await Log.CloseAndFlushAsync();
 }
