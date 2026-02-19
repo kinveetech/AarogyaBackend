@@ -23,7 +23,7 @@ public sealed class AuthControllerTests
       new Claim("cognito:groups", "Admin")
     ], "TestAuth"));
 
-    var controller = new AuthController(new NoopPhoneOtpService())
+    var controller = new AuthController(new NoopPhoneOtpService(), new NoopPkceAuthorizationService())
     {
       ControllerContext = new ControllerContext
       {
@@ -54,5 +54,14 @@ public sealed class AuthControllerTests
 
     public Task<OtpVerificationResult> VerifyOtpAsync(string phoneNumber, string otp, CancellationToken cancellationToken = default)
       => Task.FromResult(new OtpVerificationResult(true, "ok"));
+  }
+
+  private sealed class NoopPkceAuthorizationService : IPkceAuthorizationService
+  {
+    public Task<PkceAuthorizeResult> CreateAuthorizationCodeAsync(PkceAuthorizeRequest request, CancellationToken cancellationToken = default)
+      => Task.FromResult(new PkceAuthorizeResult(true, "ok", "code", DateTimeOffset.UtcNow.AddMinutes(5)));
+
+    public Task<PkceTokenResult> ExchangeAuthorizationCodeAsync(PkceTokenRequest request, CancellationToken cancellationToken = default)
+      => Task.FromResult(new PkceTokenResult(true, "ok", "access", "refresh", "id", 900));
   }
 }

@@ -15,10 +15,14 @@ namespace Aarogya.Api.Controllers;
 public sealed class AuthController : ControllerBase
 {
   private readonly IPhoneOtpService _phoneOtpService;
+  private readonly IPkceAuthorizationService _pkceAuthorizationService;
 
-  public AuthController(IPhoneOtpService phoneOtpService)
+  public AuthController(
+    IPhoneOtpService phoneOtpService,
+    IPkceAuthorizationService pkceAuthorizationService)
   {
     _phoneOtpService = phoneOtpService;
+    _pkceAuthorizationService = pkceAuthorizationService;
   }
 
   [AllowAnonymous]
@@ -65,6 +69,72 @@ public sealed class AuthController : ControllerBase
     }
 
     return Ok(new OtpResponse(result.Message));
+  }
+
+  [AllowAnonymous]
+  [HttpPost("pkce/authorize")]
+  [ProducesResponseType(typeof(PkceAuthorizeResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> CreatePkceAuthorizationCodeAsync(
+    [FromBody] PkceAuthorizeCommand request,
+    CancellationToken cancellationToken)
+  {
+    if (!ModelState.IsValid)
+    {
+      return BadRequest(new PkceErrorResponse("Invalid request payload."));
+    }
+
+    var result = await _pkceAuthorizationService.CreateAuthorizationCodeAsync(
+      new PkceAuthorizeRequest(
+        request.ClientId,
+        request.RedirectUri,
+        request.CodeChallenge,
+        request.CodeChallengeMethod,
+        request.Platform,
+        request.Scope,
+        request.State),
+      cancellationToken);
+
+    if (!result.Success)
+    {
+      return BadRequest(new PkceErrorResponse(result.Message));
+    }
+
+    return Ok(new PkceAuthorizeResponse(result.AuthorizationCode!, result.ExpiresAt!.Value, result.State));
+  }
+
+  [AllowAnonymous]
+  [HttpPost("pkce/token")]
+  [ProducesResponseType(typeof(PkceTokenResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> ExchangePkceAuthorizationCodeAsync(
+    [FromBody] PkceTokenCommand request,
+    CancellationToken cancellationToken)
+  {
+    if (!ModelState.IsValid)
+    {
+      return BadRequest(new PkceErrorResponse("Invalid request payload."));
+    }
+
+    var result = await _pkceAuthorizationService.ExchangeAuthorizationCodeAsync(
+      new PkceTokenRequest(
+        request.ClientId,
+        request.RedirectUri,
+        request.AuthorizationCode,
+        request.CodeVerifier),
+      cancellationToken);
+
+    if (!result.Success)
+    {
+      return BadRequest(new PkceErrorResponse(result.Message));
+    }
+
+    return Ok(new PkceTokenResponse(
+      result.AccessToken!,
+      result.RefreshToken!,
+      result.IdToken!,
+      result.TokenType,
+      result.ExpiresInSeconds));
   }
 
   [Authorize]
@@ -122,3 +192,58 @@ public sealed record OtpResponse(string Message);
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public response metadata attributes.")]
 public sealed record OtpRequestResponse(string Message, DateTimeOffset? ExpiresAt);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record PkceAuthorizeCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string ClientId,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  Uri RedirectUri,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string CodeChallenge,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string CodeChallengeMethod,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string Platform,
+  string? Scope,
+  string? State);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record PkceTokenCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string ClientId,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  Uri RedirectUri,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string AuthorizationCode,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string CodeVerifier);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record PkceAuthorizeResponse(string AuthorizationCode, DateTimeOffset ExpiresAt, string? State);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record PkceTokenResponse(
+  string AccessToken,
+  string RefreshToken,
+  string IdToken,
+  string TokenType,
+  int ExpiresInSeconds);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record PkceErrorResponse(string Error);
