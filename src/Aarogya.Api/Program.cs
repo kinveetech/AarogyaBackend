@@ -1,7 +1,6 @@
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Health;
 using Aarogya.Infrastructure;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -9,7 +8,8 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add AAROGYA_ prefixed environment variables as a configuration source.
-// This allows deployment environments to set AAROGYA_Jwt__Key instead of Jwt__Key,
+// This allows deployment environments to set values like
+// AAROGYA_Aws__Cognito__UserPoolId and AAROGYA_Aws__Cognito__AppClientId,
 // avoiding collisions with other applications on the same host.
 builder.Configuration.AddEnvironmentVariables(prefix: "AAROGYA_");
 
@@ -22,11 +22,6 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Bind and validate strongly-typed configuration options
-builder.Services
-  .AddOptionsWithValidateOnStart<JwtOptions>()
-  .BindConfiguration(JwtOptions.SectionName)
-  .ValidateDataAnnotations();
-
 builder.Services
   .AddOptionsWithValidateOnStart<AwsOptions>()
   .BindConfiguration(AwsOptions.SectionName)
@@ -89,26 +84,7 @@ builder.Services.AddSwaggerGen(c =>
   });
 });
 
-// Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"]
-  ?? throw new InvalidOperationException(
-    "JWT Key is not configured. Set via user-secrets, env var (Jwt__Key or AAROGYA_Jwt__Key), or appsettings.");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-  .AddJwtBearer(options =>
-  {
-    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-    {
-      ValidateIssuer = true,
-      ValidateAudience = true,
-      ValidateLifetime = true,
-      ValidateIssuerSigningKey = true,
-      ValidIssuer = builder.Configuration["Jwt:Issuer"],
-      ValidAudience = builder.Configuration["Jwt:Audience"],
-      IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-        System.Text.Encoding.UTF8.GetBytes(jwtKey))
-    };
-  });
+builder.Services.AddCognitoJwtAuthentication(builder.Configuration);
 
 builder.Services.AddAarogyaCorsPolicy(builder.Configuration);
 
