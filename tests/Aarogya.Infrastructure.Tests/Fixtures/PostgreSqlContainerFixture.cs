@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Aarogya.Infrastructure;
 using Aarogya.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

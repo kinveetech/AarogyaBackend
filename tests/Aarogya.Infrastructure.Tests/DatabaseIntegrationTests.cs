@@ -12,7 +12,7 @@ namespace Aarogya.Infrastructure.Tests;
 public sealed class DatabaseIntegrationTests(PostgreSqlContainerFixture fixture)
 {
   [Fact]
-  public async Task AddInfrastructure_ShouldResolveDbContext_FromDependencyInjection()
+  public async Task AddInfrastructure_ShouldResolveDbContext_FromDependencyInjectionAsync()
   {
     await using var serviceProvider = await fixture.CreateServiceProviderAsync();
 
@@ -23,7 +23,7 @@ public sealed class DatabaseIntegrationTests(PostgreSqlContainerFixture fixture)
   }
 
   [Fact]
-  public async Task SaveChanges_ShouldPersistEncryptedEntity()
+  public async Task SaveChanges_ShouldPersistEncryptedEntityAsync()
   {
     await using var serviceProvider = await fixture.CreateServiceProviderAsync();
 
@@ -50,7 +50,7 @@ public sealed class DatabaseIntegrationTests(PostgreSqlContainerFixture fixture)
       var record = await dbContext.AadhaarVaultRecords.SingleAsync(x => x.ReferenceToken == referenceToken);
 
       record.AadhaarNumber.Should().Be("123456789012");
-      record.AadhaarSha256.Should().Equal([1, 2, 3, 4]);
+      record.AadhaarSha256.Should().Equal(1, 2, 3, 4);
     }
   }
 }
