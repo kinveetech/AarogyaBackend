@@ -22,8 +22,8 @@ erDiagram
 
   USERS {
     uuid id PK
-    text external_auth_id UK
-    user_role role
+    string external_auth_id UK
+    enum role "user_role"
     bytea first_name_encrypted
     bytea last_name_encrypted
     bytea email_encrypted
@@ -33,39 +33,39 @@ erDiagram
     uuid aadhaar_ref_token UK
     bytea aadhaar_sha256 UK
     bool is_active
-    timestamptz created_at
-    timestamptz updated_at
+    datetime created_at
+    datetime updated_at
   }
 
   REPORTS {
     uuid id PK
-    text report_number UK
+    string report_number UK
     uuid patient_id FK
     uuid doctor_id FK
     uuid uploaded_by_user_id FK
-    report_type report_type
-    report_status status
-    timestamptz collected_at
-    timestamptz reported_at
-    timestamptz uploaded_at
+    enum report_type "report_type"
+    enum status "report_status"
+    datetime collected_at
+    datetime reported_at
+    datetime uploaded_at
     jsonb results
     jsonb metadata
-    timestamptz created_at
-    timestamptz updated_at
+    datetime created_at
+    datetime updated_at
   }
 
   REPORT_PARAMETERS {
     uuid id PK
     uuid report_id FK
-    text parameter_code
-    text parameter_name
-    numeric measured_value_numeric
-    text measured_value_text
-    text unit
-    text reference_range_text
+    string parameter_code
+    string parameter_name
+    decimal measured_value_numeric
+    string measured_value_text
+    string unit
+    string reference_range_text
     bool is_abnormal
     jsonb raw_parameter
-    timestamptz created_at
+    datetime created_at
   }
 
   ACCESS_GRANTS {
@@ -73,39 +73,40 @@ erDiagram
     uuid patient_id FK
     uuid granted_to_user_id FK
     uuid granted_by_user_id FK
-    access_grant_status status
-    timestamptz starts_at
-    timestamptz expires_at
-    timestamptz revoked_at
+    string grant_reason
     jsonb scope
-    timestamptz created_at
+    enum status "access_grant_status"
+    datetime starts_at
+    datetime expires_at
+    datetime revoked_at
+    datetime created_at
   }
 
   EMERGENCY_CONTACTS {
     uuid id PK
     uuid user_id FK
     bytea name_encrypted
-    text relationship
+    string relationship
     bytea phone_encrypted
     bytea phone_hash
     bool is_primary
-    timestamptz created_at
-    timestamptz updated_at
+    datetime created_at
+    datetime updated_at
   }
 
   AUDIT_LOGS {
     uuid id PK
-    timestamptz occurred_at
+    datetime occurred_at
     uuid actor_user_id FK
-    user_role actor_role
-    text action
-    text entity_type
+    enum actor_role "user_role"
+    string action
+    string entity_type
     uuid entity_id
     uuid correlation_id
-    text request_path
-    text request_method
-    inet client_ip
-    text user_agent
+    string request_path
+    string request_method
+    string client_ip "inet"
+    string user_agent
     int result_status
     jsonb details
   }
