@@ -82,6 +82,23 @@ tests/
    - HTTP: `http://localhost:5000`
    - Swagger UI: `https://localhost:5001/swagger`
 
+## 🧪 Dev Container
+
+This repository includes a VS Code Dev Container setup in `.devcontainer/`.
+
+What it provides:
+- .NET SDK (aligned with this repo's `.NET 9` setup)
+- AWS CLI
+- PostgreSQL client (`psql`)
+- C# Dev Kit extensions preinstalled
+
+Use in VS Code:
+1. Open the repository
+2. Run `Dev Containers: Reopen in Container`
+3. Wait for post-create setup to complete
+
+The dev container uses `.devcontainer/docker-compose.yml` and includes a local PostgreSQL service for development workflows.
+
 ## 📡 API Endpoints
 
 ### Authentication

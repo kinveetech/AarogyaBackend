@@ -1,0 +1,22 @@
+{
+  "name": "Aarogya Backend Dev Container",
+  "dockerComposeFile": [
+    "docker-compose.yml"
+  ],
+  "service": "devcontainer",
+  "workspaceFolder": "/workspaces/AarogyaBackend",
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.vscode-dotnet-runtime"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "Aarogya.sln"
+      }
+    }
+  },
+  "postCreateCommand": "dotnet --version && aws --version && psql --version && dotnet restore Aarogya.sln -nologo"
+}
