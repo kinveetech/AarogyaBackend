@@ -68,4 +68,34 @@ internal sealed class CriticalSmsNotificationService(
         result.IsRateLimited);
     }
   }
+
+  public async Task SendEmergencyAccessExpiringSoonAsync(
+    User patient,
+    User doctor,
+    AccessGrant grant,
+    CancellationToken cancellationToken = default)
+  {
+    if (string.IsNullOrWhiteSpace(patient.Phone))
+    {
+      return;
+    }
+
+    var userSub = string.IsNullOrWhiteSpace(patient.ExternalAuthId) ? patient.Id.ToString("D") : patient.ExternalAuthId;
+    if (!await preferenceService.IsEnabledAsync(userSub, NotificationEventTypes.EmergencyAccess, NotificationChannels.Sms, cancellationToken))
+    {
+      return;
+    }
+
+    var message = $"Aarogya alert: emergency access for Dr. {doctor.FirstName} {doctor.LastName} expires at {grant.ExpiresAt:yyyy-MM-dd HH:mm} UTC.";
+    var result = await smsSender.SendAsync(patient.Phone, message, NotificationEventTypes.EmergencyAccess, cancellationToken);
+    if (!result.Success)
+    {
+      logger.LogWarning(
+        "Critical SMS pre-expiry alert was not sent. patientId={PatientId}, doctorId={DoctorId}, grantId={GrantId}, rateLimited={IsRateLimited}",
+        patient.Id,
+        doctor.Id,
+        grant.Id,
+        result.IsRateLimited);
+    }
+  }
 }

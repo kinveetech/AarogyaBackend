@@ -97,6 +97,29 @@ internal static class TransactionalEmailTemplateBuilder
     return (subject, html, text);
   }
 
+  public static (string Subject, string HtmlBody, string TextBody) BuildEmergencyAccessExpiringSoon(
+    User patient,
+    User doctor,
+    AccessGrant grant,
+    string unsubscribeUrl)
+  {
+    var safePatientName = WebUtility.HtmlEncode($"{patient.FirstName} {patient.LastName}".Trim());
+    var safeDoctorName = WebUtility.HtmlEncode($"{doctor.FirstName} {doctor.LastName}".Trim());
+    var safeExpiry = WebUtility.HtmlEncode(grant.ExpiresAt?.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "N/A");
+    var subject = "Aarogya: Emergency Access Expiring Soon";
+    var html = $$"""
+                 <html><body style="font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+                 <h2>Emergency Access Expiring Soon</h2>
+                 <p>Hello {{safePatientName}},</p>
+                 <p>Emergency access for <strong>Dr. {{safeDoctorName}}</strong> will expire at <strong>{{safeExpiry}}</strong>.</p>
+                 <p>No action is required if this request is complete.</p>
+                 {{BuildUnsubscribeFooter(unsubscribeUrl)}}
+                 </body></html>
+                 """;
+    var text = $"Hello {patient.FirstName},\nEmergency access for Dr. {doctor.FirstName} {doctor.LastName} expires at {grant.ExpiresAt:O}.\nUnsubscribe: {unsubscribeUrl}";
+    return (subject, html, text);
+  }
+
   private static string BuildUnsubscribeFooter(string unsubscribeUrl)
   {
     var safeUrl = WebUtility.HtmlEncode(unsubscribeUrl);
