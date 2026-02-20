@@ -11,6 +11,7 @@ internal sealed class InMemorySocialAuthService(
   IOptions<AwsOptions> awsOptions,
   IOptions<PkceOptions> pkceOptions,
   IOptions<JwtOptions> jwtOptions,
+  ICognitoSocialTokenClient cognitoSocialTokenClient,
   IUtcClock clock)
   : ISocialAuthService
 {
@@ -67,46 +68,56 @@ internal sealed class InMemorySocialAuthService(
     SocialTokenRequest request,
     CancellationToken cancellationToken = default)
   {
+    return ExchangeCodeInternalAsync(request, cancellationToken);
+  }
+
+  private async Task<SocialTokenResult> ExchangeCodeInternalAsync(
+    SocialTokenRequest request,
+    CancellationToken cancellationToken)
+  {
     cancellationToken.ThrowIfCancellationRequested();
 
     var provider = NormalizeProvider(request.Provider);
     if (provider is null)
     {
-      return Task.FromResult(new SocialTokenResult(false, "Unsupported provider."));
+      return new SocialTokenResult(false, "Unsupported provider.");
     }
 
     if (!TryGetProviderOptions(provider, out var providerOptions) || !providerOptions.Enabled)
     {
-      return Task.FromResult(new SocialTokenResult(false, $"Provider '{provider}' is not enabled."));
+      return new SocialTokenResult(false, $"Provider '{provider}' is not enabled.");
     }
 
     if (!IsAllowedMobileRedirectUri(request.RedirectUri))
     {
-      return Task.FromResult(new SocialTokenResult(false, "Redirect URI is not allowed for mobile OAuth flow."));
+      return new SocialTokenResult(false, "Redirect URI is not allowed for mobile OAuth flow.");
     }
 
     if (string.IsNullOrWhiteSpace(request.AuthorizationCode))
     {
-      return Task.FromResult(new SocialTokenResult(false, "Authorization code is required."));
-    }
-
-    if (string.IsNullOrWhiteSpace(request.ProviderSubject))
-    {
-      return Task.FromResult(new SocialTokenResult(false, "Provider subject is required."));
+      return new SocialTokenResult(false, "Authorization code is required.");
     }
 
     if (!JwtTokenHelpers.CanIssueJwtTokens(_jwtOptions))
     {
-      return Task.FromResult(new SocialTokenResult(false, "JWT issuer is not configured."));
+      return new SocialTokenResult(false, "JWT issuer is not configured.");
     }
 
-    var mappedEmail = request.Email.Trim();
-    if (string.IsNullOrWhiteSpace(mappedEmail))
+    var exchange = await cognitoSocialTokenClient.ExchangeAuthorizationCodeAsync(
+      provider,
+      request.RedirectUri,
+      request.AuthorizationCode,
+      request.CodeVerifier,
+      cancellationToken);
+
+    if (!exchange.Success || exchange.Identity is null)
     {
-      return Task.FromResult(new SocialTokenResult(false, "Email is required."));
+      return new SocialTokenResult(false, exchange.Message);
     }
 
-    var providerIdentityKey = $"{provider}:{request.ProviderSubject.Trim()}";
+    var mappedEmail = exchange.Identity.Email;
+
+    var providerIdentityKey = $"{provider}:{exchange.Identity.ProviderSubject}";
     var existingSubject = _subjectByProviderIdentity.GetValueOrDefault(providerIdentityKey);
     var subjectByEmail = _subjectsByEmail.GetValueOrDefault(mappedEmail);
 
@@ -120,11 +131,21 @@ internal sealed class InMemorySocialAuthService(
 
     var isLinked = existingSubject is null && subjectByEmail is not null;
 
-    var accessToken = GenerateJwtToken(subject, AarogyaRoles.Patient, mappedEmail, request.GivenName, request.FamilyName);
-    var idToken = GenerateJwtToken(subject, AarogyaRoles.Patient, mappedEmail, request.GivenName, request.FamilyName);
+    var accessToken = GenerateJwtToken(
+      subject,
+      AarogyaRoles.Patient,
+      mappedEmail,
+      exchange.Identity.GivenName,
+      exchange.Identity.FamilyName);
+    var idToken = GenerateJwtToken(
+      subject,
+      AarogyaRoles.Patient,
+      mappedEmail,
+      exchange.Identity.GivenName,
+      exchange.Identity.FamilyName);
     var refreshToken = JwtTokenHelpers.GenerateToken(48);
 
-    return Task.FromResult(new SocialTokenResult(
+    return new SocialTokenResult(
       true,
       "Social login successful.",
       accessToken,
@@ -132,7 +153,7 @@ internal sealed class InMemorySocialAuthService(
       idToken,
       _pkceOptions.AccessTokenExpirySeconds,
       "Bearer",
-      isLinked));
+      isLinked);
   }
 
   private bool IsAllowedMobileRedirectUri(Uri redirectUri)

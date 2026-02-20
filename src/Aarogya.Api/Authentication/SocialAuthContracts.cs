@@ -46,10 +46,7 @@ public sealed record SocialTokenRequest(
   string Provider,
   Uri RedirectUri,
   string AuthorizationCode,
-  string ProviderSubject,
-  string Email,
-  string? GivenName,
-  string? FamilyName);
+  string? CodeVerifier);
 
 [SuppressMessage(
   "Performance",

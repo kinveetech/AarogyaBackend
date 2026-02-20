@@ -130,10 +130,7 @@ public sealed class AuthController : ControllerBase
         request.Provider,
         request.RedirectUri,
         request.AuthorizationCode,
-        request.ProviderSubject,
-        request.Email,
-        request.GivenName,
-        request.FamilyName),
+        request.CodeVerifier),
       cancellationToken);
 
     if (!result.Success)
@@ -389,12 +386,7 @@ public sealed record SocialTokenCommand(
   Uri RedirectUri,
   [property: System.ComponentModel.DataAnnotations.Required]
   string AuthorizationCode,
-  [property: System.ComponentModel.DataAnnotations.Required]
-  string ProviderSubject,
-  [property: System.ComponentModel.DataAnnotations.Required]
-  string Email,
-  string? GivenName,
-  string? FamilyName);
+  string? CodeVerifier);
 
 [SuppressMessage(
   "Performance",

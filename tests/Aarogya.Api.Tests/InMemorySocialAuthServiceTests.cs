@@ -37,19 +37,13 @@ public sealed class InMemorySocialAuthServiceTests
       "google",
       new Uri("aarogya://auth/callback"),
       "code-1",
-      "google-user-1",
-      "same.user@example.com",
-      "Same",
-      "User"));
+      null));
 
     var facebook = await service.ExchangeCodeAsync(new SocialTokenRequest(
       "facebook",
       new Uri("aarogya://auth/callback"),
       "code-2",
-      "facebook-user-9",
-      "same.user@example.com",
-      "Same",
-      "User"));
+      null));
 
     google.Success.Should().BeTrue();
     facebook.Success.Should().BeTrue();
@@ -71,16 +65,30 @@ public sealed class InMemorySocialAuthServiceTests
       "apple",
       new Uri("aarogya://auth/callback"),
       "code",
-      "apple-sub",
-      "apple.user@example.com",
-      "Apple",
-      "User"));
+      null));
 
     result.Success.Should().BeFalse();
     result.Message.Should().Contain("not enabled");
   }
 
-  private static InMemorySocialAuthService CreateService(AwsOptions? awsOptions = null)
+  [Fact]
+  public async Task ExchangeCodeAsync_ShouldFail_WhenCognitoExchangeFailsAsync()
+  {
+    var service = CreateService(tokenClient: new FailingCognitoSocialTokenClient());
+
+    var result = await service.ExchangeCodeAsync(new SocialTokenRequest(
+      "google",
+      new Uri("aarogya://auth/callback"),
+      "invalid-code",
+      null));
+
+    result.Success.Should().BeFalse();
+    result.Message.Should().Contain("exchange");
+  }
+
+  private static InMemorySocialAuthService CreateService(
+    AwsOptions? awsOptions = null,
+    ICognitoSocialTokenClient? tokenClient = null)
   {
     return new InMemorySocialAuthService(
       Options.Create(awsOptions ?? CreateAwsOptions()),
@@ -96,6 +104,7 @@ public sealed class InMemorySocialAuthServiceTests
         Issuer = "AarogyaAPI",
         Audience = "AarogyaClients"
       }),
+      tokenClient ?? new FakeCognitoSocialTokenClient(),
       new FakeClock(new DateTimeOffset(2026, 02, 20, 0, 0, 0, TimeSpan.Zero)));
   }
 
@@ -134,5 +143,38 @@ public sealed class InMemorySocialAuthServiceTests
   private sealed class FakeClock(DateTimeOffset utcNow) : IUtcClock
   {
     public DateTimeOffset UtcNow { get; private set; } = utcNow;
+  }
+
+  private sealed class FakeCognitoSocialTokenClient : ICognitoSocialTokenClient
+  {
+    public Task<CognitoSocialTokenExchangeResult> ExchangeAuthorizationCodeAsync(
+      string provider,
+      Uri redirectUri,
+      string authorizationCode,
+      string? codeVerifier,
+      CancellationToken cancellationToken = default)
+    {
+      var identity = authorizationCode switch
+      {
+        "code-1" => new SocialIdentityClaims("google-user-1", "same.user@example.com", "Same", "User"),
+        "code-2" => new SocialIdentityClaims("facebook-user-9", "same.user@example.com", "Same", "User"),
+        _ => new SocialIdentityClaims("apple-user-1", "apple.user@example.com", "Apple", "User")
+      };
+
+      return Task.FromResult(new CognitoSocialTokenExchangeResult(true, "ok", identity, 900, "Bearer"));
+    }
+  }
+
+  private sealed class FailingCognitoSocialTokenClient : ICognitoSocialTokenClient
+  {
+    public Task<CognitoSocialTokenExchangeResult> ExchangeAuthorizationCodeAsync(
+      string provider,
+      Uri redirectUri,
+      string authorizationCode,
+      string? codeVerifier,
+      CancellationToken cancellationToken = default)
+    {
+      return Task.FromResult(new CognitoSocialTokenExchangeResult(false, "Failed to exchange authorization code."));
+    }
   }
 }
