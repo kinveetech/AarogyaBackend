@@ -141,6 +141,61 @@ public sealed class AuthController : ControllerBase
       result.ExpiresInSeconds));
   }
 
+  [AllowAnonymous]
+  [HttpPost("token/refresh")]
+  [ProducesResponseType(typeof(PkceTokenResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> RefreshAccessTokenAsync(
+    [FromBody] RefreshTokenCommand request,
+    CancellationToken cancellationToken)
+  {
+    if (!ModelState.IsValid)
+    {
+      return BadRequest(new PkceErrorResponse("Invalid request payload."));
+    }
+
+    var result = await _pkceAuthorizationService.ExchangeRefreshTokenAsync(
+      new PkceRefreshTokenRequest(request.ClientId, request.RefreshToken),
+      cancellationToken);
+
+    if (!result.Success)
+    {
+      return BadRequest(new PkceErrorResponse(result.Message));
+    }
+
+    return Ok(new PkceTokenResponse(
+      result.AccessToken!,
+      result.RefreshToken!,
+      result.IdToken!,
+      result.TokenType,
+      result.ExpiresInSeconds));
+  }
+
+  [AllowAnonymous]
+  [HttpPost("token/revoke")]
+  [ProducesResponseType(typeof(PkceRevokeResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> RevokeRefreshTokenAsync(
+    [FromBody] RevokeTokenCommand request,
+    CancellationToken cancellationToken)
+  {
+    if (!ModelState.IsValid)
+    {
+      return BadRequest(new PkceErrorResponse("Invalid request payload."));
+    }
+
+    var result = await _pkceAuthorizationService.RevokeRefreshTokenAsync(
+      new PkceRevokeRequest(request.ClientId, request.RefreshToken),
+      cancellationToken);
+
+    if (!result.Success)
+    {
+      return BadRequest(new PkceErrorResponse(result.Message));
+    }
+
+    return Ok(new PkceRevokeResponse(result.Message));
+  }
+
   [Authorize]
   [HttpGet("me")]
   [ProducesResponseType(typeof(AuthClaimsResponse), StatusCodes.Status200OK)]
@@ -232,6 +287,26 @@ public sealed record PkceTokenCommand(
 [SuppressMessage(
   "Performance",
   "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record RefreshTokenCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string ClientId,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string RefreshToken);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record RevokeTokenCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string ClientId,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string RefreshToken);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
   Justification = "Referenced by public response metadata attributes.")]
 public sealed record PkceAuthorizeResponse(string AuthorizationCode, DateTimeOffset ExpiresAt, string? State);
 
@@ -245,6 +320,12 @@ public sealed record PkceTokenResponse(
   string IdToken,
   string TokenType,
   int ExpiresInSeconds);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record PkceRevokeResponse(string Message);
 
 [SuppressMessage(
   "Performance",

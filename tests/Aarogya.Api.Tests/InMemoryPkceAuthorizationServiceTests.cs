@@ -169,6 +169,135 @@ public sealed class InMemoryPkceAuthorizationServiceTests
     authorize.Message.Should().Contain("Code challenge is invalid");
   }
 
+  [Fact]
+  public async Task ExchangeRefreshTokenAsync_ShouldRotateRefreshToken_AndIssueNewAccessTokenAsync()
+  {
+    var clock = new FakeClock(new DateTimeOffset(2026, 02, 20, 0, 0, 0, TimeSpan.Zero));
+    var service = CreateService(clock);
+    var codeVerifier = BuildCodeVerifier();
+    var codeChallenge = ComputeCodeChallenge(codeVerifier);
+
+    var authorize = await service.CreateAuthorizationCodeAsync(new PkceAuthorizeRequest(
+      "mobile-client-id",
+      new Uri("myapp://auth/callback"),
+      codeChallenge,
+      "S256",
+      "ios",
+      "openid",
+      null));
+
+    var initialExchange = await service.ExchangeAuthorizationCodeAsync(new PkceTokenRequest(
+      "mobile-client-id",
+      new Uri("myapp://auth/callback"),
+      authorize.AuthorizationCode!,
+      codeVerifier));
+
+    var rotated = await service.ExchangeRefreshTokenAsync(new PkceRefreshTokenRequest(
+      "mobile-client-id",
+      initialExchange.RefreshToken!));
+
+    rotated.Success.Should().BeTrue();
+    rotated.RefreshToken.Should().NotBe(initialExchange.RefreshToken);
+    rotated.AccessToken.Should().NotBeNullOrWhiteSpace();
+
+    var replay = await service.ExchangeRefreshTokenAsync(new PkceRefreshTokenRequest(
+      "mobile-client-id",
+      initialExchange.RefreshToken!));
+    replay.Success.Should().BeFalse();
+  }
+
+  [Fact]
+  public async Task ExchangeRefreshTokenAsync_ShouldRejectExpiredRefreshTokenAsync()
+  {
+    var clock = new FakeClock(new DateTimeOffset(2026, 02, 20, 0, 0, 0, TimeSpan.Zero));
+    var service = CreateService(clock, new PkceOptions
+    {
+      AuthorizationCodeExpirySeconds = 300,
+      AccessTokenExpirySeconds = 900,
+      RefreshTokenExpirySeconds = 30
+    });
+    var codeVerifier = BuildCodeVerifier();
+    var codeChallenge = ComputeCodeChallenge(codeVerifier);
+
+    var authorize = await service.CreateAuthorizationCodeAsync(new PkceAuthorizeRequest(
+      "mobile-client-id",
+      new Uri("myapp://auth/callback"),
+      codeChallenge,
+      "S256",
+      "android",
+      "openid",
+      null));
+
+    var initialExchange = await service.ExchangeAuthorizationCodeAsync(new PkceTokenRequest(
+      "mobile-client-id",
+      new Uri("myapp://auth/callback"),
+      authorize.AuthorizationCode!,
+      codeVerifier));
+
+    clock.Advance(TimeSpan.FromMinutes(2));
+
+    var refreshed = await service.ExchangeRefreshTokenAsync(new PkceRefreshTokenRequest(
+      "mobile-client-id",
+      initialExchange.RefreshToken!));
+
+    refreshed.Success.Should().BeFalse();
+    refreshed.Message.Should().Contain("expired");
+  }
+
+  [Fact]
+  public async Task RevokeRefreshTokenAsync_ShouldPreventFurtherRefreshAsync()
+  {
+    var clock = new FakeClock(new DateTimeOffset(2026, 02, 20, 0, 0, 0, TimeSpan.Zero));
+    var service = CreateService(clock);
+    var codeVerifier = BuildCodeVerifier();
+    var codeChallenge = ComputeCodeChallenge(codeVerifier);
+
+    var authorize = await service.CreateAuthorizationCodeAsync(new PkceAuthorizeRequest(
+      "mobile-client-id",
+      new Uri("myapp://auth/callback"),
+      codeChallenge,
+      "S256",
+      "ios",
+      "openid",
+      null));
+
+    var initialExchange = await service.ExchangeAuthorizationCodeAsync(new PkceTokenRequest(
+      "mobile-client-id",
+      new Uri("myapp://auth/callback"),
+      authorize.AuthorizationCode!,
+      codeVerifier));
+
+    var revoke = await service.RevokeRefreshTokenAsync(new PkceRevokeRequest(
+      "mobile-client-id",
+      initialExchange.RefreshToken!));
+    revoke.Success.Should().BeTrue();
+    revoke.Message.Should().Contain("revoked");
+
+    var revokeAgain = await service.RevokeRefreshTokenAsync(new PkceRevokeRequest(
+      "mobile-client-id",
+      initialExchange.RefreshToken!));
+    revokeAgain.Success.Should().BeTrue();
+
+    var refreshed = await service.ExchangeRefreshTokenAsync(new PkceRefreshTokenRequest(
+      "mobile-client-id",
+      initialExchange.RefreshToken!));
+    refreshed.Success.Should().BeFalse();
+  }
+
+  [Fact]
+  public async Task RevokeRefreshTokenAsync_ShouldSucceed_WhenTokenDoesNotExistAsync()
+  {
+    var clock = new FakeClock(new DateTimeOffset(2026, 02, 20, 0, 0, 0, TimeSpan.Zero));
+    var service = CreateService(clock);
+
+    var revoke = await service.RevokeRefreshTokenAsync(new PkceRevokeRequest(
+      "mobile-client-id",
+      "missing-refresh-token"));
+
+    revoke.Success.Should().BeTrue();
+    revoke.Message.Should().Contain("revoked");
+  }
+
   private static InMemoryPkceAuthorizationService CreateService(FakeClock clock, PkceOptions? pkceOptions = null)
   {
     return new InMemoryPkceAuthorizationService(

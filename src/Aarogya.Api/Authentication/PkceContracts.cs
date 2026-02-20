@@ -15,6 +15,14 @@ public interface IPkceAuthorizationService
   public Task<PkceTokenResult> ExchangeAuthorizationCodeAsync(
     PkceTokenRequest request,
     CancellationToken cancellationToken = default);
+
+  public Task<PkceTokenResult> ExchangeRefreshTokenAsync(
+    PkceRefreshTokenRequest request,
+    CancellationToken cancellationToken = default);
+
+  public Task<PkceRevokeResult> RevokeRefreshTokenAsync(
+    PkceRevokeRequest request,
+    CancellationToken cancellationToken = default);
 }
 
 [SuppressMessage(
@@ -63,3 +71,27 @@ public sealed record PkceTokenRequest(
   Uri RedirectUri,
   string AuthorizationCode,
   string CodeVerifier);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public service contract.")]
+public sealed record PkceRefreshTokenRequest(
+  string ClientId,
+  string RefreshToken);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public service contract.")]
+public sealed record PkceRevokeRequest(
+  string ClientId,
+  string RefreshToken);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Returned by public service contract.")]
+public sealed record PkceRevokeResult(
+  bool Success,
+  string Message);
