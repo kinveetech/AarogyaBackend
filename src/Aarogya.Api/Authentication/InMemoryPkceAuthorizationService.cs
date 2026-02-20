@@ -7,7 +7,6 @@ using System.Text.RegularExpressions;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Aarogya.Api.Authentication;
 
@@ -48,7 +47,7 @@ internal sealed class InMemoryPkceAuthorizationService(
 
     var now = clock.UtcNow;
     var expiresAt = now.AddSeconds(_pkceOptions.AuthorizationCodeExpirySeconds);
-    var authorizationCode = GenerateToken(32);
+    var authorizationCode = JwtTokenHelpers.GenerateToken(32);
     var normalizedPlatform = request.Platform.Trim().ToUpperInvariant();
 
     _authorizationCodes[authorizationCode] = new AuthorizationCodeEntry
@@ -124,16 +123,16 @@ internal sealed class InMemoryPkceAuthorizationService(
 
     _authorizationCodes.TryRemove(request.AuthorizationCode.Trim(), out _);
 
-    if (!CanIssueJwtTokens(_jwtOptions))
+    if (!JwtTokenHelpers.CanIssueJwtTokens(_jwtOptions))
     {
       return Task.FromResult(new PkceTokenResult(false, "JWT issuer is not configured."));
     }
 
-    var subject = GenerateToken(16);
+    var subject = JwtTokenHelpers.GenerateToken(16);
     var role = AarogyaRoles.Patient;
     var accessToken = GenerateJwtToken(subject, role, isIdToken: false);
     var idToken = GenerateJwtToken(subject, role, isIdToken: true);
-    var refreshToken = GenerateToken(48);
+    var refreshToken = JwtTokenHelpers.GenerateToken(48);
     var refreshExpiresAt = now.AddSeconds(_pkceOptions.RefreshTokenExpirySeconds);
     _refreshTokens[refreshToken] = new RefreshTokenEntry
     {
@@ -165,7 +164,7 @@ internal sealed class InMemoryPkceAuthorizationService(
       return Task.FromResult(new PkceTokenResult(false, validationMessage));
     }
 
-    if (!CanIssueJwtTokens(_jwtOptions))
+    if (!JwtTokenHelpers.CanIssueJwtTokens(_jwtOptions))
     {
       return Task.FromResult(new PkceTokenResult(false, "JWT issuer is not configured."));
     }
@@ -200,7 +199,7 @@ internal sealed class InMemoryPkceAuthorizationService(
 
     _refreshTokens.TryRemove(refreshToken, out _);
 
-    var nextRefreshToken = GenerateToken(48);
+    var nextRefreshToken = JwtTokenHelpers.GenerateToken(48);
     var nextRefreshExpiry = now.AddSeconds(_pkceOptions.RefreshTokenExpirySeconds);
     _refreshTokens[nextRefreshToken] = new RefreshTokenEntry
     {
@@ -386,12 +385,6 @@ internal sealed class InMemoryPkceAuthorizationService(
     return Base64UrlEncode(hash);
   }
 
-  private static string GenerateToken(int bytesLength)
-  {
-    var bytes = RandomNumberGenerator.GetBytes(bytesLength);
-    return Base64UrlEncode(bytes);
-  }
-
   private static string Base64UrlEncode(byte[] bytes)
   {
     return Convert.ToBase64String(bytes)
@@ -418,10 +411,6 @@ internal sealed class InMemoryPkceAuthorizationService(
 
   private string GenerateJwtToken(string subject, string role, bool isIdToken)
   {
-    var now = clock.UtcNow;
-    var expiresAt = now.AddSeconds(_pkceOptions.AccessTokenExpirySeconds);
-    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
-    var signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
     var claims = new List<Claim>
     {
       new(JwtRegisteredClaimNames.Sub, subject),
@@ -430,36 +419,7 @@ internal sealed class InMemoryPkceAuthorizationService(
       new("cognito:groups", role)
     };
 
-    var descriptor = new SecurityTokenDescriptor
-    {
-      Issuer = _jwtOptions.Issuer,
-      Audience = _jwtOptions.Audience,
-      Subject = new ClaimsIdentity(claims),
-      NotBefore = now.UtcDateTime,
-      Expires = expiresAt.UtcDateTime,
-      SigningCredentials = signingCredentials
-    };
-
-    var handler = new JwtSecurityTokenHandler();
-    var token = handler.CreateToken(descriptor);
-    return handler.WriteToken(token);
-  }
-
-  private static bool CanIssueJwtTokens(JwtOptions jwtOptions)
-  {
-    if (string.IsNullOrWhiteSpace(jwtOptions.Key))
-    {
-      return false;
-    }
-
-    if (jwtOptions.Key.Contains("SET_VIA", StringComparison.OrdinalIgnoreCase))
-    {
-      return false;
-    }
-
-    return jwtOptions.Key.Length >= 32
-      && !string.IsNullOrWhiteSpace(jwtOptions.Issuer)
-      && !string.IsNullOrWhiteSpace(jwtOptions.Audience);
+    return JwtTokenHelpers.GenerateJwtToken(clock, _jwtOptions, _pkceOptions.AccessTokenExpirySeconds, claims);
   }
 
   private sealed class AuthorizationCodeEntry

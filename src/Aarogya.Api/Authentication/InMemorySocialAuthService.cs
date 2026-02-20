@@ -1,12 +1,9 @@
 using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Aarogya.Api.Authentication;
 
@@ -45,7 +42,7 @@ internal sealed class InMemorySocialAuthService(
       return Task.FromResult(new SocialAuthorizeResult(false, "Redirect URI is not allowed for mobile OAuth flow."));
     }
 
-    var state = string.IsNullOrWhiteSpace(request.State) ? GenerateToken(16) : request.State.Trim();
+    var state = string.IsNullOrWhiteSpace(request.State) ? JwtTokenHelpers.GenerateToken(16) : request.State.Trim();
     var issuer = AuthenticationExtensions.ResolveCognitoIssuer(_awsOptions);
     var clientId = _awsOptions.Cognito.AppClientId?.Trim();
     if (string.IsNullOrWhiteSpace(clientId))
@@ -98,7 +95,7 @@ internal sealed class InMemorySocialAuthService(
       return Task.FromResult(new SocialTokenResult(false, "Provider subject is required."));
     }
 
-    if (!CanIssueJwtTokens(_jwtOptions))
+    if (!JwtTokenHelpers.CanIssueJwtTokens(_jwtOptions))
     {
       return Task.FromResult(new SocialTokenResult(false, "JWT issuer is not configured."));
     }
@@ -115,7 +112,7 @@ internal sealed class InMemorySocialAuthService(
 
     var subject = existingSubject
       ?? subjectByEmail
-      ?? GenerateToken(16);
+      ?? JwtTokenHelpers.GenerateToken(16);
 
     _subjectsByEmail[mappedEmail] = subject;
     _subjectByProviderIdentity[providerIdentityKey] = subject;
@@ -125,7 +122,7 @@ internal sealed class InMemorySocialAuthService(
 
     var accessToken = GenerateJwtToken(subject, AarogyaRoles.Patient, mappedEmail, request.GivenName, request.FamilyName);
     var idToken = GenerateJwtToken(subject, AarogyaRoles.Patient, mappedEmail, request.GivenName, request.FamilyName);
-    var refreshToken = GenerateToken(48);
+    var refreshToken = JwtTokenHelpers.GenerateToken(48);
 
     return Task.FromResult(new SocialTokenResult(
       true,
@@ -218,11 +215,6 @@ internal sealed class InMemorySocialAuthService(
     string? givenName,
     string? familyName)
   {
-    var now = clock.UtcNow;
-    var expiresAt = now.AddSeconds(_pkceOptions.AccessTokenExpirySeconds);
-    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
-    var signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
     var claims = new List<Claim>
     {
       new(JwtRegisteredClaimNames.Sub, subject),
@@ -234,44 +226,6 @@ internal sealed class InMemorySocialAuthService(
       new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
     };
 
-    var descriptor = new SecurityTokenDescriptor
-    {
-      Issuer = _jwtOptions.Issuer,
-      Audience = _jwtOptions.Audience,
-      Subject = new ClaimsIdentity(claims),
-      NotBefore = now.UtcDateTime,
-      Expires = expiresAt.UtcDateTime,
-      SigningCredentials = signingCredentials
-    };
-
-    var handler = new JwtSecurityTokenHandler();
-    var token = handler.CreateToken(descriptor);
-    return handler.WriteToken(token);
-  }
-
-  private static bool CanIssueJwtTokens(JwtOptions jwtOptions)
-  {
-    if (string.IsNullOrWhiteSpace(jwtOptions.Key))
-    {
-      return false;
-    }
-
-    if (jwtOptions.Key.Contains("SET_VIA", StringComparison.OrdinalIgnoreCase))
-    {
-      return false;
-    }
-
-    return jwtOptions.Key.Length >= 32
-      && !string.IsNullOrWhiteSpace(jwtOptions.Issuer)
-      && !string.IsNullOrWhiteSpace(jwtOptions.Audience);
-  }
-
-  private static string GenerateToken(int bytesLength)
-  {
-    var bytes = RandomNumberGenerator.GetBytes(bytesLength);
-    return Convert.ToBase64String(bytes)
-      .TrimEnd('=')
-      .Replace('+', '-')
-      .Replace('/', '_');
+    return JwtTokenHelpers.GenerateJwtToken(clock, _jwtOptions, _pkceOptions.AccessTokenExpirySeconds, claims);
   }
 }
