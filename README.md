@@ -318,6 +318,28 @@ Configuration (`appsettings*.json`):
 }
 ```
 
+### SMS Notification Service (Mock)
+Issue #63 adds critical SMS notification flows for:
+- OTP delivery (`/api/auth/otp/request`)
+- emergency contact lifecycle alerts (create/update/delete)
+
+Current implementation is mock-only (no outbound SNS send), with:
+- per-recipient/per-event SMS rate limiting
+- per-message estimated cost tracking in structured logs
+- Indian-number validation retained (`+91XXXXXXXXXX`)
+
+Configuration (`appsettings*.json`):
+```json
+{
+  "SmsNotifications": {
+    "EnableCriticalSms": false,
+    "MaxSendsPerWindow": 5,
+    "RateLimitWindowSeconds": 60,
+    "EstimatedCostPerMessageInInr": 0.25
+  }
+}
+```
+
 ### CloudFront Report CDN
 Issue #58 adds CloudFront CDN infrastructure and runtime integration for report downloads:
 

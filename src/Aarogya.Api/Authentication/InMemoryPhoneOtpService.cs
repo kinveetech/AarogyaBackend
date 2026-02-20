@@ -51,12 +51,19 @@ internal sealed class InMemoryPhoneOtpService(
       expiresAt = entry.ExpiresAt;
     }
 
-    await otpSender.SendOtpAsync(normalizedPhone, otpToSend!, expiresAt!.Value, cancellationToken);
+    var dispatchResult = await otpSender.SendOtpAsync(normalizedPhone, otpToSend!, expiresAt!.Value, cancellationToken);
+    if (!dispatchResult.Sent)
+    {
+      return new OtpRequestResult(
+        false,
+        dispatchResult.IsRateLimited,
+        dispatchResult.Message);
+    }
 
     return new OtpRequestResult(
       true,
       false,
-      "OTP sent successfully (mocked delivery).",
+      "OTP sent successfully.",
       expiresAt);
   }
 
