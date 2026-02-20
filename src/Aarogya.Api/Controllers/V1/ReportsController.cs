@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Features.V1.Common;
+using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.RateLimiting;
 using Aarogya.Api.Validation;
@@ -27,22 +28,25 @@ public sealed class ReportsController : ControllerBase
   private readonly IReportService _reportService;
   private readonly IReportFileUploadService _reportFileUploadService;
   private readonly IReportChecksumVerificationService _reportChecksumVerificationService;
+  private readonly IConsentService _consentService;
 
   public ReportsController(
     IReportService reportService,
     IReportFileUploadService reportFileUploadService,
-    IReportChecksumVerificationService reportChecksumVerificationService)
+    IReportChecksumVerificationService reportChecksumVerificationService,
+    IConsentService consentService)
   {
     _reportService = reportService;
     _reportFileUploadService = reportFileUploadService;
     _reportChecksumVerificationService = reportChecksumVerificationService;
+    _consentService = consentService;
   }
 
   [HttpGet("{id:guid}")]
   [ProducesResponseType(typeof(ReportDetailResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-  [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> GetReportDetailAsync(Guid id, CancellationToken cancellationToken)
   {
@@ -54,8 +58,13 @@ public sealed class ReportsController : ControllerBase
 
     try
     {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
       var result = await _reportService.GetDetailForUserAsync(userSub, id, cancellationToken);
       return Ok(result);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
     }
     catch (KeyNotFoundException ex)
     {
@@ -84,6 +93,7 @@ public sealed class ReportsController : ControllerBase
   [HttpGet]
   [ProducesResponseType(typeof(ReportListResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   public async Task<IActionResult> ListReportsAsync(
     [FromQuery] ReportListQueryRequest request,
@@ -97,8 +107,13 @@ public sealed class ReportsController : ControllerBase
 
     try
     {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
       var result = await _reportService.GetForUserAsync(userSub, request, cancellationToken);
       return Ok(result);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
     }
     catch (InvalidOperationException ex)
     {
@@ -114,6 +129,7 @@ public sealed class ReportsController : ControllerBase
   [HttpPost]
   [ProducesResponseType(typeof(ReportSummaryResponse), StatusCodes.Status201Created)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   public async Task<IActionResult> CreateReportAsync(
     [FromBody] CreateReportRequest request,
@@ -133,8 +149,13 @@ public sealed class ReportsController : ControllerBase
 
     try
     {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
       var created = await _reportService.AddForUserAsync(userSub, request, cancellationToken);
       return Created(new Uri($"/api/v1/reports/{created.ReportId}", UriKind.Relative), created);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
     }
     catch (InvalidOperationException ex)
     {
@@ -150,6 +171,7 @@ public sealed class ReportsController : ControllerBase
   [HttpPost("upload-url")]
   [ProducesResponseType(typeof(ReportSignedUploadUrlResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   public async Task<IActionResult> CreateUploadUrlAsync(
     [FromBody] CreateReportUploadUrlRequest request,
@@ -161,13 +183,22 @@ public sealed class ReportsController : ControllerBase
       return Unauthorized();
     }
 
-    var result = await _reportService.GetSignedUploadUrlAsync(userSub, request, cancellationToken);
-    return Ok(result);
+    try
+    {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
+      var result = await _reportService.GetSignedUploadUrlAsync(userSub, request, cancellationToken);
+      return Ok(result);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
+    }
   }
 
   [HttpPost("download-url")]
   [ProducesResponseType(typeof(ReportSignedDownloadUrlResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   public async Task<IActionResult> CreateDownloadUrlAsync(
     [FromBody] CreateReportDownloadUrlRequest request,
@@ -180,8 +211,13 @@ public sealed class ReportsController : ControllerBase
     }
     try
     {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
       var result = await _reportService.GetSignedDownloadUrlAsync(userSub, request, cancellationToken);
       return Ok(result);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
     }
     catch (InvalidOperationException ex)
     {
@@ -198,6 +234,7 @@ public sealed class ReportsController : ControllerBase
   [Consumes("multipart/form-data")]
   [ProducesResponseType(typeof(ReportUploadResponse), StatusCodes.Status201Created)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   public async Task<IActionResult> UploadReportFileAsync(
     [FromForm] IFormFile file,
@@ -211,8 +248,13 @@ public sealed class ReportsController : ControllerBase
 
     try
     {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
       var uploaded = await _reportFileUploadService.UploadAsync(userSub, file, cancellationToken);
       return Created(new Uri($"/api/v1/reports/{uploaded.ReportId}", UriKind.Relative), uploaded);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
     }
     catch (InvalidOperationException ex)
     {
@@ -228,6 +270,7 @@ public sealed class ReportsController : ControllerBase
   [HttpPost("download-url/verified")]
   [ProducesResponseType(typeof(VerifiedReportDownloadResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> CreateVerifiedDownloadUrlAsync(
@@ -242,8 +285,13 @@ public sealed class ReportsController : ControllerBase
 
     try
     {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
       var result = await _reportChecksumVerificationService.CreateVerifiedDownloadUrlAsync(userSub, request, cancellationToken);
       return Ok(result);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
     }
     catch (KeyNotFoundException ex)
     {
@@ -272,5 +320,17 @@ public sealed class ReportsController : ControllerBase
           ["checksum"] = [ex.Message]
         }));
     }
+  }
+
+  private ObjectResult ForbidWithConsentError(string purpose)
+  {
+    return StatusCode(
+      StatusCodes.Status403Forbidden,
+      new ValidationErrorResponse(
+        "Consent required.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["consent"] = [$"Consent for purpose '{purpose}' is required."]
+        }));
   }
 }

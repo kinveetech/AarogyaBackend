@@ -56,5 +56,7 @@ public sealed class User : IAuditableEntity
 
   public ICollection<EmergencyContact> EmergencyContacts { get; set; } = [];
 
+  public ICollection<ConsentRecord> ConsentRecords { get; set; } = [];
+
   public ICollection<AuditLog> AuditLogs { get; set; } = [];
 }

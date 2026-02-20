@@ -1,4 +1,5 @@
 using Aarogya.Api.Features.V1.AccessGrants;
+using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.EmergencyContacts;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Features.V1.Users;
@@ -18,6 +19,7 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddHostedService<S3UploadEventConsumerHostedService>();
     services.AddScoped<IAccessGrantService, AccessGrantService>();
     services.AddScoped<IEmergencyContactService, EmergencyContactService>();
+    services.AddScoped<IConsentService, ConsentService>();
 
     return services;
   }

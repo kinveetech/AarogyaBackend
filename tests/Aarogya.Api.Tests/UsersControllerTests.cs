@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Aarogya.Api.Controllers.V1;
+using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.Users;
 using Aarogya.Api.Validation;
 using FluentAssertions;
@@ -119,7 +120,15 @@ public sealed class UsersControllerTests
 
   private static UsersController CreateController(IUserProfileService service, ClaimsPrincipal user)
   {
-    return new UsersController(service)
+    var consentService = new Mock<IConsentService>();
+    consentService
+      .Setup(x => x.EnsureGrantedAsync(
+        It.IsAny<string>(),
+        It.IsAny<string>(),
+        It.IsAny<CancellationToken>()))
+      .Returns(Task.CompletedTask);
+
+    return new UsersController(service, consentService.Object)
     {
       ControllerContext = new ControllerContext
       {

@@ -30,6 +30,8 @@ public sealed class AarogyaDbContext(
 
   public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+  public DbSet<ConsentRecord> ConsentRecords => Set<ConsentRecord>();
+
   public DbSet<AadhaarVaultRecord> AadhaarVaultRecords => Set<AadhaarVaultRecord>();
 
   public DbSet<AadhaarVaultAccessLog> AadhaarVaultAccessLogs => Set<AadhaarVaultAccessLog>();
@@ -52,6 +54,7 @@ public sealed class AarogyaDbContext(
     modelBuilder.ApplyConfiguration(new ReportParameterConfiguration());
     modelBuilder.ApplyConfiguration(new AccessGrantConfiguration());
     modelBuilder.ApplyConfiguration(new AuditLogConfiguration());
+    modelBuilder.ApplyConfiguration(new ConsentRecordConfiguration());
   }
 
   public override int SaveChanges(bool acceptAllChangesOnSuccess)
