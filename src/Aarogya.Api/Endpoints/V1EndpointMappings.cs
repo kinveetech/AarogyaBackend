@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Aarogya.Api.Authorization;
+using Aarogya.Api.Validation;
 
 namespace Aarogya.Api.Endpoints;
 
@@ -17,6 +18,7 @@ internal static class V1EndpointMappings
   public static IEndpointRouteBuilder MapV1EndpointGroups(this IEndpointRouteBuilder app)
   {
     var v1 = app.MapGroup("/api/v1")
+      .AddEndpointFilter<FluentValidationEndpointFilter>()
       .WithOpenApi();
 
     MapUsers(v1);
@@ -67,11 +69,6 @@ internal static class V1EndpointMappings
 
     reports.MapPost("/", async (CreateReportRequest request, HttpContext context, IReportsEndpointService service, CancellationToken ct) =>
     {
-      if (string.IsNullOrWhiteSpace(request.Title))
-      {
-        return Results.BadRequest(new ApiError("Title is required."));
-      }
-
       var userSub = GetRequiredSub(context.User);
       if (userSub is null)
       {
@@ -116,13 +113,6 @@ internal static class V1EndpointMappings
 
     grants.MapPost("/", async (CreateAccessGrantRequest request, HttpContext context, IAccessGrantsEndpointService service, CancellationToken ct) =>
     {
-      if (string.IsNullOrWhiteSpace(request.DoctorSub)
-        || request.ReportIds is null
-        || request.ReportIds.Count == 0)
-      {
-        return Results.BadRequest(new ApiError("DoctorSub and at least one report ID are required."));
-      }
-
       var patientSub = GetRequiredSub(context.User);
       if (patientSub is null)
       {
@@ -186,13 +176,6 @@ internal static class V1EndpointMappings
 
     contacts.MapPost("/", async (CreateEmergencyContactRequest request, HttpContext context, IEmergencyContactsEndpointService service, CancellationToken ct) =>
     {
-      if (string.IsNullOrWhiteSpace(request.Name)
-        || string.IsNullOrWhiteSpace(request.PhoneNumber)
-        || string.IsNullOrWhiteSpace(request.Relationship))
-      {
-        return Results.BadRequest(new ApiError("Name, phone number and relationship are required."));
-      }
-
       var userSub = GetRequiredSub(context.User);
       if (userSub is null)
       {
