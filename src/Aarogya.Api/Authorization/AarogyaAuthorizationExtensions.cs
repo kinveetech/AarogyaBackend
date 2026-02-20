@@ -24,6 +24,13 @@ internal static class AarogyaAuthorizationExtensions
 
       options.AddPolicy(AarogyaPolicies.Admin, policy =>
         policy.RequireClaim(System.Security.Claims.ClaimTypes.Role, AarogyaRoles.Admin));
+
+      options.AddPolicy(AarogyaPolicies.LabIntegrationApiKey, policy =>
+      {
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("auth_method", "api_key");
+        policy.RequireClaim(System.Security.Claims.ClaimTypes.Role, AarogyaRoles.LabTechnician);
+      });
     });
 
     services.AddTransient<IClaimsTransformation, AarogyaRoleClaimsTransformation>();

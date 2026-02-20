@@ -1,4 +1,6 @@
 using System.Text;
+using Aarogya.Api.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -10,6 +12,7 @@ public static class AuthenticationExtensions
 {
   private const string CognitoJwtScheme = "CognitoJwt";
   private const string LocalJwtScheme = "LocalJwt";
+  private const string ApiKeyScheme = ApiKeyAuthenticationHandler.SchemeName;
 
   public static IServiceCollection AddCognitoJwtAuthentication(
     this IServiceCollection services,
@@ -46,13 +49,23 @@ public static class AuthenticationExtensions
         options.ForwardDefaultSelector = context =>
         {
           var bearerToken = ExtractBearerToken(context.Request.Headers.Authorization);
-          if (hasLocalJwt && !string.IsNullOrWhiteSpace(bearerToken))
+          if (!string.IsNullOrWhiteSpace(bearerToken))
           {
-            var tokenIssuer = TryReadIssuer(bearerToken);
-            if (string.Equals(tokenIssuer, jwtOptions.Issuer, StringComparison.Ordinal))
+            if (hasLocalJwt)
             {
-              return LocalJwtScheme;
+              var tokenIssuer = TryReadIssuer(bearerToken);
+              if (string.Equals(tokenIssuer, jwtOptions.Issuer, StringComparison.Ordinal))
+              {
+                return LocalJwtScheme;
+              }
             }
+
+            return CognitoJwtScheme;
+          }
+
+          if (context.Request.Headers.ContainsKey(ApiKeyAuthenticationHandler.HeaderName))
+          {
+            return ApiKeyScheme;
           }
 
           return CognitoJwtScheme;
@@ -76,6 +89,9 @@ public static class AuthenticationExtensions
           RoleClaimType = "cognito:groups"
         };
       });
+
+    services.AddAuthentication()
+      .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyScheme, _ => { });
 
     if (hasLocalJwt)
     {

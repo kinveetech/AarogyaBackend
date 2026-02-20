@@ -26,6 +26,7 @@ public sealed class AuthControllerTests
 
     var controller = new AuthController(
       new NoopPhoneOtpService(),
+      new NoopApiKeyService(),
       new NoopPkceAuthorizationService(),
       new NoopSocialAuthService(),
       new NoopRoleAssignmentService())
@@ -74,6 +75,18 @@ public sealed class AuthControllerTests
 
     public Task<PkceRevokeResult> RevokeRefreshTokenAsync(PkceRevokeRequest request, CancellationToken cancellationToken = default)
       => Task.FromResult(new PkceRevokeResult(true, "ok"));
+  }
+
+  private sealed class NoopApiKeyService : IApiKeyService
+  {
+    public Task<ApiKeyIssueResult> IssueKeyAsync(ApiKeyIssueRequest request, CancellationToken cancellationToken = default)
+      => Task.FromResult(new ApiKeyIssueResult(true, "ok", "key-id", "plain-key", DateTimeOffset.UtcNow.AddDays(1), request.PartnerId, request.PartnerName));
+
+    public Task<ApiKeyRotateResult> RotateKeyAsync(ApiKeyRotateRequest request, CancellationToken cancellationToken = default)
+      => Task.FromResult(new ApiKeyRotateResult(true, "ok", "key-id-2", "plain-key-2", DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddMinutes(30), "partner", "Partner"));
+
+    public Task<ApiKeyValidationResult> ValidateKeyAsync(string apiKey, CancellationToken cancellationToken = default)
+      => Task.FromResult(new ApiKeyValidationResult(true, "ok", "key-id", "partner", "Partner"));
   }
 
   private sealed class NoopRoleAssignmentService : IRoleAssignmentService
