@@ -207,12 +207,20 @@ internal sealed class AccessGrantService(
     grant.RevokedAt = clock.UtcNow;
     accessGrantRepository.Update(grant);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    var isEmergencyGrant = !string.IsNullOrWhiteSpace(grant.GrantReason)
+      && grant.GrantReason.StartsWith("emergency:", StringComparison.OrdinalIgnoreCase);
+    var action = isEmergencyGrant ? "emergency_access.revoked" : "access_grant.revoked";
     await auditLoggingService.LogDataAccessAsync(
       patient,
-      "access_grant.revoked",
+      action,
       "access_grant",
       grant.Id,
       200,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["doctorUserId"] = grant.GrantedToUserId.ToString("D"),
+        ["grantReason"] = grant.GrantReason ?? string.Empty
+      },
       cancellationToken: cancellationToken);
     return true;
   }

@@ -37,6 +37,7 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddHostedService<EmergencyAccessExpiryHostedService>();
     services.AddScoped<IAccessGrantService, AccessGrantService>();
     services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
+    services.AddScoped<IEmergencyAccessAuditTrailService, EmergencyAccessAuditTrailService>();
     services.AddScoped<IEmergencyContactService, EmergencyContactService>();
     services.AddScoped<IConsentService, ConsentService>();
 

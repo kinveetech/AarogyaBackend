@@ -93,6 +93,21 @@ internal sealed class EmergencyAccessService(
       },
       cancellationToken);
 
+    await auditLoggingService.LogDataAccessAsync(
+      patient,
+      "emergency_access.granted",
+      "access_grant",
+      grant.Id,
+      201,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["doctorUserId"] = doctor.Id.ToString("D"),
+        ["emergencyContactId"] = contact.Id.ToString("D"),
+        ["requestedByContact"] = "true",
+        ["expiresAtUtc"] = expiresAt.ToString("O")
+      },
+      cancellationToken);
+
     await transactionalEmailNotificationService.SendEmergencyAccessRequestedAsync(
       patient,
       contact,

@@ -80,6 +80,28 @@ internal sealed class ReportService(
         .GroupBy(report => report.Id)
         .Select(group => group.First())
         .ToArray();
+
+      var emergencyGrantIds = grants
+        .Where(IsEmergencyGrant)
+        .Select(grant => grant.Id)
+        .Distinct()
+        .ToArray();
+      if (emergencyGrantIds.Length > 0 && accessibleReports.Count > 0)
+      {
+        await auditLoggingService.LogDataAccessAsync(
+          user,
+          "emergency_access.report_listed",
+          "report",
+          null,
+          200,
+          new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+          {
+            ["doctorUserId"] = user.Id.ToString("D"),
+            ["count"] = accessibleReports.Count.ToString(CultureInfo.InvariantCulture),
+            ["emergencyAccessGrantIds"] = string.Join(",", emergencyGrantIds.Select(id => id.ToString("D")))
+          },
+          cancellationToken);
+      }
     }
     else
     {
@@ -162,6 +184,28 @@ internal sealed class ReportService(
         ["reportType"] = ToReportTypeCode(report.ReportType)
       },
       cancellationToken);
+
+    if (user.Role == UserRole.Doctor)
+    {
+      var emergencyGrant = await ResolveEmergencyGrantContextAsync(user, report, cancellationToken);
+      if (emergencyGrant is not null)
+      {
+        await auditLoggingService.LogDataAccessAsync(
+          user,
+          "emergency_access.report_viewed",
+          "report",
+          report.Id,
+          200,
+          new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+          {
+            ["doctorUserId"] = user.Id.ToString("D"),
+            ["patientUserId"] = report.PatientId.ToString("D"),
+            ["emergencyAccessGrantId"] = emergencyGrant.Id.ToString("D"),
+            ["reportType"] = ToReportTypeCode(report.ReportType)
+          },
+          cancellationToken);
+      }
+    }
 
     report.Metadata.Tags.TryGetValue("lab-name", out var labName);
     report.Metadata.Tags.TryGetValue("lab-code", out var labCode);
@@ -435,6 +479,28 @@ internal sealed class ReportService(
 
       return true;
     });
+  }
+
+  private async Task<AccessGrant?> ResolveEmergencyGrantContextAsync(
+    User doctor,
+    Report report,
+    CancellationToken cancellationToken)
+  {
+    var now = clock.UtcNow;
+    var grants = await accessGrantRepository.ListAsync(
+      new ActiveAccessGrantsForDoctorSpecification(doctor.Id, now),
+      cancellationToken);
+
+    return grants
+      .Where(grant => grant.PatientId == report.PatientId)
+      .Where(grant => IsEmergencyGrant(grant))
+      .FirstOrDefault(grant => IsReportAllowedByGrant([grant], report, requiresDownloadAccess: true));
+  }
+
+  private static bool IsEmergencyGrant(AccessGrant grant)
+  {
+    return !string.IsNullOrWhiteSpace(grant.GrantReason)
+      && grant.GrantReason.StartsWith("emergency:", StringComparison.OrdinalIgnoreCase);
   }
 
   private static bool CanDeleteReport(User user, Report report)

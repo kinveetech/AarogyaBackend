@@ -9,4 +9,10 @@ internal sealed class AuditLogRepository(AarogyaDbContext dbContext)
 {
   public Task<IReadOnlyList<AuditLog>> ListByActorAsync(Guid actorUserId, CancellationToken cancellationToken = default)
     => ListAsync(new AuditLogsByActorSpecification(actorUserId), cancellationToken);
+
+  public override void Update(AuditLog entity)
+    => throw new NotSupportedException("Audit logs are append-only and cannot be updated.");
+
+  public override void Delete(AuditLog entity)
+    => throw new NotSupportedException("Audit logs are append-only and cannot be deleted.");
 }
