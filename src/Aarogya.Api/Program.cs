@@ -8,8 +8,10 @@ using Aarogya.Api.Endpoints;
 using Aarogya.Api.Features.V1;
 using Aarogya.Api.Health;
 using Aarogya.Api.RateLimiting;
+using Aarogya.Api.Security;
 using Aarogya.Api.Validation;
 using Aarogya.Infrastructure;
+using Aarogya.Infrastructure.Security;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -89,6 +91,11 @@ builder.Services
   .BindConfiguration(RateLimitingOptions.SectionName)
   .ValidateDataAnnotations();
 
+builder.Services
+  .AddOptionsWithValidateOnStart<DataEncryptionRotationOptions>()
+  .BindConfiguration(DataEncryptionRotationOptions.SectionName)
+  .ValidateDataAnnotations();
+
 // Add Infrastructure services (DbContext, health checks, etc.)
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -132,6 +139,7 @@ builder.Services.AddSingleton<ICognitoSocialTokenClient, CognitoOAuthTokenClient
 builder.Services.AddSingleton<ISocialAuthService, InMemorySocialAuthService>();
 builder.Services.AddSingleton<IRoleAssignmentService, InMemoryRoleAssignmentService>();
 builder.Services.AddScoped<IAuditLoggingService, AuditLoggingService>();
+builder.Services.AddHostedService<DataEncryptionKeyRotationHostedService>();
 
 // Configure Swagger
 builder.Services.AddSwaggerGen(c =>

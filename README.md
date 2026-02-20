@@ -28,7 +28,8 @@ infra/
 
 scripts/
 ├── install-git-hooks.sh
-└── configure-audit-log-archival.sh # One-time setup script for WS6-3 compliance archival
+├── configure-audit-log-archival.sh # One-time setup script for WS6-3 compliance archival
+└── configure-kms-key-rotation.sh   # One-time setup script for WS6-4 KMS key rotation
 ```
 
 ## ⚙️ Current Service Setup
@@ -220,8 +221,20 @@ Configure encryption via `Encryption` settings:
   "Encryption": {
     "UseAwsKms": true,
     "KmsKeyId": "alias/aarogya-prod-data-key",
+    "ActiveKeyId": "kms-2026",
     "LocalDataKey": "dev-only-local-fallback-key",
+    "LegacyLocalDataKeys": [
+      {
+        "KeyId": "local-2025",
+        "Secret": "legacy-local-secret"
+      }
+    ],
     "BlindIndexKey": "hmac-secret-for-blind-indexes"
+  },
+  "EncryptionRotation": {
+    "EnableBackgroundReEncryption": true,
+    "CheckIntervalMinutes": 1440,
+    "BatchSize": 250
   }
 }
 ```
@@ -229,7 +242,17 @@ Configure encryption via `Encryption` settings:
 Notes:
 - Production: keep `UseAwsKms=true` and set `KmsKeyId`.
 - Local/dev: set `UseAwsKms=false` and provide `LocalDataKey`.
+- Set `ActiveKeyId` to a new value during rotation waves (for example `kms-2027`).
+- Keep previous local keys in `LegacyLocalDataKeys` for backward decryption during migration.
+- A background worker re-encrypts records in batches and writes audit events under `encryption.reencryption.*`.
 - Always set a strong `BlindIndexKey` via user-secrets or environment variables.
+
+KMS annual key-rotation bootstrap:
+```bash
+AWS_REGION=ap-south-1 KMS_ALIAS_NAME=alias/aarogya-prod-data-key ./scripts/configure-kms-key-rotation.sh
+```
+
+Detailed runbook: `docs/infrastructure/encryption-key-rotation.md`
 
 ### Transport Security (TLS)
 Issue #49 adds transport-level TLS enforcement controls for production paths:
