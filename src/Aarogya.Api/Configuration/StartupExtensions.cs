@@ -137,7 +137,54 @@ public static class StartupExtensions
       violations.Add("Missing Aws:Cognito:AppClientId");
     }
 
+    AddSocialProviderConfigurationViolations(configuration, violations);
+
     return violations;
+  }
+
+  private static void AddSocialProviderConfigurationViolations(IConfiguration configuration, List<string> violations)
+  {
+    var redirectUris = configuration.GetSection("Aws:Cognito:SocialIdentityProviders:MobileRedirectUris").Get<string[]>() ?? [];
+    if (redirectUris.Length == 0 || Array.TrueForAll(redirectUris, IsMissingConfigurationValue))
+    {
+      violations.Add("Missing Aws:Cognito:SocialIdentityProviders:MobileRedirectUris");
+    }
+
+    foreach (var provider in new[] { "Google", "Apple", "Facebook" })
+    {
+      ValidateProvider(provider);
+    }
+
+    return;
+
+    void ValidateProvider(string provider)
+    {
+      var enabledKey = $"Aws:Cognito:SocialIdentityProviders:{provider}:Enabled";
+      var enabledRaw = configuration[enabledKey];
+      if (IsMissingConfigurationValue(enabledRaw))
+      {
+        violations.Add($"Missing {enabledKey}");
+        return;
+      }
+
+      var isEnabled = bool.TryParse(enabledRaw, out var parsedEnabled) && parsedEnabled;
+      if (!isEnabled)
+      {
+        return;
+      }
+
+      var clientId = configuration[$"Aws:Cognito:SocialIdentityProviders:{provider}:ClientId"];
+      if (IsMissingConfigurationValue(clientId))
+      {
+        violations.Add($"Missing Aws:Cognito:SocialIdentityProviders:{provider}:ClientId");
+      }
+
+      var clientSecret = configuration[$"Aws:Cognito:SocialIdentityProviders:{provider}:ClientSecret"];
+      if (IsMissingConfigurationValue(clientSecret))
+      {
+        violations.Add($"Missing Aws:Cognito:SocialIdentityProviders:{provider}:ClientSecret");
+      }
+    }
   }
 
   [SuppressMessage(

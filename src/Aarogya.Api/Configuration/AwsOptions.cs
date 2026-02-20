@@ -61,10 +61,47 @@ public sealed class CognitoOptions
   [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "Configuration binding requires string type")]
   public string? Issuer { get; set; }
 
+  public CognitoSocialIdentityProviderOptions SocialIdentityProviders { get; set; } = new();
+
   [RegularExpression("^(OFF|ON|OPTIONAL)$", ErrorMessage = "MfaConfiguration must be OFF, ON, or OPTIONAL.")]
   public string MfaConfiguration { get; set; } = "OPTIONAL";
 
   public CognitoPasswordPolicyOptions PasswordPolicy { get; set; } = new();
+}
+
+public sealed class CognitoSocialIdentityProviderOptions
+{
+  public SocialProviderOptions Google { get; set; } = new();
+
+  public SocialProviderOptions Apple { get; set; } = new();
+
+  public SocialProviderOptions Facebook { get; set; } = new();
+
+  [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "Configuration binding requires mutable collection.")]
+  public List<string> MobileRedirectUris { get; set; } = [];
+}
+
+public sealed class SocialProviderOptions
+{
+  public bool Enabled { get; set; }
+
+  public string? ClientId { get; set; }
+
+  public string? ClientSecret { get; set; }
+
+  [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "Configuration binding requires mutable collection.")]
+  public List<string> Scopes { get; set; } = ["openid", "email", "profile"];
+
+  public SocialAttributeMappingOptions AttributeMapping { get; set; } = new();
+}
+
+public sealed class SocialAttributeMappingOptions
+{
+  public string Email { get; set; } = "email";
+
+  public string GivenName { get; set; } = "given_name";
+
+  public string FamilyName { get; set; } = "family_name";
 }
 
 public sealed class CognitoPasswordPolicyOptions

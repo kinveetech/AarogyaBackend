@@ -24,7 +24,11 @@ public sealed class AuthControllerTests
       new Claim("cognito:groups", "Admin")
     ], "TestAuth"));
 
-    var controller = new AuthController(new NoopPhoneOtpService(), new NoopPkceAuthorizationService(), new NoopRoleAssignmentService())
+    var controller = new AuthController(
+      new NoopPhoneOtpService(),
+      new NoopPkceAuthorizationService(),
+      new NoopSocialAuthService(),
+      new NoopRoleAssignmentService())
     {
       ControllerContext = new ControllerContext
       {
@@ -82,5 +86,14 @@ public sealed class AuthControllerTests
 
     public IReadOnlyCollection<string> GetAssignedRoles(string userSub)
       => [];
+  }
+
+  private sealed class NoopSocialAuthService : ISocialAuthService
+  {
+    public Task<SocialAuthorizeResult> CreateAuthorizeUrlAsync(SocialAuthorizeRequest request, CancellationToken cancellationToken = default)
+      => Task.FromResult(new SocialAuthorizeResult(true, "ok", new Uri("https://example.com/authorize"), "state"));
+
+    public Task<SocialTokenResult> ExchangeCodeAsync(SocialTokenRequest request, CancellationToken cancellationToken = default)
+      => Task.FromResult(new SocialTokenResult(true, "ok", "access", "refresh", "id", 900, "Bearer", false));
   }
 }

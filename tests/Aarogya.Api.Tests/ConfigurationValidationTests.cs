@@ -12,10 +12,11 @@ public class ConfigurationValidationTests
   [Fact]
   public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenCognitoUserPoolIdMissing()
   {
-    var configuration = BuildConfiguration(new Dictionary<string, string?>
+    var values = WithDefaultsForSocialProviderConfiguration(new Dictionary<string, string?>
     {
       ["ConnectionStrings:DefaultConnection"] = "Host=db;Username=user;Password=strong-password"
     });
+    var configuration = BuildConfiguration(values);
 
     var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
 
@@ -26,13 +27,14 @@ public class ConfigurationValidationTests
   [Fact]
   public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenDefaultDbPasswordIsUsed()
   {
-    var configuration = BuildConfiguration(new Dictionary<string, string?>
+    var values = WithDefaultsForSocialProviderConfiguration(new Dictionary<string, string?>
     {
       ["ConnectionStrings:DefaultConnection"] =
         "Host=db;Port=5432;Database=aarogya;Username=aarogya;Password=aarogya_dev_password",
       ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId",
       ["Aws:Cognito:AppClientId"] = "example-app-client-id"
     });
+    var configuration = BuildConfiguration(values);
 
     var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
 
@@ -43,11 +45,12 @@ public class ConfigurationValidationTests
   [Fact]
   public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenCognitoAppClientIdMissing()
   {
-    var configuration = BuildConfiguration(new Dictionary<string, string?>
+    var values = WithDefaultsForSocialProviderConfiguration(new Dictionary<string, string?>
     {
       ["ConnectionStrings:DefaultConnection"] = "Host=db;Username=user;Password=strong-password",
       ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId"
     });
+    var configuration = BuildConfiguration(values);
 
     var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
 
@@ -58,12 +61,13 @@ public class ConfigurationValidationTests
   [Fact]
   public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenCognitoValuesUseEnvPlaceholders()
   {
-    var configuration = BuildConfiguration(new Dictionary<string, string?>
+    var values = WithDefaultsForSocialProviderConfiguration(new Dictionary<string, string?>
     {
       ["ConnectionStrings:DefaultConnection"] = "Host=db;Username=user;Password=strong-password",
       ["Aws:Cognito:UserPoolId"] = "SET_VIA_ENV_VAR",
       ["Aws:Cognito:AppClientId"] = "SET_VIA_ENV_VAR"
     });
+    var configuration = BuildConfiguration(values);
 
     var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
 
@@ -75,13 +79,14 @@ public class ConfigurationValidationTests
   [Fact]
   public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenAwsServiceUrlIsInvalid()
   {
-    var configuration = BuildConfiguration(new Dictionary<string, string?>
+    var values = WithDefaultsForSocialProviderConfiguration(new Dictionary<string, string?>
     {
       ["ConnectionStrings:DefaultConnection"] = "Host=db;Username=user;Password=strong-password",
       ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId",
       ["Aws:Cognito:AppClientId"] = "example-app-client-id",
       ["Aws:ServiceUrl"] = "not-a-url"
     });
+    var configuration = BuildConfiguration(values);
 
     var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
 
@@ -102,11 +107,53 @@ public class ConfigurationValidationTests
     action.Should().NotThrow();
   }
 
+  [Fact]
+  public void ValidateRequiredConfiguration_ShouldNotThrowInProduction_WhenProviderIsDisabled()
+  {
+    var values = WithDefaultsForSocialProviderConfiguration(new Dictionary<string, string?>
+    {
+      ["ConnectionStrings:DefaultConnection"] = "Host=db;Username=user;Password=strong-password",
+      ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId",
+      ["Aws:Cognito:AppClientId"] = "example-app-client-id"
+    });
+
+    values["Aws:Cognito:SocialIdentityProviders:Apple:Enabled"] = "false";
+    values.Remove("Aws:Cognito:SocialIdentityProviders:Apple:ClientId");
+    values.Remove("Aws:Cognito:SocialIdentityProviders:Apple:ClientSecret");
+
+    var configuration = BuildConfiguration(values);
+    var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
+
+    action.Should().NotThrow();
+  }
+
   private static IConfiguration BuildConfiguration(Dictionary<string, string?> values)
   {
     return new ConfigurationBuilder()
       .AddInMemoryCollection(values)
       .Build();
+  }
+
+  private static Dictionary<string, string?> WithDefaultsForSocialProviderConfiguration(Dictionary<string, string?> values)
+  {
+    foreach (var provider in new[] { "Google", "Apple", "Facebook" })
+    {
+      var providerKey = $"Aws:Cognito:SocialIdentityProviders:{provider}";
+      var providerId = provider switch
+      {
+        "Google" => "google",
+        "Apple" => "apple",
+        "Facebook" => "facebook",
+        _ => throw new InvalidOperationException($"Unsupported provider '{provider}'.")
+      };
+
+      values[$"{providerKey}:Enabled"] = "true";
+      values[$"{providerKey}:ClientId"] = $"{providerId}-client-id";
+      values[$"{providerKey}:ClientSecret"] = $"{providerId}-client-secret";
+    }
+
+    values["Aws:Cognito:SocialIdentityProviders:MobileRedirectUris:0"] = "aarogya://auth/callback";
+    return values;
   }
 
   private sealed class TestHostEnvironment(string environmentName) : IHostEnvironment
