@@ -61,6 +61,11 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptionsWithValidateOnStart<BreachDetectionOptions>()
+  .BindConfiguration(BreachDetectionOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<CorsOptions>()
   .BindConfiguration(CorsOptions.SectionName);
 
@@ -180,6 +185,7 @@ builder.Services.AddSingleton<ISocialAuthService, InMemorySocialAuthService>();
 builder.Services.AddSingleton<IRoleAssignmentService, InMemoryRoleAssignmentService>();
 builder.Services.AddScoped<IAuditLoggingService, AuditLoggingService>();
 builder.Services.AddHostedService<DataEncryptionKeyRotationHostedService>();
+builder.Services.AddHostedService<BreachDetectionHostedService>();
 
 // Configure Swagger
 builder.Services.AddSwaggerGen(c =>
