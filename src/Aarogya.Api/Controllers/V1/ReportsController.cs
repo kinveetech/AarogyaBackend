@@ -39,9 +39,12 @@ public sealed class ReportsController : ControllerBase
   }
 
   [HttpGet]
-  [ProducesResponseType(typeof(IReadOnlyList<ReportSummaryResponse>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ReportListResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-  public async Task<IActionResult> ListReportsAsync(CancellationToken cancellationToken)
+  public async Task<IActionResult> ListReportsAsync(
+    [FromQuery] ReportListQueryRequest request,
+    CancellationToken cancellationToken)
   {
     var userSub = User.GetSubjectOrNull();
     if (userSub is null)
@@ -49,8 +52,20 @@ public sealed class ReportsController : ControllerBase
       return Unauthorized();
     }
 
-    var result = await _reportService.GetForUserAsync(userSub, cancellationToken);
-    return Ok(result);
+    try
+    {
+      var result = await _reportService.GetForUserAsync(userSub, request, cancellationToken);
+      return Ok(result);
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["query"] = [ex.Message]
+        }));
+    }
   }
 
   [HttpPost]

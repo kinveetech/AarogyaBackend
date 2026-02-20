@@ -13,6 +13,53 @@ namespace Aarogya.Api.Tests;
 public sealed class ReportsControllerTests
 {
   [Fact]
+  public async Task ListReportsAsync_ShouldReturnUnauthorized_WhenSubjectMissingAsync()
+  {
+    var controller = CreateController(
+      user: new ClaimsPrincipal(new ClaimsIdentity()),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.ListReportsAsync(new ReportListQueryRequest(), CancellationToken.None);
+
+    result.Should().BeOfType<UnauthorizedResult>();
+  }
+
+  [Fact]
+  public async Task ListReportsAsync_ShouldReturnOk_WithPagedResponseAsync()
+  {
+    var expected = new ReportListResponse(
+      Page: 1,
+      PageSize: 20,
+      TotalCount: 1,
+      Items:
+      [
+        new ReportSummaryResponse(
+          Guid.NewGuid(),
+          "blood_test - Aarogya Diagnostics",
+          "uploaded",
+          new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero))
+      ]);
+
+    var reportService = new Mock<IReportService>();
+    reportService
+      .Setup(x => x.GetForUserAsync("seed-PATIENT-1", It.IsAny<ReportListQueryRequest>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(expected);
+
+    var controller = CreateController(
+      user: CreateUser("seed-PATIENT-1"),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: reportService.Object,
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.ListReportsAsync(new ReportListQueryRequest(), CancellationToken.None);
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    ok.Value.Should().BeEquivalentTo(expected);
+  }
+
+  [Fact]
   public async Task CreateReportAsync_ShouldReturnForbidden_ForDoctorRoleAsync()
   {
     var reportService = new Mock<IReportService>();

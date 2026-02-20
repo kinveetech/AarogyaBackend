@@ -8,7 +8,10 @@ namespace Aarogya.Api.Features.V1.Reports;
   Justification = "Used by public controller constructor injection.")]
 public interface IReportService
 {
-  public Task<IReadOnlyList<ReportSummaryResponse>> GetForUserAsync(string userSub, CancellationToken cancellationToken = default);
+  public Task<ReportListResponse> GetForUserAsync(
+    string userSub,
+    ReportListQueryRequest request,
+    CancellationToken cancellationToken = default);
 
   public Task<ReportSummaryResponse> AddForUserAsync(string userSub, CreateReportRequest request, CancellationToken cancellationToken = default);
 

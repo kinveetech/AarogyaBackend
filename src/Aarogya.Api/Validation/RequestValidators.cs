@@ -186,6 +186,45 @@ internal sealed class CreateReportParameterRequestValidator : AbstractValidator<
     => request.Value.HasValue || !string.IsNullOrWhiteSpace(request.ValueText);
 }
 
+internal sealed class ReportListQueryRequestValidator : AbstractValidator<ReportListQueryRequest>
+{
+  private static readonly string[] AllowedReportTypes =
+  [
+    "blood_test",
+    "urine_test",
+    "radiology",
+    "cardiology",
+    "other"
+  ];
+
+  private static readonly string[] AllowedStatuses =
+  [
+    "draft",
+    "uploaded",
+    "processing",
+    "validated",
+    "published",
+    "archived"
+  ];
+
+  public ReportListQueryRequestValidator()
+  {
+    RuleFor(x => x.ReportType)
+      .Must(value => value is null || AllowedReportTypes.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase))
+      .WithMessage("ReportType filter is invalid.");
+
+    RuleFor(x => x.Status)
+      .Must(value => value is null || AllowedStatuses.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase))
+      .WithMessage("Status filter is invalid.");
+
+    RuleFor(x => x.Page).GreaterThan(0);
+    RuleFor(x => x.PageSize).InclusiveBetween(1, 100);
+    RuleFor(x => x.ToDate)
+      .GreaterThanOrEqualTo(x => x.FromDate)
+      .When(x => x.FromDate.HasValue && x.ToDate.HasValue);
+  }
+}
+
 internal sealed class CreateReportUploadUrlRequestValidator : AbstractValidator<CreateReportUploadUrlRequest>
 {
   private static readonly string[] AllowedContentTypes =
