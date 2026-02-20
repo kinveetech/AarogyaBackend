@@ -272,6 +272,29 @@ Behavior:
 - Protected `/api/v1` endpoints enforce required consent and return `403` when withdrawn or missing.
 - Every consent grant/withdraw/denial is written to the audit log trail.
 
+### Virus Scanning Pipeline
+Issue #56 adds antivirus scanning for uploaded report files:
+
+- upload flow starts in `processing` state
+- S3 upload events are consumed from SQS
+- each object is scanned via `IReportVirusScanner` (ClamAV-compatible scanner abstraction)
+- clean files transition to `clean`
+- infected files are copied to quarantine bucket/prefix and transition to `infected`
+- scan metadata is attached to report tags (`scan-status`, `scan-engine`, signature/quarantine key when infected)
+- ClamAV definitions refresh runs periodically in a hosted service
+
+Configuration (`appsettings*.json`):
+```json
+{
+  "VirusScanning": {
+    "EnableScanning": true,
+    "QuarantineBucketName": "aarogya-dev-quarantine",
+    "QuarantinePrefix": "quarantine",
+    "DefinitionsRefreshIntervalMinutes": 60
+  }
+}
+```
+
 ### Transport Security (TLS)
 Issue #49 adds transport-level TLS enforcement controls for production paths:
 - PostgreSQL connection must use `SSL Mode=Require|VerifyCA|VerifyFull`

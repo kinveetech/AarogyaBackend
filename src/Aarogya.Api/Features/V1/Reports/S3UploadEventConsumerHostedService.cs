@@ -10,6 +10,7 @@ namespace Aarogya.Api.Features.V1.Reports;
 internal sealed class S3UploadEventConsumerHostedService(
   IAmazonSQS sqsClient,
   IAmazonS3 s3Client,
+  IReportVirusScanProcessor virusScanProcessor,
   IOptions<AwsOptions> awsOptions,
   ILogger<S3UploadEventConsumerHostedService> logger)
   : BackgroundService
@@ -119,6 +120,8 @@ internal sealed class S3UploadEventConsumerHostedService(
         contentType ?? "unknown",
         record.EventName,
         record.EventTime);
+
+      await virusScanProcessor.ProcessUploadAsync(record, cancellationToken);
     }
   }
 

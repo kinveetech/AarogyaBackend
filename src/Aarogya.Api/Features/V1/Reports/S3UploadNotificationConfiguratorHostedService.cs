@@ -12,6 +12,7 @@ internal sealed class S3UploadNotificationConfiguratorHostedService(
   IAmazonS3 s3Client,
   IAmazonSQS sqsClient,
   IOptions<AwsOptions> awsOptions,
+  IOptions<VirusScanningOptions> virusScanningOptions,
   ILogger<S3UploadNotificationConfiguratorHostedService> logger)
   : IHostedService
 {
@@ -37,6 +38,7 @@ internal sealed class S3UploadNotificationConfiguratorHostedService(
 
     var queueUrl = await GetOrCreateQueueUrlAsync(options.Sqs.QueueName, cancellationToken);
     var queueArn = await GetQueueArnAsync(queueUrl, cancellationToken);
+    await EnsureQuarantineBucketAsync(virusScanningOptions.Value, cancellationToken);
 
     await EnsureQueuePolicyAsync(queueUrl, queueArn, options.S3.BucketName, cancellationToken);
     await EnsureBucketNotificationAsync(queueArn, options.S3.BucketName, cancellationToken);
@@ -155,5 +157,28 @@ internal sealed class S3UploadNotificationConfiguratorHostedService(
     };
 
     await s3Client.PutBucketNotificationAsync(updated, cancellationToken);
+  }
+
+  private async Task EnsureQuarantineBucketAsync(
+    VirusScanningOptions options,
+    CancellationToken cancellationToken)
+  {
+    if (string.IsNullOrWhiteSpace(options.QuarantineBucketName))
+    {
+      return;
+    }
+
+    try
+    {
+      await s3Client.GetBucketAclAsync(new GetBucketAclRequest
+      {
+        BucketName = options.QuarantineBucketName
+      }, cancellationToken);
+    }
+    catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+    {
+      await s3Client.PutBucketAsync(options.QuarantineBucketName, cancellationToken);
+      logger.LogInformation(ex, "Created quarantine bucket '{BucketName}'.", options.QuarantineBucketName);
+    }
   }
 }

@@ -78,7 +78,7 @@ internal sealed class S3ReportFileUploadService(
       PatientId = uploader.Id,
       UploadedByUserId = uploader.Id,
       ReportType = ResolveReportType(file.ContentType),
-      Status = ReportStatus.Uploaded,
+      Status = ReportStatus.Processing,
       SourceSystem = "api-upload",
       UploadedAt = uploadedAt,
       FileStorageKey = objectKey,
@@ -90,7 +90,8 @@ internal sealed class S3ReportFileUploadService(
         {
           ["content-type"] = file.ContentType.Trim(),
           ["size-bytes"] = file.Length.ToString(CultureInfo.InvariantCulture),
-          ["original-file-name"] = file.FileName
+          ["original-file-name"] = file.FileName,
+          ["scan-status"] = "pending"
         }
       }
     };
