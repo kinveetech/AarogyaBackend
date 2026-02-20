@@ -21,15 +21,18 @@ public sealed class AuthController : ControllerBase
 {
   private readonly IPhoneOtpService _phoneOtpService;
   private readonly IPkceAuthorizationService _pkceAuthorizationService;
+  private readonly ISocialAuthService _socialAuthService;
   private readonly IRoleAssignmentService _roleAssignmentService;
 
   public AuthController(
     IPhoneOtpService phoneOtpService,
     IPkceAuthorizationService pkceAuthorizationService,
+    ISocialAuthService socialAuthService,
     IRoleAssignmentService roleAssignmentService)
   {
     _phoneOtpService = phoneOtpService;
     _pkceAuthorizationService = pkceAuthorizationService;
+    _socialAuthService = socialAuthService;
     _roleAssignmentService = roleAssignmentService;
   }
 
@@ -77,6 +80,74 @@ public sealed class AuthController : ControllerBase
     }
 
     return Ok(new OtpResponse(result.Message));
+  }
+
+  [AllowAnonymous]
+  [HttpPost("social/authorize")]
+  [ProducesResponseType(typeof(SocialAuthorizeResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> CreateSocialAuthorizeUrlAsync(
+    [FromBody] SocialAuthorizeCommand request,
+    CancellationToken cancellationToken)
+  {
+    if (!ModelState.IsValid)
+    {
+      return BadRequest(new PkceErrorResponse("Invalid request payload."));
+    }
+
+    var result = await _socialAuthService.CreateAuthorizeUrlAsync(
+      new SocialAuthorizeRequest(
+        request.Provider,
+        request.RedirectUri,
+        request.State,
+        request.CodeChallenge,
+        request.CodeChallengeMethod),
+      cancellationToken);
+
+    if (!result.Success)
+    {
+      return BadRequest(new PkceErrorResponse(result.Message));
+    }
+
+    return Ok(new SocialAuthorizeResponse(result.AuthorizeUrl!, result.State!));
+  }
+
+  [AllowAnonymous]
+  [HttpPost("social/token")]
+  [ProducesResponseType(typeof(SocialTokenResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> ExchangeSocialCodeAsync(
+    [FromBody] SocialTokenCommand request,
+    CancellationToken cancellationToken)
+  {
+    if (!ModelState.IsValid)
+    {
+      return BadRequest(new PkceErrorResponse("Invalid request payload."));
+    }
+
+    var result = await _socialAuthService.ExchangeCodeAsync(
+      new SocialTokenRequest(
+        request.Provider,
+        request.RedirectUri,
+        request.AuthorizationCode,
+        request.ProviderSubject,
+        request.Email,
+        request.GivenName,
+        request.FamilyName),
+      cancellationToken);
+
+    if (!result.Success)
+    {
+      return BadRequest(new PkceErrorResponse(result.Message));
+    }
+
+    return Ok(new SocialTokenResponse(
+      result.AccessToken!,
+      result.RefreshToken!,
+      result.IdToken!,
+      result.TokenType,
+      result.ExpiresInSeconds,
+      result.IsLinkedAccount));
   }
 
   [AllowAnonymous]
@@ -293,6 +364,57 @@ public sealed record OtpResponse(string Message);
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public response metadata attributes.")]
 public sealed record OtpRequestResponse(string Message, DateTimeOffset? ExpiresAt);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record SocialAuthorizeCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string Provider,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  Uri RedirectUri,
+  string? State,
+  string? CodeChallenge,
+  string? CodeChallengeMethod);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record SocialTokenCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string Provider,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  Uri RedirectUri,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string AuthorizationCode,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string ProviderSubject,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string Email,
+  string? GivenName,
+  string? FamilyName);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record SocialAuthorizeResponse(
+  Uri AuthorizeUrl,
+  string State);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record SocialTokenResponse(
+  string AccessToken,
+  string RefreshToken,
+  string IdToken,
+  string TokenType,
+  int ExpiresInSeconds,
+  bool IsLinkedAccount);
 
 [SuppressMessage(
   "Performance",

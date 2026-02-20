@@ -68,6 +68,7 @@ builder.Services.AddSingleton<IUtcClock, SystemUtcClock>();
 builder.Services.AddSingleton<IPhoneOtpSender, MockPhoneOtpSender>();
 builder.Services.AddSingleton<IPhoneOtpService, InMemoryPhoneOtpService>();
 builder.Services.AddSingleton<IPkceAuthorizationService, InMemoryPkceAuthorizationService>();
+builder.Services.AddSingleton<ISocialAuthService, InMemorySocialAuthService>();
 builder.Services.AddSingleton<IRoleAssignmentService, InMemoryRoleAssignmentService>();
 
 // Configure Swagger
