@@ -20,17 +20,20 @@ namespace Aarogya.Api.Controllers;
 public sealed class AuthController : ControllerBase
 {
   private readonly IPhoneOtpService _phoneOtpService;
+  private readonly IApiKeyService _apiKeyService;
   private readonly IPkceAuthorizationService _pkceAuthorizationService;
   private readonly ISocialAuthService _socialAuthService;
   private readonly IRoleAssignmentService _roleAssignmentService;
 
   public AuthController(
     IPhoneOtpService phoneOtpService,
+    IApiKeyService apiKeyService,
     IPkceAuthorizationService pkceAuthorizationService,
     ISocialAuthService socialAuthService,
     IRoleAssignmentService roleAssignmentService)
   {
     _phoneOtpService = phoneOtpService;
+    _apiKeyService = apiKeyService;
     _pkceAuthorizationService = pkceAuthorizationService;
     _socialAuthService = socialAuthService;
     _roleAssignmentService = roleAssignmentService;
@@ -288,6 +291,75 @@ public sealed class AuthController : ControllerBase
   }
 
   [Authorize(Policy = AarogyaPolicies.Admin)]
+  [HttpPost("api-keys/issue")]
+  [ProducesResponseType(typeof(ApiKeyIssueResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public async Task<IActionResult> IssueApiKeyAsync([FromBody] ApiKeyIssueCommand request, CancellationToken cancellationToken)
+  {
+    if (!ModelState.IsValid)
+    {
+      return BadRequest(new PkceErrorResponse("Invalid request payload."));
+    }
+
+    var result = await _apiKeyService.IssueKeyAsync(new ApiKeyIssueRequest(request.PartnerId, request.PartnerName), cancellationToken);
+    if (!result.Success)
+    {
+      return BadRequest(new PkceErrorResponse(result.Message));
+    }
+
+    return Ok(new ApiKeyIssueResponse(
+      result.KeyId!,
+      result.ApiKey!,
+      result.PartnerId!,
+      result.PartnerName!,
+      result.ExpiresAt!.Value));
+  }
+
+  [Authorize(Policy = AarogyaPolicies.Admin)]
+  [HttpPost("api-keys/rotate")]
+  [ProducesResponseType(typeof(ApiKeyRotateResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public async Task<IActionResult> RotateApiKeyAsync([FromBody] ApiKeyRotateCommand request, CancellationToken cancellationToken)
+  {
+    if (!ModelState.IsValid)
+    {
+      return BadRequest(new PkceErrorResponse("Invalid request payload."));
+    }
+
+    var result = await _apiKeyService.RotateKeyAsync(new ApiKeyRotateRequest(request.KeyId), cancellationToken);
+    if (!result.Success)
+    {
+      return BadRequest(new PkceErrorResponse(result.Message));
+    }
+
+    return Ok(new ApiKeyRotateResponse(
+      result.KeyId!,
+      result.ApiKey!,
+      result.PartnerId!,
+      result.PartnerName!,
+      result.ExpiresAt!.Value,
+      result.PreviousKeyValidUntil!.Value));
+  }
+
+  [Authorize(Policy = AarogyaPolicies.LabIntegrationApiKey)]
+  [HttpGet("api-keys/me")]
+  [ProducesResponseType(typeof(ApiKeyIdentityResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public ActionResult<ApiKeyIdentityResponse> GetApiKeyIdentity()
+  {
+    var keyId = User.FindFirstValue("api_key_id") ?? string.Empty;
+    var partnerId = User.FindFirstValue("lab_partner_id") ?? string.Empty;
+    var partnerName = User.FindFirstValue("lab_partner_name") ?? string.Empty;
+
+    return Ok(new ApiKeyIdentityResponse(keyId, partnerId, partnerName));
+  }
+
+  [Authorize(Policy = AarogyaPolicies.Admin)]
   [HttpPost("roles/assign")]
   [ProducesResponseType(typeof(RoleAssignmentResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
@@ -407,6 +479,53 @@ public sealed record SocialTokenResponse(
   string TokenType,
   int ExpiresInSeconds,
   bool IsLinkedAccount);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record ApiKeyIssueCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string PartnerId,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string PartnerName);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record ApiKeyRotateCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string KeyId);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record ApiKeyIssueResponse(
+  string KeyId,
+  string ApiKey,
+  string PartnerId,
+  string PartnerName,
+  DateTimeOffset ExpiresAt);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record ApiKeyRotateResponse(
+  string KeyId,
+  string ApiKey,
+  string PartnerId,
+  string PartnerName,
+  DateTimeOffset ExpiresAt,
+  DateTimeOffset PreviousKeyValidUntil);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record ApiKeyIdentityResponse(string KeyId, string PartnerId, string PartnerName);
 
 [SuppressMessage(
   "Performance",
