@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Aarogya.Infrastructure.Persistence;
 using Aarogya.Infrastructure.Seeding;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 
@@ -23,6 +24,7 @@ public static class StartupExtensions
         if (origins.Length > 0)
         {
           policy.WithOrigins(origins);
+          policy.SetPreflightMaxAge(TimeSpan.FromMinutes(10));
 
           if (corsConfig!.AllowCredentials)
           {
@@ -37,6 +39,23 @@ public static class StartupExtensions
 
         policy.AllowAnyMethod().AllowAnyHeader();
       });
+    });
+
+    return services;
+  }
+
+  public static IServiceCollection AddAarogyaSecurityHeaders(
+    this IServiceCollection services,
+    IConfiguration configuration)
+  {
+    var options = configuration.GetSection(SecurityHeadersOptions.SectionName).Get<SecurityHeadersOptions>()
+      ?? new SecurityHeadersOptions();
+
+    services.AddHsts(hsts =>
+    {
+      hsts.Preload = options.HstsPreload;
+      hsts.IncludeSubDomains = options.HstsIncludeSubDomains;
+      hsts.MaxAge = TimeSpan.FromDays(options.HstsMaxAgeDays);
     });
 
     return services;
@@ -68,6 +87,31 @@ public static class StartupExtensions
           httpContext.Request.Headers.ContainsKey("Authorization")
           || httpContext.Request.Headers.ContainsKey("Cookie"));
       };
+    });
+
+    return app;
+  }
+
+  public static IApplicationBuilder UseAarogyaSecurityHeaders(this IApplicationBuilder app)
+  {
+    var options = app.ApplicationServices.GetRequiredService<IOptions<SecurityHeadersOptions>>().Value;
+
+    app.Use(async (context, next) =>
+    {
+      context.Response.OnStarting(static state =>
+      {
+        var (httpContext, securityHeadersOptions) = ((HttpContext, SecurityHeadersOptions))state;
+        var headers = httpContext.Response.Headers;
+
+        headers["Content-Security-Policy"] = securityHeadersOptions.ContentSecurityPolicy;
+        headers["X-Frame-Options"] = securityHeadersOptions.XFrameOptions;
+        headers["X-Content-Type-Options"] = securityHeadersOptions.XContentTypeOptions;
+        headers["Referrer-Policy"] = securityHeadersOptions.ReferrerPolicy;
+
+        return Task.CompletedTask;
+      }, (context, options));
+
+      await next();
     });
 
     return app;

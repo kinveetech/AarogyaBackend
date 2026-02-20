@@ -244,6 +244,33 @@ Notes:
 - `appsettings.Development.json` disables enforcement for local Docker/Aspire environments that use non-TLS local endpoints.
 - In production, avoid `Trust Server Certificate=true` in PostgreSQL connection strings.
 
+### Security Headers and CORS
+Issue #50 adds strict response hardening for API responses:
+- `Content-Security-Policy`
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: no-referrer`
+- HSTS configured with `preload` + `includeSubDomains`
+
+Configuration:
+```json
+{
+  "SecurityHeaders": {
+    "ContentSecurityPolicy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'",
+    "XFrameOptions": "DENY",
+    "XContentTypeOptions": "nosniff",
+    "ReferrerPolicy": "no-referrer",
+    "HstsIncludeSubDomains": true,
+    "HstsPreload": true,
+    "HstsMaxAgeDays": 730
+  }
+}
+```
+
+Notes:
+- CORS is allow-list based via `Cors:AllowedOrigins`; origins not listed are blocked.
+- Preflight cache duration is set with `Access-Control-Max-Age` (10 minutes).
+
 ### Aadhaar Vault Configuration
 Issue #19 introduces a dedicated Aadhaar vault schema with:
 - `aadhaar_vault.aadhaar_records` for encrypted Aadhaar + SHA-256 lookup + reference token
