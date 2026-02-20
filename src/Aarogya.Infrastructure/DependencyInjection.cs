@@ -106,8 +106,12 @@ public static class DependencyInjection
     var encryptionOptions = new EncryptionOptions();
     configuration.GetSection(EncryptionOptions.SectionName).Bind(encryptionOptions);
     services.AddSingleton(Options.Create(encryptionOptions));
+    var encryptionRotationOptions = new DataEncryptionRotationOptions();
+    configuration.GetSection(DataEncryptionRotationOptions.SectionName).Bind(encryptionRotationOptions);
+    services.AddSingleton(Options.Create(encryptionRotationOptions));
     services.AddSingleton<IPiiFieldEncryptionService, PiiFieldEncryptionService>();
     services.AddSingleton<IBlindIndexService, BlindIndexService>();
+    services.AddScoped<IDataEncryptionKeyRotationService, DataEncryptionKeyRotationService>();
 
     if (!string.IsNullOrWhiteSpace(redisConnectionString))
     {

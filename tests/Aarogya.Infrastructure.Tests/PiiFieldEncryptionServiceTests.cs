@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Aarogya.Infrastructure.Security;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
@@ -38,12 +39,46 @@ public sealed class PiiFieldEncryptionServiceTests
     service.Decrypt(null).Should().BeNull();
   }
 
-  private static PiiFieldEncryptionService CreateService()
+  [Fact]
+  public void Encrypt_ShouldStampActiveKeyId()
+  {
+    var service = CreateService();
+
+    var encrypted = service.Encrypt("alice@example.com");
+
+    service.GetEncryptionKeyId(encrypted).Should().Be("local-current");
+  }
+
+  [Fact]
+  public void Decrypt_ShouldSupportLegacyLocalKeyRing()
+  {
+    var legacyService = CreateService("legacy-local-key", "local-legacy");
+    var encryptedWithLegacy = legacyService.Encrypt("alice@example.com");
+
+    var service = CreateService(
+      activeLocalKey: "current-local-key",
+      activeKeyId: "local-current",
+      legacy: new Collection<LegacyEncryptionKeyOptions>
+      {
+        new() { KeyId = "local-legacy", Secret = "legacy-local-key" }
+      });
+
+    var decrypted = service.Decrypt(encryptedWithLegacy);
+
+    decrypted.Should().Be("alice@example.com");
+  }
+
+  private static PiiFieldEncryptionService CreateService(
+    string activeLocalKey = "test-local-data-key",
+    string activeKeyId = "local-current",
+    Collection<LegacyEncryptionKeyOptions>? legacy = null)
   {
     var options = Options.Create(new EncryptionOptions
     {
       UseAwsKms = false,
-      LocalDataKey = "test-local-data-key",
+      ActiveKeyId = activeKeyId,
+      LocalDataKey = activeLocalKey,
+      LegacyLocalDataKeys = legacy ?? [],
       BlindIndexKey = "blind-index-key"
     });
 
