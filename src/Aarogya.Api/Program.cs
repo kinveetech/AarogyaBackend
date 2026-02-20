@@ -1,4 +1,5 @@
 using Aarogya.Api.Authentication;
+using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Health;
 using Aarogya.Infrastructure;
@@ -67,6 +68,7 @@ builder.Services.AddSingleton<IUtcClock, SystemUtcClock>();
 builder.Services.AddSingleton<IPhoneOtpSender, MockPhoneOtpSender>();
 builder.Services.AddSingleton<IPhoneOtpService, InMemoryPhoneOtpService>();
 builder.Services.AddSingleton<IPkceAuthorizationService, InMemoryPkceAuthorizationService>();
+builder.Services.AddSingleton<IRoleAssignmentService, InMemoryRoleAssignmentService>();
 
 // Configure Swagger
 builder.Services.AddSwaggerGen(c =>
@@ -105,6 +107,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddCognitoJwtAuthentication(builder.Configuration);
+builder.Services.AddAarogyaAuthorization();
 
 builder.Services.AddAarogyaCorsPolicy(builder.Configuration);
 

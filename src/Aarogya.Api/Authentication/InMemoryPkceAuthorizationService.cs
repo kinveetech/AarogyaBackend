@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -129,14 +130,16 @@ internal sealed class InMemoryPkceAuthorizationService(
     }
 
     var subject = GenerateToken(16);
-    var accessToken = GenerateJwtToken(subject, isIdToken: false);
-    var idToken = GenerateJwtToken(subject, isIdToken: true);
+    var role = AarogyaRoles.Patient;
+    var accessToken = GenerateJwtToken(subject, role, isIdToken: false);
+    var idToken = GenerateJwtToken(subject, role, isIdToken: true);
     var refreshToken = GenerateToken(48);
     var refreshExpiresAt = now.AddSeconds(_pkceOptions.RefreshTokenExpirySeconds);
     _refreshTokens[refreshToken] = new RefreshTokenEntry
     {
       ClientId = request.ClientId.Trim(),
       Subject = subject,
+      Role = role,
       ExpiresAt = refreshExpiresAt
     };
 
@@ -203,11 +206,12 @@ internal sealed class InMemoryPkceAuthorizationService(
     {
       ClientId = entry.ClientId,
       Subject = entry.Subject,
+      Role = entry.Role,
       ExpiresAt = nextRefreshExpiry
     };
 
-    var accessToken = GenerateJwtToken(entry.Subject, isIdToken: false);
-    var idToken = GenerateJwtToken(entry.Subject, isIdToken: true);
+    var accessToken = GenerateJwtToken(entry.Subject, entry.Role, isIdToken: false);
+    var idToken = GenerateJwtToken(entry.Subject, entry.Role, isIdToken: true);
 
     return Task.FromResult(new PkceTokenResult(
       true,
@@ -412,7 +416,7 @@ internal sealed class InMemoryPkceAuthorizationService(
     }
   }
 
-  private string GenerateJwtToken(string subject, bool isIdToken)
+  private string GenerateJwtToken(string subject, string role, bool isIdToken)
   {
     var now = clock.UtcNow;
     var expiresAt = now.AddSeconds(_pkceOptions.AccessTokenExpirySeconds);
@@ -422,7 +426,8 @@ internal sealed class InMemoryPkceAuthorizationService(
     {
       new(JwtRegisteredClaimNames.Sub, subject),
       new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
-      new("token_use", isIdToken ? "id" : "access")
+      new("token_use", isIdToken ? "id" : "access"),
+      new("cognito:groups", role)
     };
 
     var descriptor = new SecurityTokenDescriptor
@@ -485,6 +490,8 @@ internal sealed class InMemoryPkceAuthorizationService(
     public string ClientId { get; set; } = string.Empty;
 
     public string Subject { get; set; } = string.Empty;
+
+    public string Role { get; set; } = string.Empty;
 
     public DateTimeOffset ExpiresAt { get; set; }
 

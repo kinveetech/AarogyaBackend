@@ -64,6 +64,9 @@ public sealed class InMemoryPkceAuthorizationServiceTests
     var jwt = new JwtSecurityTokenHandler().ReadJwtToken(exchange.AccessToken);
     jwt.Issuer.Should().Be("AarogyaAPI");
     jwt.Audiences.Should().ContainSingle("AarogyaClients");
+    jwt.Claims.Should().Contain(claim =>
+      claim.Type == "cognito:groups"
+      && claim.Value == "Patient");
   }
 
   [Fact]

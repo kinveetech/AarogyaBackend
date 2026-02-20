@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Aarogya.Api.Authentication;
+using Aarogya.Api.Authorization;
 using Aarogya.Api.Controllers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
@@ -23,7 +24,7 @@ public sealed class AuthControllerTests
       new Claim("cognito:groups", "Admin")
     ], "TestAuth"));
 
-    var controller = new AuthController(new NoopPhoneOtpService(), new NoopPkceAuthorizationService())
+    var controller = new AuthController(new NoopPhoneOtpService(), new NoopPkceAuthorizationService(), new NoopRoleAssignmentService())
     {
       ControllerContext = new ControllerContext
       {
@@ -69,5 +70,17 @@ public sealed class AuthControllerTests
 
     public Task<PkceRevokeResult> RevokeRefreshTokenAsync(PkceRevokeRequest request, CancellationToken cancellationToken = default)
       => Task.FromResult(new PkceRevokeResult(true, "ok"));
+  }
+
+  private sealed class NoopRoleAssignmentService : IRoleAssignmentService
+  {
+    public bool TryAssignRole(string actorSub, IReadOnlyCollection<string> actorRoles, string targetSub, string targetRole, out string message)
+    {
+      message = "ok";
+      return true;
+    }
+
+    public IReadOnlyCollection<string> GetAssignedRoles(string userSub)
+      => [];
   }
 }
