@@ -6,8 +6,6 @@ internal sealed class FluentValidationEndpointFilter(IServiceProvider services) 
 {
   public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
   {
-    var failures = new List<FluentValidation.Results.ValidationFailure>();
-
     foreach (var argument in context.Arguments)
     {
       if (argument is null || ShouldSkipValidation(argument.GetType()))
@@ -27,13 +25,8 @@ internal sealed class FluentValidationEndpointFilter(IServiceProvider services) 
       var result = await validator.ValidateAsync(validationContext, context.HttpContext.RequestAborted);
       if (!result.IsValid)
       {
-        failures.AddRange(result.Errors);
+        return Results.BadRequest(ValidationErrorResponse.FromFailures(result.Errors));
       }
-    }
-
-    if (failures.Count > 0)
-    {
-      return Results.BadRequest(ValidationErrorResponse.FromFailures(failures));
     }
 
     return await next(context);
