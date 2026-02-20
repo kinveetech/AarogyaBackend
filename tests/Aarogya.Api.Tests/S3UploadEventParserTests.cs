@@ -1,3 +1,4 @@
+using System.Globalization;
 using Aarogya.Api.Features.V1.Reports;
 using FluentAssertions;
 using Xunit;
@@ -36,7 +37,10 @@ public sealed class S3UploadEventParserTests
     records[0].ObjectKey.Should().Be("reports/user-123/file name.pdf");
     records[0].SizeBytes.Should().Be(3145728);
     records[0].EventName.Should().Be("ObjectCreated:Put");
-    records[0].EventTime.Should().Be(DateTimeOffset.Parse("2026-02-20T12:00:00.000Z"));
+    records[0].EventTime.Should().Be(DateTimeOffset.Parse(
+      "2026-02-20T12:00:00.000Z",
+      CultureInfo.InvariantCulture,
+      DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal));
   }
 
   [Fact]

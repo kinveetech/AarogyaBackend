@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 
@@ -30,7 +31,11 @@ internal static class S3UploadEventParser
         continue;
       }
 
-      if (!DateTimeOffset.TryParse(eventTimeRaw, out var eventTime))
+      if (!DateTimeOffset.TryParse(
+        eventTimeRaw,
+        CultureInfo.InvariantCulture,
+        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+        out var eventTime))
       {
         continue;
       }
@@ -69,12 +74,17 @@ internal static class S3UploadEventParser
       return false;
     }
 
-    return element.ValueKind switch
+    if (element.ValueKind == JsonValueKind.Number)
     {
-      JsonValueKind.Number => element.TryGetInt64(out value),
-      JsonValueKind.String => long.TryParse(element.GetString(), out value),
-      _ => false
-    };
+      return element.TryGetInt64(out value);
+    }
+
+    if (element.ValueKind == JsonValueKind.String)
+    {
+      return long.TryParse(element.GetString(), out value);
+    }
+
+    return false;
   }
 
   private static bool TryNavigate(JsonElement root, out JsonElement element, params string[] path)

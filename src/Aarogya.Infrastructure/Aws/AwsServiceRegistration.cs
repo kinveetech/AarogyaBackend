@@ -4,8 +4,8 @@ using Amazon.Extensions.NETCore.Setup;
 using Amazon.KeyManagementService;
 using Amazon.Runtime;
 using Amazon.S3;
-using Amazon.SQS;
 using Amazon.SimpleEmailV2;
+using Amazon.SQS;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
