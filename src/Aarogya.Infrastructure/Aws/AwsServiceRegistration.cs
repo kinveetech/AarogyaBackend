@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Amazon;
+using Amazon.CloudFront;
 using Amazon.CognitoIdentityProvider;
 using Amazon.Extensions.NETCore.Setup;
 using Amazon.KeyManagementService;
@@ -68,6 +69,24 @@ public static class AwsServiceRegistration
     else
     {
       services.AddAWSService<IAmazonS3>();
+    }
+
+    // Register CloudFront client
+    if (useLocalStack && hasServiceUrl)
+    {
+      var useHttp = serviceUrl!.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+      services.AddSingleton<IAmazonCloudFront>(_ => new AmazonCloudFrontClient(
+        awsOptions.Credentials ?? new BasicAWSCredentials("test", "test"),
+        new AmazonCloudFrontConfig
+        {
+          RegionEndpoint = awsOptions.Region,
+          ServiceURL = serviceUrl,
+          UseHttp = useHttp
+        }));
+    }
+    else
+    {
+      services.AddAWSService<IAmazonCloudFront>();
     }
 
     // Register SES v2 client

@@ -24,7 +24,9 @@ tests/
 └── Aarogya.Infrastructure.Tests/ # Infrastructure tests
 
 infra/
-└── aws/audit-log-archival/     # AWS policy templates for CloudWatch -> Firehose -> S3 archival
+└── aws/
+    ├── audit-log-archival/     # AWS policy templates for CloudWatch -> Firehose -> S3 archival
+    └── cloudfront-report-cdn/  # CloudFormation template for report CDN (OAI + signed URLs)
 
 scripts/
 ├── install-git-hooks.sh
@@ -312,6 +314,35 @@ Configuration (`appsettings*.json`):
     "EnableHardDeleteWorker": true,
     "RetentionDays": 2555,
     "WorkerIntervalMinutes": 60
+  }
+}
+```
+
+### CloudFront Report CDN
+Issue #58 adds CloudFront CDN infrastructure and runtime integration for report downloads:
+
+- CloudFront signed URLs are used when `Aws:S3:CloudFront:Enabled=true`
+- delete flow triggers CloudFront cache invalidation for the deleted report path
+- S3 upload path writes `Cache-Control: private, no-store, max-age=0`
+- infrastructure template added at `infra/aws/cloudfront-report-cdn/cloudfront-report-cdn.yaml`
+  - S3 origin locked behind Origin Access Identity (OAI)
+  - HTTPS-only viewer protocol
+  - signed URL enforcement and no-store response headers
+
+Configuration (`appsettings*.json` and user-secrets):
+```json
+{
+  "Aws": {
+    "S3": {
+      "CloudFront": {
+        "Enabled": true,
+        "DistributionId": "E123ABC456XYZ",
+        "DistributionDomain": "d111111abcdef8.cloudfront.net",
+        "KeyPairId": "K123EXAMPLE",
+        "PrivateKeyPem": "base64-encoded-cloudfront-private-key-pem",
+        "EnableInvalidationOnDelete": true
+      }
+    }
   }
 }
 ```

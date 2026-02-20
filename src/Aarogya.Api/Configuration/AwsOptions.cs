@@ -47,11 +47,15 @@ public sealed class CloudFrontOptions
 {
   public bool Enabled { get; set; }
 
+  public string? DistributionId { get; set; }
+
   public string? DistributionDomain { get; set; }
 
   public string? KeyPairId { get; set; }
 
   public string? PrivateKeyPem { get; set; }
+
+  public bool EnableInvalidationOnDelete { get; set; } = true;
 }
 
 public sealed class SesOptions

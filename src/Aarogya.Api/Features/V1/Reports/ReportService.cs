@@ -18,6 +18,7 @@ namespace Aarogya.Api.Features.V1.Reports;
 
 internal sealed class ReportService(
   IAmazonS3 s3Client,
+  ICloudFrontInvalidationService cloudFrontInvalidationService,
   IUserRepository userRepository,
   IAccessGrantRepository accessGrantRepository,
   IReportRepository reportRepository,
@@ -335,6 +336,7 @@ internal sealed class ReportService(
 
     reportRepository.Update(report);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    await cloudFrontInvalidationService.InvalidateObjectAsync(report.FileStorageKey ?? string.Empty, cancellationToken);
     await auditLoggingService.LogDataAccessAsync(
       user,
       "report.deleted",
@@ -475,7 +477,11 @@ internal sealed class ReportService(
       Key = objectKey,
       Verb = HttpVerb.GET,
       Expires = expiresAt.UtcDateTime,
-      Protocol = ResolveProtocol()
+      Protocol = ResolveProtocol(),
+      ResponseHeaderOverrides = new ResponseHeaderOverrides
+      {
+        CacheControl = "private, no-store, max-age=0"
+      }
     };
 
     var s3Url = await s3Client.GetPreSignedURLAsync(presignRequest);

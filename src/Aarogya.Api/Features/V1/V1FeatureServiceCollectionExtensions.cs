@@ -12,6 +12,7 @@ internal static class V1FeatureServiceCollectionExtensions
   {
     services.AddScoped<IUserProfileService, UserProfileService>();
     services.AddScoped<IReportService, ReportService>();
+    services.AddScoped<ICloudFrontInvalidationService, CloudFrontInvalidationService>();
     services.AddScoped<IReportFileUploadService, S3ReportFileUploadService>();
     services.AddScoped<IReportChecksumVerificationService, S3ReportChecksumVerificationService>();
     services.AddScoped<IReportVirusScanProcessor, ReportVirusScanProcessor>();

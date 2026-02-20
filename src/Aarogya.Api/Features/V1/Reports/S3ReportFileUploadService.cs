@@ -63,6 +63,10 @@ internal sealed class S3ReportFileUploadService(
       AutoCloseStream = false,
       AutoResetStreamPosition = false,
       ContentType = file.ContentType.Trim(),
+      Headers =
+      {
+        CacheControl = "private, no-store, max-age=0"
+      },
       Metadata =
       {
         ["uploaded-by-sub"] = userSub,
