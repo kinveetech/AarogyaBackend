@@ -271,11 +271,31 @@ public sealed class InMemoryPkceAuthorizationServiceTests
       "mobile-client-id",
       initialExchange.RefreshToken!));
     revoke.Success.Should().BeTrue();
+    revoke.Message.Should().Contain("revoked");
+
+    var revokeAgain = await service.RevokeRefreshTokenAsync(new PkceRevokeRequest(
+      "mobile-client-id",
+      initialExchange.RefreshToken!));
+    revokeAgain.Success.Should().BeTrue();
 
     var refreshed = await service.ExchangeRefreshTokenAsync(new PkceRefreshTokenRequest(
       "mobile-client-id",
       initialExchange.RefreshToken!));
     refreshed.Success.Should().BeFalse();
+  }
+
+  [Fact]
+  public async Task RevokeRefreshTokenAsync_ShouldSucceed_WhenTokenDoesNotExistAsync()
+  {
+    var clock = new FakeClock(new DateTimeOffset(2026, 02, 20, 0, 0, 0, TimeSpan.Zero));
+    var service = CreateService(clock);
+
+    var revoke = await service.RevokeRefreshTokenAsync(new PkceRevokeRequest(
+      "mobile-client-id",
+      "missing-refresh-token"));
+
+    revoke.Success.Should().BeTrue();
+    revoke.Message.Should().Contain("revoked");
   }
 
   private static InMemoryPkceAuthorizationService CreateService(FakeClock clock, PkceOptions? pkceOptions = null)

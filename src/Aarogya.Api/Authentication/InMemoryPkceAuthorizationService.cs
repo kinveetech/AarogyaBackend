@@ -234,7 +234,7 @@ internal sealed class InMemoryPkceAuthorizationService(
     var refreshToken = request.RefreshToken.Trim();
     if (!_refreshTokens.TryGetValue(refreshToken, out var entry))
     {
-      return Task.FromResult(new PkceRevokeResult(false, "Refresh token not found."));
+      return Task.FromResult(new PkceRevokeResult(true, "Refresh token revoked."));
     }
 
     lock (entry.Lock)
@@ -242,7 +242,7 @@ internal sealed class InMemoryPkceAuthorizationService(
       if (entry.IsRevoked)
       {
         _refreshTokens.TryRemove(refreshToken, out _);
-        return Task.FromResult(new PkceRevokeResult(false, "Refresh token already revoked."));
+        return Task.FromResult(new PkceRevokeResult(true, "Refresh token revoked."));
       }
 
       if (!string.Equals(entry.ClientId, request.ClientId.Trim(), StringComparison.Ordinal))
