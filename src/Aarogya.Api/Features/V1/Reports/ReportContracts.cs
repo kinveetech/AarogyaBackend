@@ -49,3 +49,16 @@ public sealed record ReportSignedDownloadUrlResponse(
   Uri DownloadUrl,
   DateTimeOffset ExpiresAt,
   string Provider);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record ReportUploadResponse(
+  Guid ReportId,
+  string ReportNumber,
+  string ObjectKey,
+  string ContentType,
+  long SizeBytes,
+  string ChecksumSha256,
+  DateTimeOffset UploadedAt);

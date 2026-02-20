@@ -18,8 +18,23 @@ namespace Aarogya.Api.Controllers.V1;
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "ASP.NET Core controllers must be public to be discovered by the framework.")]
-public sealed class ReportsController(IReportService reportService) : ControllerBase
+[SuppressMessage(
+  "Major Code Smell",
+  "S6960",
+  Justification = "This controller groups related report operations intentionally to keep route discovery cohesive.")]
+public sealed class ReportsController : ControllerBase
 {
+  private readonly IReportService _reportService;
+  private readonly IReportFileUploadService _reportFileUploadService;
+
+  public ReportsController(
+    IReportService reportService,
+    IReportFileUploadService reportFileUploadService)
+  {
+    _reportService = reportService;
+    _reportFileUploadService = reportFileUploadService;
+  }
+
   [HttpGet]
   [ProducesResponseType(typeof(IReadOnlyList<ReportSummaryResponse>), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -31,7 +46,7 @@ public sealed class ReportsController(IReportService reportService) : Controller
       return Unauthorized();
     }
 
-    var result = await reportService.GetForUserAsync(userSub, cancellationToken);
+    var result = await _reportService.GetForUserAsync(userSub, cancellationToken);
     return Ok(result);
   }
 
@@ -49,7 +64,7 @@ public sealed class ReportsController(IReportService reportService) : Controller
       return Unauthorized();
     }
 
-    var created = await reportService.AddForUserAsync(userSub, request, cancellationToken);
+    var created = await _reportService.AddForUserAsync(userSub, request, cancellationToken);
     return Created(new Uri($"/api/v1/reports/{created.ReportId}", UriKind.Relative), created);
   }
 
@@ -67,7 +82,7 @@ public sealed class ReportsController(IReportService reportService) : Controller
       return Unauthorized();
     }
 
-    var result = await reportService.GetSignedUploadUrlAsync(userSub, request, cancellationToken);
+    var result = await _reportService.GetSignedUploadUrlAsync(userSub, request, cancellationToken);
     return Ok(result);
   }
 
@@ -86,7 +101,7 @@ public sealed class ReportsController(IReportService reportService) : Controller
     }
     try
     {
-      var result = await reportService.GetSignedDownloadUrlAsync(userSub, request, cancellationToken);
+      var result = await _reportService.GetSignedDownloadUrlAsync(userSub, request, cancellationToken);
       return Ok(result);
     }
     catch (InvalidOperationException ex)
@@ -96,6 +111,37 @@ public sealed class ReportsController(IReportService reportService) : Controller
         new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
           ["ObjectKey"] = [ex.Message]
+        }));
+    }
+  }
+
+  [HttpPost("upload")]
+  [Consumes("multipart/form-data")]
+  [ProducesResponseType(typeof(ReportUploadResponse), StatusCodes.Status201Created)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> UploadReportFileAsync(
+    [FromForm] IFormFile file,
+    CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    try
+    {
+      var uploaded = await _reportFileUploadService.UploadAsync(userSub, file, cancellationToken);
+      return Created(new Uri($"/api/v1/reports/{uploaded.ReportId}", UriKind.Relative), uploaded);
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["file"] = [ex.Message]
         }));
     }
   }

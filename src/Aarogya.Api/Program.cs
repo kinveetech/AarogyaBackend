@@ -15,6 +15,7 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+const int MaxReportUploadSizeBytes = 50 * 1024 * 1024;
 
 // Add AAROGYA_ prefixed environment variables as a configuration source.
 // This allows deployment environments to set values like
@@ -85,6 +86,11 @@ builder.Services
     options.InvalidModelStateResponseFactory = context =>
       new BadRequestObjectResult(ValidationErrorResponse.FromModelState(context.ModelState));
   });
+
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+  options.MultipartBodyLengthLimit = MaxReportUploadSizeBytes;
+});
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<OtpRequestCommandValidator>(includeInternalTypes: true);
