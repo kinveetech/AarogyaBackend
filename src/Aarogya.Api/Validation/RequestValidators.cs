@@ -397,6 +397,20 @@ internal sealed class UpdateUserProfileRequestValidator : AbstractValidator<Upda
   }
 }
 
+internal sealed class DataDeletionRequestValidator : AbstractValidator<DataDeletionRequest>
+{
+  public DataDeletionRequestValidator()
+  {
+    RuleFor(x => x.ConfirmPermanentDeletion)
+      .Equal(true)
+      .WithMessage("ConfirmPermanentDeletion must be true to proceed.");
+
+    RuleFor(x => x.Reason)
+      .MaximumLength(500)
+      .When(x => x.Reason is not null);
+  }
+}
+
 internal sealed class RegisterDeviceTokenRequestValidator : AbstractValidator<RegisterDeviceTokenRequest>
 {
   private static readonly string[] SupportedPlatforms = ["ios", "android"];
