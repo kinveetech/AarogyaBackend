@@ -90,17 +90,20 @@ builder.Services.AddSwaggerGen(c =>
   {
     Title = "Aarogya API",
     Version = "v1",
-    Description = "Backend API for Aarogya mobile application"
+    Description = "Backend API for Aarogya mobile application (versioned under /api/v1)."
   });
+
+  c.SupportNonNullableReferenceTypes();
 
   // Add JWT Authentication to Swagger
   c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
   {
-    Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token",
+    Description = "JWT Authorization header using the Bearer scheme. Example: 'Bearer {token}'",
     Name = "Authorization",
     In = ParameterLocation.Header,
-    Type = SecuritySchemeType.ApiKey,
-    Scheme = "Bearer"
+    Type = SecuritySchemeType.Http,
+    Scheme = "bearer",
+    BearerFormat = "JWT"
   });
 
   c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -132,14 +135,12 @@ StartupExtensions.ValidateRequiredConfiguration(app.Configuration, app.Environme
 await StartupExtensions.InitializeDatabaseAsync(app);
 
 // Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-  app.UseSwagger();
-  app.UseSwaggerUI(c =>
-  {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Aarogya API v1");
-  });
-}
+  c.RoutePrefix = "swagger";
+  c.SwaggerEndpoint("/swagger/v1/swagger.json", "Aarogya API v1");
+});
 
 app.UseAarogyaRequestLogging();
 app.UseAarogyaApiVersioning();
