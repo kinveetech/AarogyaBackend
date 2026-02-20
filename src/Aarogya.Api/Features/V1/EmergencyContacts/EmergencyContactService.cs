@@ -1,3 +1,4 @@
+using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Security;
 using Aarogya.Domain.Entities;
@@ -11,6 +12,7 @@ internal sealed class EmergencyContactService(
   IUserRepository userRepository,
   IEmergencyContactRepository emergencyContactRepository,
   IUnitOfWork unitOfWork,
+  IAuditLoggingService auditLoggingService,
   IUtcClock clock)
   : IEmergencyContactService
 {
@@ -22,6 +24,18 @@ internal sealed class EmergencyContactService(
   {
     var patient = await ResolvePatientAsync(userSub, cancellationToken);
     var contacts = await emergencyContactRepository.ListByUserAsync(patient.Id, cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      patient,
+      "emergency_contact.listed",
+      "emergency_contact",
+      null,
+      200,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["count"] = contacts.Count.ToString()
+      },
+      cancellationToken);
+
     return contacts.Select(Map).ToArray();
   }
 
@@ -53,6 +67,13 @@ internal sealed class EmergencyContactService(
 
     await emergencyContactRepository.AddAsync(contact, cancellationToken);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      patient,
+      "emergency_contact.created",
+      "emergency_contact",
+      contact.Id,
+      201,
+      cancellationToken: cancellationToken);
     return Map(contact);
   }
 
@@ -80,6 +101,13 @@ internal sealed class EmergencyContactService(
 
     emergencyContactRepository.Update(contact);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      patient,
+      "emergency_contact.updated",
+      "emergency_contact",
+      contact.Id,
+      200,
+      cancellationToken: cancellationToken);
     return Map(contact);
   }
 
@@ -96,6 +124,13 @@ internal sealed class EmergencyContactService(
 
     emergencyContactRepository.Delete(contact);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      patient,
+      "emergency_contact.deleted",
+      "emergency_contact",
+      contact.Id,
+      200,
+      cancellationToken: cancellationToken);
     return true;
   }
 

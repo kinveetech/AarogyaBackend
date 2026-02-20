@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
@@ -116,6 +117,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<OtpRequestCommandValidator>(includeInternalTypes: true);
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient(CognitoOAuthTokenClient.HttpClientName, client =>
 {
@@ -129,6 +131,7 @@ builder.Services.AddSingleton<IPkceAuthorizationService, InMemoryPkceAuthorizati
 builder.Services.AddSingleton<ICognitoSocialTokenClient, CognitoOAuthTokenClient>();
 builder.Services.AddSingleton<ISocialAuthService, InMemorySocialAuthService>();
 builder.Services.AddSingleton<IRoleAssignmentService, InMemoryRoleAssignmentService>();
+builder.Services.AddScoped<IAuditLoggingService, AuditLoggingService>();
 
 // Configure Swagger
 builder.Services.AddSwaggerGen(c =>

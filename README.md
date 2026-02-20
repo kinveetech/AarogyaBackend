@@ -282,6 +282,20 @@ Additional guardrails:
 - JSON input is constrained to declared DTO contracts via explicit `System.Text.Json` type resolver configuration
 - source guardrail tests validate that raw SQL execution patterns are not introduced in application code
 
+### Audit Logging
+Issue #52 adds a centralized audit logging service for PII/medical-data access workflows.
+
+Captured fields:
+- who: `actor_user_id`, `actor_role`
+- what: `action`, `resource_type`, `resource_id`
+- when: `occurredAtUtc` and `occurredAtIst` (stored in audit details)
+- where: request path/method, client IP, user-agent
+
+Notes:
+- audit records are persisted in `audit_logs` through `IAuditLogRepository`
+- application logs emit structured audit events via Serilog/`ILogger`; in containerized AWS deployments these logs flow to CloudWatch through runtime log drivers
+- audit payloads avoid raw PII values in summary/messages
+
 ### Aadhaar Vault Configuration
 Issue #19 introduces a dedicated Aadhaar vault schema with:
 - `aadhaar_vault.aadhaar_records` for encrypted Aadhaar + SHA-256 lookup + reference token

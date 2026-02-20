@@ -1,3 +1,4 @@
+using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Features.V1.AccessGrants;
@@ -44,6 +45,7 @@ public sealed class AccessGrantServiceTests
       Mock.Of<IReportRepository>(),
       accessGrantRepository.Object,
       Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
       Options.Create(new AccessGrantOptions
       {
         DefaultExpiryDays = 30,
@@ -92,6 +94,7 @@ public sealed class AccessGrantServiceTests
       reportRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
@@ -130,6 +133,7 @@ public sealed class AccessGrantServiceTests
       Mock.Of<IReportRepository>(),
       accessGrantRepository.Object,
       unitOfWork.Object,
+      Mock.Of<IAuditLoggingService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
@@ -175,6 +179,7 @@ public sealed class AccessGrantServiceTests
       Mock.Of<IReportRepository>(),
       accessGrantRepository.Object,
       Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(now));
 
@@ -202,6 +207,7 @@ public sealed class AccessGrantServiceTests
       Mock.Of<IReportRepository>(),
       Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 

@@ -1,3 +1,4 @@
+using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Features.V1.EmergencyContacts;
 using Aarogya.Domain.Entities;
@@ -42,6 +43,7 @@ public sealed class EmergencyContactServiceTests
       userRepository.Object,
       emergencyContactRepository.Object,
       Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero)));
 
     var response = await service.AddForUserAsync(
@@ -84,6 +86,7 @@ public sealed class EmergencyContactServiceTests
       userRepository.Object,
       emergencyContactRepository.Object,
       Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var action = async () => await service.AddForUserAsync(
@@ -127,6 +130,7 @@ public sealed class EmergencyContactServiceTests
       userRepository.Object,
       emergencyContactRepository.Object,
       Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var updated = await service.UpdateForUserAsync(
@@ -164,6 +168,7 @@ public sealed class EmergencyContactServiceTests
       userRepository.Object,
       emergencyContactRepository.Object,
       Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var deleted = await service.DeleteForUserAsync("seed-PATIENT-1", Guid.NewGuid(), CancellationToken.None);
