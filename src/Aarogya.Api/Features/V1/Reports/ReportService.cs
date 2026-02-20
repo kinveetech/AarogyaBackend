@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
+using Aarogya.Api.Security;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
@@ -611,14 +612,14 @@ internal sealed class ReportService(
     return new ReportResults
     {
       ReportVersion = 1,
-      Notes = request.Notes?.Trim(),
+      Notes = InputSanitizer.SanitizeNullablePlainText(request.Notes),
       Parameters = request.Parameters.Select(parameter => new ReportResultParameter
       {
-        Code = parameter.Code.Trim(),
-        Name = parameter.Name.Trim(),
+        Code = InputSanitizer.SanitizePlainText(parameter.Code),
+        Name = InputSanitizer.SanitizePlainText(parameter.Name),
         Value = parameter.Value,
-        Unit = parameter.Unit?.Trim(),
-        ReferenceRange = parameter.ReferenceRange?.Trim(),
+        Unit = InputSanitizer.SanitizeNullablePlainText(parameter.Unit),
+        ReferenceRange = InputSanitizer.SanitizeNullablePlainText(parameter.ReferenceRange),
         AbnormalFlag = parameter.IsAbnormal
       }).ToArray()
     };
@@ -640,12 +641,12 @@ internal sealed class ReportService(
 
     if (!string.IsNullOrWhiteSpace(request.LabName))
     {
-      tags["lab-name"] = request.LabName.Trim();
+      tags["lab-name"] = InputSanitizer.SanitizePlainText(request.LabName);
     }
 
     if (!string.IsNullOrWhiteSpace(request.LabCode))
     {
-      tags["lab-code"] = request.LabCode.Trim();
+      tags["lab-code"] = InputSanitizer.SanitizePlainText(request.LabCode);
     }
 
     if (sourceSystem.Equals("lab-upload", StringComparison.OrdinalIgnoreCase))
@@ -667,18 +668,16 @@ internal sealed class ReportService(
     return parameters.Select(parameter => new ReportParameter
     {
       Id = Guid.NewGuid(),
-      ParameterCode = parameter.Code.Trim(),
-      ParameterName = parameter.Name.Trim(),
+      ParameterCode = InputSanitizer.SanitizePlainText(parameter.Code),
+      ParameterName = InputSanitizer.SanitizePlainText(parameter.Name),
       MeasuredValueNumeric = parameter.Value,
-      MeasuredValueText = string.IsNullOrWhiteSpace(parameter.ValueText) ? null : parameter.ValueText.Trim(),
-      Unit = string.IsNullOrWhiteSpace(parameter.Unit) ? null : parameter.Unit.Trim(),
-      ReferenceRangeText = string.IsNullOrWhiteSpace(parameter.ReferenceRange) ? null : parameter.ReferenceRange.Trim(),
+      MeasuredValueText = InputSanitizer.SanitizeNullablePlainText(parameter.ValueText),
+      Unit = InputSanitizer.SanitizeNullablePlainText(parameter.Unit),
+      ReferenceRangeText = InputSanitizer.SanitizeNullablePlainText(parameter.ReferenceRange),
       IsAbnormal = parameter.IsAbnormal,
       RawParameter = new ReportParameterRaw
       {
-        Attributes = parameter.Attributes is null
-          ? []
-          : new Dictionary<string, string>(parameter.Attributes, StringComparer.OrdinalIgnoreCase)
+        Attributes = InputSanitizer.SanitizeStringDictionary(parameter.Attributes)
       },
       CreatedAt = createdAt
     }).ToList();

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
@@ -92,6 +94,14 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Add services to the container
 builder.Services
   .AddControllers()
+  .AddJsonOptions(options =>
+  {
+    // Keep JSON payload handling locked to declared DTO contracts.
+    options.JsonSerializerOptions.TypeInfoResolverChain.Clear();
+    options.JsonSerializerOptions.TypeInfoResolverChain.Add(new DefaultJsonTypeInfoResolver());
+    options.JsonSerializerOptions.UnknownTypeHandling = JsonUnknownTypeHandling.JsonElement;
+    options.JsonSerializerOptions.MaxDepth = 32;
+  })
   .ConfigureApiBehaviorOptions(options =>
   {
     options.InvalidModelStateResponseFactory = context =>

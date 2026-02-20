@@ -1,4 +1,5 @@
 using Aarogya.Api.Authentication;
+using Aarogya.Api.Security;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Infrastructure.Aadhaar;
@@ -34,32 +35,32 @@ internal sealed class UserProfileService(
 
     if (request.FirstName is not null)
     {
-      user.FirstName = request.FirstName.Trim();
+      user.FirstName = InputSanitizer.SanitizePlainText(request.FirstName);
     }
 
     if (request.LastName is not null)
     {
-      user.LastName = request.LastName.Trim();
+      user.LastName = InputSanitizer.SanitizePlainText(request.LastName);
     }
 
     if (request.Email is not null)
     {
-      user.Email = request.Email.Trim();
+      user.Email = InputSanitizer.SanitizePlainText(request.Email);
     }
 
     if (request.Phone is not null)
     {
-      user.Phone = request.Phone.Trim();
+      user.Phone = InputSanitizer.SanitizePlainText(request.Phone);
     }
 
     if (request.Address is not null)
     {
-      user.Address = request.Address.Trim();
+      user.Address = InputSanitizer.SanitizePlainText(request.Address);
     }
 
     if (request.BloodGroup is not null)
     {
-      user.BloodGroup = request.BloodGroup.Trim().ToUpperInvariant();
+      user.BloodGroup = InputSanitizer.SanitizePlainText(request.BloodGroup).ToUpperInvariant();
     }
 
     if (request.DateOfBirth.HasValue)
