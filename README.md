@@ -144,6 +144,7 @@ DELETE /api/v1/access-grants/{grantId}       Revoke access grant
 GET    /api/v1/emergency-contacts            List emergency contacts
 POST   /api/v1/emergency-contacts            Create emergency contact
 DELETE /api/v1/emergency-contacts/{contactId} Delete emergency contact
+POST   /api/v1/emergency-access/requests     Request break-glass emergency access
 GET    /api/v1/consents                      List current user consent states
 PUT    /api/v1/consents/{purpose}            Grant/withdraw consent for a purpose
 GET    /api/v1/notifications/preferences     Get notification preferences
@@ -362,6 +363,25 @@ API:
 Behavior:
 - default preferences are all-enabled on first user interaction
 - push/email/sms notification services evaluate preferences before sending
+
+### Emergency Access Request Flow
+Issue #65 adds break-glass emergency access requests:
+- endpoint: `POST /api/v1/emergency-access/requests`
+- only registered emergency contacts (by patient + contact phone match) can trigger requests
+- temporary access grant is created for the requested doctor
+- patient is notified via push, email, and SMS (subject to notification preferences)
+- audit event recorded as `emergency_access.requested`
+
+Configuration (`appsettings*.json`):
+```json
+{
+  "EmergencyAccess": {
+    "DefaultDurationHours": 24,
+    "MinDurationHours": 24,
+    "MaxDurationHours": 48
+  }
+}
+```
 
 ### CloudFront Report CDN
 Issue #58 adds CloudFront CDN infrastructure and runtime integration for report downloads:

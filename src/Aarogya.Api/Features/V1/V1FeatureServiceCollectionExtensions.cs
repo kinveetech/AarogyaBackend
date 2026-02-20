@@ -1,5 +1,6 @@
 using Aarogya.Api.Features.V1.AccessGrants;
 using Aarogya.Api.Features.V1.Consents;
+using Aarogya.Api.Features.V1.EmergencyAccess;
 using Aarogya.Api.Features.V1.EmergencyContacts;
 using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Features.V1.Reports;
@@ -34,6 +35,7 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddHostedService<ClamAvDefinitionsUpdaterHostedService>();
     services.AddHostedService<ReportHardDeleteHostedService>();
     services.AddScoped<IAccessGrantService, AccessGrantService>();
+    services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
     services.AddScoped<IEmergencyContactService, EmergencyContactService>();
     services.AddScoped<IConsentService, ConsentService>();
 

@@ -60,6 +60,15 @@ internal sealed class PushNotificationService(
     SendPushNotificationRequest request,
     CancellationToken cancellationToken = default)
   {
+    return await SendToUserAsync(userSub, eventType, request, cancellationToken);
+  }
+
+  public async Task<PushNotificationDeliveryResponse> SendToUserAsync(
+    string userSub,
+    string eventType,
+    SendPushNotificationRequest request,
+    CancellationToken cancellationToken = default)
+  {
     ArgumentNullException.ThrowIfNull(request);
 
     var normalizedSub = InputSanitizer.SanitizePlainText(userSub);

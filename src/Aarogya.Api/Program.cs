@@ -105,6 +105,11 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptionsWithValidateOnStart<EmergencyAccessOptions>()
+  .BindConfiguration(EmergencyAccessOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<RateLimitingOptions>()
   .BindConfiguration(RateLimitingOptions.SectionName)
   .ValidateDataAnnotations();
