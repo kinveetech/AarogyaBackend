@@ -62,3 +62,26 @@ public sealed record ReportUploadResponse(
   long SizeBytes,
   string ChecksumSha256,
   DateTimeOffset UploadedAt);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+[SuppressMessage(
+  "Major Code Smell",
+  "S6964",
+  Justification = "FluentValidation enforces ReportId non-empty for this request model.")]
+public sealed record CreateVerifiedReportDownloadRequest(
+  Guid ReportId,
+  int? ExpiryMinutes = null);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record VerifiedReportDownloadResponse(
+  Guid ReportId,
+  string ObjectKey,
+  Uri DownloadUrl,
+  DateTimeOffset ExpiresAt,
+  bool ChecksumVerified);
