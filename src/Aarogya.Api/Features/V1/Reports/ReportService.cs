@@ -20,6 +20,7 @@ internal sealed class ReportService(
   IAccessGrantRepository accessGrantRepository,
   IReportRepository reportRepository,
   IAuditLogRepository auditLogRepository,
+  IPatientNotificationService patientNotificationService,
   IUnitOfWork unitOfWork,
   IOptions<AwsOptions> awsOptions,
   IUtcClock clock)
@@ -178,16 +179,21 @@ internal sealed class ReportService(
   {
     ArgumentNullException.ThrowIfNull(request);
 
-    var uploader = await userRepository.GetByExternalAuthIdAsync(userSub, cancellationToken)
-      ?? throw new InvalidOperationException("Authenticated user is not provisioned in the database.");
+    var uploader = await ResolveUploaderAsync(userSub, cancellationToken);
 
-    var patient = await ResolvePatientAsync(uploader, request.PatientSub, cancellationToken);
+    var patient = await ResolvePatientAsync(
+      uploader,
+      request.PatientSub,
+      request.PatientPhone,
+      request.PatientAadhaar,
+      cancellationToken);
 
     EnsureObjectKeyBelongsToUploader(userSub, request.ObjectKey);
     var objectMetadata = await GetObjectMetadataAsync(request.ObjectKey, cancellationToken);
 
     var now = clock.UtcNow;
     var reportType = ParseReportType(request.ReportType);
+    var sourceSystem = ResolveSourceSystem(uploader.Role, request.SourceSystem);
     var report = new Report
     {
       Id = Guid.NewGuid(),
@@ -196,14 +202,14 @@ internal sealed class ReportService(
       UploadedByUserId = uploader.Id,
       ReportType = reportType,
       Status = ReportStatus.Uploaded,
-      SourceSystem = string.IsNullOrWhiteSpace(request.SourceSystem) ? "api-upload" : request.SourceSystem.Trim(),
+      SourceSystem = sourceSystem,
       CollectedAt = request.CollectedAt,
       ReportedAt = request.ReportedAt,
       UploadedAt = now,
       FileStorageKey = request.ObjectKey.Trim(),
       ChecksumSha256 = ResolveChecksum(objectMetadata),
       Results = BuildResults(request),
-      Metadata = BuildMetadata(request, objectMetadata, reportType),
+      Metadata = BuildMetadata(request, objectMetadata, reportType, sourceSystem),
       Parameters = BuildParameters(request.Parameters, now),
       CreatedAt = now,
       UpdatedAt = now
@@ -211,6 +217,11 @@ internal sealed class ReportService(
 
     await reportRepository.AddAsync(report, cancellationToken);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+
+    if (uploader.Role == UserRole.LabTechnician)
+    {
+      await patientNotificationService.NotifyReportUploadedAsync(patient, report, cancellationToken);
+    }
 
     return new ReportSummaryResponse(
       report.Id,
@@ -378,34 +389,156 @@ internal sealed class ReportService(
   private async Task<User> ResolvePatientAsync(
     User uploader,
     string? requestedPatientSub,
+    string? requestedPatientPhone,
+    string? requestedPatientAadhaar,
     CancellationToken cancellationToken)
   {
-    if (string.IsNullOrWhiteSpace(requestedPatientSub))
+    if (uploader.Role != UserRole.LabTechnician)
     {
-      if (uploader.Role == UserRole.LabTechnician)
+      if (string.IsNullOrWhiteSpace(requestedPatientSub))
       {
-        throw new InvalidOperationException("PatientSub is required when a lab technician uploads a report.");
+        return uploader;
+      }
+
+      var normalizedPatientSub = requestedPatientSub.Trim();
+      if (!string.Equals(normalizedPatientSub, uploader.ExternalAuthId, StringComparison.Ordinal))
+      {
+        throw new InvalidOperationException("Only lab technicians can upload reports for another patient.");
       }
 
       return uploader;
     }
 
-    var normalizedPatientSub = requestedPatientSub.Trim();
-    if (uploader.Role != UserRole.LabTechnician
-      && !string.Equals(normalizedPatientSub, uploader.ExternalAuthId, StringComparison.Ordinal))
+    if (!string.IsNullOrWhiteSpace(requestedPatientSub))
     {
-      throw new InvalidOperationException("Only lab technicians can upload reports for another patient.");
+      var patientBySub = await userRepository.GetByExternalAuthIdAsync(requestedPatientSub.Trim(), cancellationToken)
+        ?? throw new InvalidOperationException("PatientSub does not match a provisioned user.");
+
+      return EnsurePatientRole(patientBySub, "PatientSub must belong to a patient user.");
     }
 
-    var patient = await userRepository.GetByExternalAuthIdAsync(normalizedPatientSub, cancellationToken)
-      ?? throw new InvalidOperationException("PatientSub does not match a provisioned user.");
-
-    if (patient.Role != UserRole.Patient)
+    if (!string.IsNullOrWhiteSpace(requestedPatientPhone))
     {
-      throw new InvalidOperationException("PatientSub must belong to a patient user.");
+      var patientByPhone = await ResolvePatientByPhoneAsync(requestedPatientPhone, cancellationToken)
+        ?? throw new InvalidOperationException("PatientPhone does not match a provisioned patient user.");
+
+      return patientByPhone;
     }
 
-    return patient;
+    if (!string.IsNullOrWhiteSpace(requestedPatientAadhaar))
+    {
+      var patientByAadhaar = await ResolvePatientByAadhaarAsync(requestedPatientAadhaar, cancellationToken)
+        ?? throw new InvalidOperationException("PatientAadhaar does not match a provisioned patient user.");
+
+      return patientByAadhaar;
+    }
+
+    throw new InvalidOperationException("PatientSub, PatientPhone, or PatientAadhaar is required for lab technician uploads.");
+  }
+
+  private async Task<User> ResolveUploaderAsync(string userSub, CancellationToken cancellationToken)
+  {
+    var user = await userRepository.GetByExternalAuthIdAsync(userSub, cancellationToken);
+    if (user is not null)
+    {
+      return user;
+    }
+
+    if (!userSub.StartsWith("lab:", StringComparison.OrdinalIgnoreCase))
+    {
+      throw new InvalidOperationException("Authenticated user is not provisioned in the database.");
+    }
+
+    return await userRepository.GetFirstByRoleAsync(UserRole.LabTechnician, cancellationToken)
+      ?? throw new InvalidOperationException("No lab technician user is provisioned for API key uploads.");
+  }
+
+  private async Task<User?> ResolvePatientByPhoneAsync(string phoneInput, CancellationToken cancellationToken)
+  {
+    foreach (var candidate in ExpandPhoneCandidates(phoneInput))
+    {
+      var user = await userRepository.GetByPhoneAsync(candidate, cancellationToken);
+      if (user is not null && user.Role == UserRole.Patient)
+      {
+        return user;
+      }
+    }
+
+    return null;
+  }
+
+  private async Task<User?> ResolvePatientByAadhaarAsync(string aadhaarInput, CancellationToken cancellationToken)
+  {
+    var digitsOnly = new string(aadhaarInput.Where(char.IsDigit).ToArray());
+    if (digitsOnly.Length != 12)
+    {
+      throw new InvalidOperationException("PatientAadhaar must contain exactly 12 digits.");
+    }
+
+    var aadhaarSha256 = SHA256.HashData(Encoding.UTF8.GetBytes(digitsOnly));
+    var user = await userRepository.GetByAadhaarSha256Async(aadhaarSha256, cancellationToken);
+    if (user is null)
+    {
+      return null;
+    }
+
+    return EnsurePatientRole(user, "PatientAadhaar must belong to a patient user.");
+  }
+
+  private static IEnumerable<string> ExpandPhoneCandidates(string phoneInput)
+  {
+    if (InMemoryPhoneOtpService.TryNormalizeIndianPhone(phoneInput, out var normalizedIndian))
+    {
+      yield return normalizedIndian;
+      yield return normalizedIndian[3..];
+      yield break;
+    }
+
+    var digitsOnly = new string(phoneInput.Where(char.IsDigit).ToArray());
+    if (digitsOnly.Length == 10)
+    {
+      yield return digitsOnly;
+      yield return $"+91{digitsOnly}";
+      yield break;
+    }
+
+    if (digitsOnly.Length == 12 && digitsOnly.StartsWith("91", StringComparison.Ordinal))
+    {
+      yield return digitsOnly;
+      yield return $"+{digitsOnly}";
+      yield return digitsOnly[2..];
+      yield break;
+    }
+
+    if (!string.IsNullOrWhiteSpace(phoneInput))
+    {
+      yield return phoneInput.Trim();
+    }
+  }
+
+  private static User EnsurePatientRole(User user, string message)
+  {
+    if (user.Role != UserRole.Patient)
+    {
+      throw new InvalidOperationException(message);
+    }
+
+    return user;
+  }
+
+  private static string ResolveSourceSystem(UserRole uploaderRole, string? requestedSourceSystem)
+  {
+    if (uploaderRole == UserRole.LabTechnician)
+    {
+      return "lab-upload";
+    }
+
+    if (!string.IsNullOrWhiteSpace(requestedSourceSystem))
+    {
+      return requestedSourceSystem.Trim();
+    }
+
+    return "api-upload";
   }
 
   private static void EnsureObjectKeyBelongsToUploader(string userSub, string objectKey)
@@ -472,7 +605,8 @@ internal sealed class ReportService(
   private static ReportMetadata BuildMetadata(
     CreateReportRequest request,
     GetObjectMetadataResponse objectMetadata,
-    ReportType reportType)
+    ReportType reportType,
+    string sourceSystem)
   {
     var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -492,9 +626,14 @@ internal sealed class ReportService(
       tags["lab-code"] = request.LabCode.Trim();
     }
 
+    if (sourceSystem.Equals("lab-upload", StringComparison.OrdinalIgnoreCase))
+    {
+      tags["upload-origin"] = "lab";
+    }
+
     return new ReportMetadata
     {
-      SourceSystem = string.IsNullOrWhiteSpace(request.SourceSystem) ? "api-upload" : request.SourceSystem.Trim(),
+      SourceSystem = sourceSystem,
       Tags = tags
     };
   }
