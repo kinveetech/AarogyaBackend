@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Aarogya.Api.Controllers.V1;
+using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Validation;
 using FluentAssertions;
@@ -285,7 +286,15 @@ public sealed class ReportsControllerTests
     IReportService reportService,
     IReportChecksumVerificationService checksumService)
   {
-    return new ReportsController(reportService, uploadService, checksumService)
+    var consentService = new Mock<IConsentService>();
+    consentService
+      .Setup(x => x.EnsureGrantedAsync(
+        It.IsAny<string>(),
+        It.IsAny<string>(),
+        It.IsAny<CancellationToken>()))
+      .Returns(Task.CompletedTask);
+
+    return new ReportsController(reportService, uploadService, checksumService, consentService.Object)
     {
       ControllerContext = new ControllerContext
       {

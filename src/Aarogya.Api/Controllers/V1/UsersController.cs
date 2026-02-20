@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Features.V1.Common;
+using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.Users;
 using Aarogya.Api.RateLimiting;
 using Aarogya.Api.Validation;
@@ -18,10 +19,14 @@ namespace Aarogya.Api.Controllers.V1;
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "ASP.NET Core controllers must be public to be discovered by the framework.")]
-public sealed class UsersController(IUserProfileService userProfileService) : ControllerBase
+public sealed class UsersController(
+  IUserProfileService userProfileService,
+  IConsentService consentService)
+  : ControllerBase
 {
   [HttpGet("me")]
   [ProducesResponseType(typeof(UserProfileResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> GetCurrentUserProfileAsync(CancellationToken cancellationToken)
@@ -34,8 +39,13 @@ public sealed class UsersController(IUserProfileService userProfileService) : Co
 
     try
     {
+      await consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.ProfileManagement, cancellationToken);
       var profile = await userProfileService.GetCurrentUserAsync(userSub, cancellationToken);
       return Ok(profile);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
     }
     catch (KeyNotFoundException ex)
     {
@@ -51,6 +61,7 @@ public sealed class UsersController(IUserProfileService userProfileService) : Co
   [HttpPut("me")]
   [ProducesResponseType(typeof(UserProfileResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> UpdateCurrentUserProfileAsync(
@@ -65,8 +76,13 @@ public sealed class UsersController(IUserProfileService userProfileService) : Co
 
     try
     {
+      await consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.ProfileManagement, cancellationToken);
       var profile = await userProfileService.UpdateCurrentUserAsync(userSub, request, cancellationToken);
       return Ok(profile);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
     }
     catch (KeyNotFoundException ex)
     {
@@ -83,6 +99,7 @@ public sealed class UsersController(IUserProfileService userProfileService) : Co
   [Authorize(Policy = AarogyaPolicies.Patient)]
   [ProducesResponseType(typeof(AadhaarVerificationResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> VerifyCurrentUserAadhaarAsync(
@@ -97,8 +114,13 @@ public sealed class UsersController(IUserProfileService userProfileService) : Co
 
     try
     {
+      await consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.ProfileManagement, cancellationToken);
       var response = await userProfileService.VerifyCurrentUserAadhaarAsync(userSub, request, cancellationToken);
       return Ok(response);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
     }
     catch (InvalidOperationException ex)
     {
@@ -118,5 +140,17 @@ public sealed class UsersController(IUserProfileService userProfileService) : Co
           ["user"] = [ex.Message]
         }));
     }
+  }
+
+  private ObjectResult ForbidWithConsentError(string purpose)
+  {
+    return StatusCode(
+      StatusCodes.Status403Forbidden,
+      new ValidationErrorResponse(
+        "Consent required.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["consent"] = [$"Consent for purpose '{purpose}' is required."]
+        }));
   }
 }

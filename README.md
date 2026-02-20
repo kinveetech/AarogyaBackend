@@ -132,6 +132,7 @@ POST   /api/auth/roles/assign      Assign role to user (Admin)
 ### Versioned API (`/api/v1`)
 ```
 GET    /api/v1/users/me                      Get current user profile
+PUT    /api/v1/users/me                      Update current user profile
 GET    /api/v1/reports                       List reports for current user
 POST   /api/v1/reports                       Create report for current user
 GET    /api/v1/access-grants                 List grants for current patient
@@ -140,6 +141,8 @@ DELETE /api/v1/access-grants/{grantId}       Revoke access grant
 GET    /api/v1/emergency-contacts            List emergency contacts
 POST   /api/v1/emergency-contacts            Create emergency contact
 DELETE /api/v1/emergency-contacts/{contactId} Delete emergency contact
+GET    /api/v1/consents                      List current user consent states
+PUT    /api/v1/consents/{purpose}            Grant/withdraw consent for a purpose
 ```
 
 ## 🔐 Authentication
@@ -253,6 +256,21 @@ AWS_REGION=ap-south-1 KMS_ALIAS_NAME=alias/aarogya-prod-data-key ./scripts/confi
 ```
 
 Detailed runbook: `docs/infrastructure/encryption-key-rotation.md`
+
+### Consent Management (DPDP)
+Issue #55 adds consent recording and enforcement for sensitive data workflows.
+
+Supported purposes:
+- `profile_management`
+- `emergency_contact_management`
+- `medical_data_sharing`
+- `medical_records_processing`
+
+Behavior:
+- Consent is recorded via `PUT /api/v1/consents/{purpose}`.
+- The latest consent state per purpose is returned by `GET /api/v1/consents`.
+- Protected `/api/v1` endpoints enforce required consent and return `403` when withdrawn or missing.
+- Every consent grant/withdraw/denial is written to the audit log trail.
 
 ### Transport Security (TLS)
 Issue #49 adds transport-level TLS enforcement controls for production paths:
