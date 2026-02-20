@@ -2,7 +2,18 @@ namespace Aarogya.Infrastructure.Aadhaar;
 
 public sealed record MockAadhaarValidationRequest(string AadhaarNumber);
 
-public sealed record MockAadhaarValidationResponse(bool IsValid, string? RequestId, string? Message);
+public sealed record MockAadhaarValidationResponse(
+  bool IsValid,
+  string? RequestId,
+  string? Message,
+  string? Provider,
+  MockAadhaarDemographics? Demographics);
+
+public sealed record MockAadhaarDemographics(
+  string? FullName,
+  DateOnly? DateOfBirth,
+  string? Gender,
+  string? Address);
 
 public sealed record MockAadhaarTokenizeRequest(string AadhaarNumberHashBase64);
 

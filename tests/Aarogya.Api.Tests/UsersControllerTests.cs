@@ -79,6 +79,44 @@ public sealed class UsersControllerTests
     notFound.Value.Should().BeOfType<ValidationErrorResponse>();
   }
 
+  [Fact]
+  public async Task VerifyCurrentUserAadhaarAsync_ShouldReturnOkAsync()
+  {
+    var verification = new AadhaarVerificationResponse(
+      Guid.NewGuid(),
+      false,
+      "LOCAL",
+      new AadhaarDemographicsResponse("Verified Holder", null, null, "India"));
+
+    var service = new Mock<IUserProfileService>();
+    service
+      .Setup(x => x.VerifyCurrentUserAadhaarAsync("seed-PATIENT-1", It.IsAny<VerifyAadhaarRequest>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(verification);
+
+    var controller = CreateController(service.Object, CreateUser("seed-PATIENT-1"));
+
+    var result = await controller.VerifyCurrentUserAadhaarAsync(new VerifyAadhaarRequest("123456789012"), CancellationToken.None);
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    ok.Value.Should().BeEquivalentTo(verification);
+  }
+
+  [Fact]
+  public async Task VerifyCurrentUserAadhaarAsync_ShouldReturnBadRequest_WhenVerificationFailsAsync()
+  {
+    var service = new Mock<IUserProfileService>();
+    service
+      .Setup(x => x.VerifyCurrentUserAadhaarAsync("seed-PATIENT-1", It.IsAny<VerifyAadhaarRequest>(), It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new InvalidOperationException("Aadhaar validation failed."));
+
+    var controller = CreateController(service.Object, CreateUser("seed-PATIENT-1"));
+
+    var result = await controller.VerifyCurrentUserAadhaarAsync(new VerifyAadhaarRequest("123456789012"), CancellationToken.None);
+
+    var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+    badRequest.Value.Should().BeOfType<ValidationErrorResponse>();
+  }
+
   private static UsersController CreateController(IUserProfileService service, ClaimsPrincipal user)
   {
     return new UsersController(service)

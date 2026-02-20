@@ -314,6 +314,14 @@ internal sealed class AadhaarNumberValidator : AbstractValidator<string>
   }
 }
 
+internal sealed class VerifyAadhaarRequestValidator : AbstractValidator<VerifyAadhaarRequest>
+{
+  public VerifyAadhaarRequestValidator()
+  {
+    RuleFor(x => x.AadhaarNumber).MustBeAadhaarNumber();
+  }
+}
+
 internal sealed class UpdateUserProfileRequestValidator : AbstractValidator<UpdateUserProfileRequest>
 {
   private static readonly DateOnly MinimumBirthDate = new(1900, 1, 1);

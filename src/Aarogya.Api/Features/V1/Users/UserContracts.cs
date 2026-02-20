@@ -29,3 +29,29 @@ public sealed record UpdateUserProfileRequest(
   string? Address,
   string? BloodGroup,
   DateOnly? DateOfBirth);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record VerifyAadhaarRequest(string AadhaarNumber);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record AadhaarVerificationResponse(
+  Guid ReferenceToken,
+  bool ExistingRecord,
+  string? Provider,
+  AadhaarDemographicsResponse? Demographics);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record AadhaarDemographicsResponse(
+  string? FullName,
+  DateOnly? DateOfBirth,
+  string? Gender,
+  string? Address);

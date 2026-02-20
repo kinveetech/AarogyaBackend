@@ -12,12 +12,17 @@ public sealed class MockAadhaarApiClient(HttpClient httpClient, IOptions<Aadhaar
   {
     if (string.IsNullOrWhiteSpace(aadhaarNumber))
     {
-      return new MockAadhaarValidationResponse(false, null, "Aadhaar number is required.");
+      return new MockAadhaarValidationResponse(false, null, "Aadhaar number is required.", null, null);
     }
 
     if (!_options.UseMockApi)
     {
-      return new MockAadhaarValidationResponse(true, null, "Mock API disabled.");
+      return new MockAadhaarValidationResponse(
+        true,
+        $"local-{Guid.NewGuid():N}",
+        "Mock API disabled.",
+        "LOCAL",
+        CreateFallbackDemographics(aadhaarNumber));
     }
 
     try
@@ -26,15 +31,25 @@ public sealed class MockAadhaarApiClient(HttpClient httpClient, IOptions<Aadhaar
       var response = await httpClient.PostAsJsonAsync(_options.ValidateEndpoint, request, cancellationToken);
       if (!response.IsSuccessStatusCode)
       {
-        return new MockAadhaarValidationResponse(false, null, $"Mock Aadhaar validate API returned {response.StatusCode}.");
+        return new MockAadhaarValidationResponse(
+          false,
+          null,
+          $"Mock Aadhaar validate API returned {response.StatusCode}.",
+          null,
+          null);
       }
 
       return await response.Content.ReadFromJsonAsync<MockAadhaarValidationResponse>(cancellationToken)
-        ?? new MockAadhaarValidationResponse(false, null, "Invalid mock validation response.");
+        ?? new MockAadhaarValidationResponse(false, null, "Invalid mock validation response.", null, null);
     }
     catch (HttpRequestException)
     {
-      return new MockAadhaarValidationResponse(true, $"local-{Guid.NewGuid():N}", "Fallback local validation used.");
+      return new MockAadhaarValidationResponse(
+        true,
+        $"local-{Guid.NewGuid():N}",
+        "Fallback local validation used.",
+        "LOCAL",
+        CreateFallbackDemographics(aadhaarNumber));
     }
   }
 
@@ -72,5 +87,15 @@ public sealed class MockAadhaarApiClient(HttpClient httpClient, IOptions<Aadhaar
   {
     var tokenBytes = sha256Hash.Take(16).ToArray();
     return new Guid(tokenBytes);
+  }
+
+  private static MockAadhaarDemographics CreateFallbackDemographics(string normalizedAadhaar)
+  {
+    var suffix = normalizedAadhaar[^4..];
+    return new MockAadhaarDemographics(
+      $"Verified Holder {suffix}",
+      null,
+      null,
+      "India");
   }
 }

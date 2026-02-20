@@ -14,4 +14,9 @@ public interface IUserProfileService
     string userSub,
     UpdateUserProfileRequest request,
     CancellationToken cancellationToken = default);
+
+  public Task<AadhaarVerificationResponse> VerifyCurrentUserAadhaarAsync(
+    string userSub,
+    VerifyAadhaarRequest request,
+    CancellationToken cancellationToken = default);
 }

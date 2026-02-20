@@ -15,6 +15,10 @@ public sealed class AadhaarVaultRecord : IAuditableEntity
 
   public string? ProviderRequestId { get; set; }
 
+  public string? VerificationProvider { get; set; }
+
+  public string? DemographicsJson { get; set; }
+
   public DateTimeOffset CreatedAt { get; set; }
 
   public DateTimeOffset UpdatedAt { get; set; }
