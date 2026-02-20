@@ -13,10 +13,8 @@ internal sealed record ValidationErrorResponse(
       .Where(pair => pair.Value?.Errors.Count > 0)
       .ToDictionary(
         pair => string.IsNullOrWhiteSpace(pair.Key) ? "request" : pair.Key,
-        pair => (IReadOnlyList<string>)pair.Value!.Errors
-          .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage) ? "Invalid value." : error.ErrorMessage)
-          .Distinct(StringComparer.Ordinal)
-          .ToArray(),
+        pair => ToReadOnlyErrorList(pair.Value!.Errors
+          .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage) ? "Invalid value." : error.ErrorMessage)),
         StringComparer.OrdinalIgnoreCase);
 
     return new ValidationErrorResponse("Validation failed.", errors);
@@ -28,12 +26,14 @@ internal sealed record ValidationErrorResponse(
       .GroupBy(failure => string.IsNullOrWhiteSpace(failure.PropertyName) ? "request" : failure.PropertyName)
       .ToDictionary(
         group => group.Key,
-        group => (IReadOnlyList<string>)group
-          .Select(failure => failure.ErrorMessage)
-          .Distinct(StringComparer.Ordinal)
-          .ToArray(),
+        group => ToReadOnlyErrorList(group.Select(failure => failure.ErrorMessage)),
         StringComparer.OrdinalIgnoreCase);
 
     return new ValidationErrorResponse("Validation failed.", errors);
   }
+
+  private static IReadOnlyList<string> ToReadOnlyErrorList(IEnumerable<string> messages)
+    => messages
+      .Distinct(StringComparer.Ordinal)
+      .ToArray();
 }

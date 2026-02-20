@@ -16,7 +16,8 @@ internal sealed class FluentValidationEndpointFilter(IServiceProvider services) 
       }
 
       var validatorType = typeof(IValidator<>).MakeGenericType(argument.GetType());
-      if (services.GetService(validatorType) is not IValidator validator)
+      var validator = services.GetService(validatorType) as IValidator;
+      if (validator is null)
       {
         continue;
       }
