@@ -2,6 +2,7 @@ using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Features.V1.AccessGrants;
+using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
@@ -46,6 +47,7 @@ public sealed class AccessGrantServiceTests
       accessGrantRepository.Object,
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       Options.Create(new AccessGrantOptions
       {
         DefaultExpiryDays = 30,
@@ -95,6 +97,7 @@ public sealed class AccessGrantServiceTests
       Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
@@ -134,6 +137,7 @@ public sealed class AccessGrantServiceTests
       accessGrantRepository.Object,
       unitOfWork.Object,
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
@@ -180,6 +184,7 @@ public sealed class AccessGrantServiceTests
       accessGrantRepository.Object,
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(now));
 
@@ -208,6 +213,7 @@ public sealed class AccessGrantServiceTests
       Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
@@ -240,6 +246,7 @@ public sealed class AccessGrantServiceTests
       Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       Options.Create(new AccessGrantOptions
       {
         DefaultExpiryDays = 30,
@@ -339,6 +346,7 @@ public sealed class AccessGrantServiceTests
       accessGrantRepository.Object,
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(now));
 
@@ -376,6 +384,7 @@ public sealed class AccessGrantServiceTests
       accessGrantRepository.Object,
       unitOfWork.Object,
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       Options.Create(new AccessGrantOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 

@@ -1,6 +1,7 @@
 using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Features.V1.EmergencyContacts;
+using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
@@ -44,6 +45,7 @@ public sealed class EmergencyContactServiceTests
       emergencyContactRepository.Object,
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero)));
 
     var response = await service.AddForUserAsync(
@@ -87,6 +89,7 @@ public sealed class EmergencyContactServiceTests
       emergencyContactRepository.Object,
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var action = async () => await service.AddForUserAsync(
@@ -131,6 +134,7 @@ public sealed class EmergencyContactServiceTests
       emergencyContactRepository.Object,
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var updated = await service.UpdateForUserAsync(
@@ -169,6 +173,7 @@ public sealed class EmergencyContactServiceTests
       emergencyContactRepository.Object,
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var deleted = await service.DeleteForUserAsync("seed-PATIENT-1", Guid.NewGuid(), CancellationToken.None);
@@ -196,6 +201,7 @@ public sealed class EmergencyContactServiceTests
       Mock.Of<IEmergencyContactRepository>(),
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var action = async () => await service.AddForUserAsync(
@@ -242,6 +248,7 @@ public sealed class EmergencyContactServiceTests
       emergencyContactRepository.Object,
       unitOfWork.Object,
       Mock.Of<IAuditLoggingService>(),
+      Mock.Of<ITransactionalEmailNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var deleted = await service.DeleteForUserAsync("seed-PATIENT-1", contact.Id, CancellationToken.None);

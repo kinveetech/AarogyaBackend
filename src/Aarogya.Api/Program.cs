@@ -89,6 +89,11 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptionsWithValidateOnStart<EmailNotificationsOptions>()
+  .BindConfiguration(EmailNotificationsOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<AccessGrantOptions>()
   .BindConfiguration(AccessGrantOptions.SectionName)
   .ValidateDataAnnotations();

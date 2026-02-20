@@ -1,6 +1,7 @@
 using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
+using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Security;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
@@ -17,6 +18,7 @@ internal sealed class AccessGrantService(
   IAccessGrantRepository accessGrantRepository,
   IUnitOfWork unitOfWork,
   IAuditLoggingService auditLoggingService,
+  ITransactionalEmailNotificationService transactionalEmailNotificationService,
   IOptions<AccessGrantOptions> options,
   IUtcClock clock)
   : IAccessGrantService
@@ -170,6 +172,12 @@ internal sealed class AccessGrantService(
         ["doctorUserId"] = doctor.Id.ToString("D"),
         ["allReports"] = request.AllReports.ToString()
       },
+      cancellationToken);
+
+    await transactionalEmailNotificationService.SendAccessGrantedAsync(
+      patient,
+      doctor,
+      grant,
       cancellationToken);
 
     return new AccessGrantResponse(
