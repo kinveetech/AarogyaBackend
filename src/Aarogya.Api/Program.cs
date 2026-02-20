@@ -1,6 +1,7 @@
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
+using Aarogya.Api.Endpoints;
 using Aarogya.Api.Health;
 using Aarogya.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -122,6 +123,7 @@ builder.Services.AddCognitoJwtAuthentication(builder.Configuration);
 builder.Services.AddAarogyaAuthorization();
 
 builder.Services.AddAarogyaCorsPolicy(builder.Configuration);
+builder.Services.AddV1EndpointGroupServices();
 
 var app = builder.Build();
 
@@ -140,12 +142,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseAarogyaRequestLogging();
+app.UseAarogyaApiVersioning();
 
 app.UseHttpsRedirection();
 app.UseCors("AarogyaPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapV1EndpointGroups();
 
 // Health check endpoints
 app.MapHealthChecks("/health", new HealthCheckOptions
