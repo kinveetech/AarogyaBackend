@@ -30,6 +30,7 @@ services:
       Aws__Cognito__PasswordPolicy__RequireNumbers: ${AWS_COGNITO_PASSWORD_REQUIRE_NUMBERS:-true}
       Aws__Cognito__PasswordPolicy__RequireSymbols: ${AWS_COGNITO_PASSWORD_REQUIRE_SYMBOLS:-true}
       Aws__S3__BucketName: ${AWS_S3_BUCKET_NAME:-aarogya-dev}
+      Aws__Sqs__QueueName: ${AWS_SQS_QUEUE_NAME:-aarogya-dev-queue}
       Aws__S3__PresignedUrlExpiryMinutes: ${AWS_S3_PRESIGNED_URL_EXPIRY_MINUTES:-15}
       Aws__S3__CloudFront__Enabled: ${AWS_S3_CLOUDFRONT_ENABLED:-false}
     depends_on:

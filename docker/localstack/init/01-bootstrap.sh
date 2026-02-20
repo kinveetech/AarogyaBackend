@@ -142,6 +142,32 @@ else
   log "Created SQS queue: ${SQS_QUEUE_NAME}"
 fi
 
+queue_url="$(aws --endpoint-url "$AWS_ENDPOINT_URL" sqs get-queue-url --queue-name "$SQS_QUEUE_NAME" --query 'QueueUrl' --output text)"
+queue_arn="$(aws --endpoint-url "$AWS_ENDPOINT_URL" sqs get-queue-attributes --queue-url "$queue_url" --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)"
+
+s3_notification_tmp="$(mktemp)"
+cat >"$s3_notification_tmp" <<EOF
+{
+  "QueueConfigurations": [
+    {
+      "Id": "aarogya-report-upload-events",
+      "QueueArn": "${queue_arn}",
+      "Events": [
+        "s3:ObjectCreated:Put",
+        "s3:ObjectCreated:Post",
+        "s3:ObjectCreated:CompleteMultipartUpload"
+      ]
+    }
+  ]
+}
+EOF
+
+aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-notification-configuration \
+  --bucket "$S3_BUCKET_NAME" \
+  --notification-configuration "file://${s3_notification_tmp}" >/dev/null
+rm -f "$s3_notification_tmp"
+log "Configured S3 upload event notification to SQS queue: ${SQS_QUEUE_NAME}"
+
 password_policy="MinimumLength=${COGNITO_PASSWORD_MIN_LENGTH},RequireLowercase=${COGNITO_PASSWORD_REQUIRE_LOWERCASE},RequireUppercase=${COGNITO_PASSWORD_REQUIRE_UPPERCASE},RequireNumbers=${COGNITO_PASSWORD_REQUIRE_NUMBERS},RequireSymbols=${COGNITO_PASSWORD_REQUIRE_SYMBOLS},TemporaryPasswordValidityDays=7"
 auto_verified_attributes=("email" "phone_number")
 username_attributes=("email" "phone_number")
