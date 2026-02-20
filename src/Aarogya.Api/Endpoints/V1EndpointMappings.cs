@@ -93,7 +93,9 @@ internal static class V1EndpointMappings
 
     grants.MapPost("/", async (CreateAccessGrantRequest request, HttpContext context, IAccessGrantsEndpointService service, CancellationToken ct) =>
     {
-      if (string.IsNullOrWhiteSpace(request.DoctorSub) || request.ReportIds.Count == 0)
+      if (string.IsNullOrWhiteSpace(request.DoctorSub)
+        || request.ReportIds is null
+        || request.ReportIds.Count == 0)
       {
         return Results.BadRequest(new ApiError("DoctorSub and at least one report ID are required."));
       }
