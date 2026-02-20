@@ -1,6 +1,7 @@
 using Aarogya.Api.Features.V1.AccessGrants;
 using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.EmergencyContacts;
+using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Features.V1.Users;
 
@@ -18,6 +19,12 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddScoped<IReportVirusScanProcessor, ReportVirusScanProcessor>();
     services.AddSingleton<IReportVirusScanner, ClamAvReportVirusScanner>();
     services.AddScoped<IPatientNotificationService, LoggingPatientNotificationService>();
+    services.AddSingleton<IDeviceTokenRegistry, InMemoryDeviceTokenRegistry>();
+    services.AddScoped<IPushNotificationService, PushNotificationService>();
+    services.AddHttpClient<IPushNotificationSender, FirebasePushNotificationSender>(client =>
+    {
+      client.Timeout = TimeSpan.FromSeconds(10);
+    });
     services.AddHostedService<S3UploadNotificationConfiguratorHostedService>();
     services.AddHostedService<S3UploadEventConsumerHostedService>();
     services.AddHostedService<ClamAvDefinitionsUpdaterHostedService>();
