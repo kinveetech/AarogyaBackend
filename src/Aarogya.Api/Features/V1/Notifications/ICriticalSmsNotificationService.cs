@@ -21,4 +21,10 @@ public interface ICriticalSmsNotificationService
     User doctor,
     AccessGrant grant,
     CancellationToken cancellationToken = default);
+
+  public Task SendEmergencyAccessExpiringSoonAsync(
+    User patient,
+    User doctor,
+    AccessGrant grant,
+    CancellationToken cancellationToken = default);
 }

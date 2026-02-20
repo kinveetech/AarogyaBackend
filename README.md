@@ -383,6 +383,23 @@ Configuration (`appsettings*.json`):
 }
 ```
 
+### Emergency Access Auto-Expiry
+Issue #66 adds a background worker for emergency-access lifecycle:
+- sends pre-expiry notifications 1 hour before expiry
+- automatically transitions overdue emergency access grants to `Expired`
+- writes audit actions: `emergency_access.preexpiry_notified` and `emergency_access.expired`
+
+Configuration (`appsettings*.json`):
+```json
+{
+  "EmergencyAccess": {
+    "EnableAutoExpiryWorker": true,
+    "AutoExpiryWorkerIntervalMinutes": 5,
+    "PreExpiryNotificationLeadMinutes": 60
+  }
+}
+```
+
 ### CloudFront Report CDN
 Issue #58 adds CloudFront CDN infrastructure and runtime integration for report downloads:
 
