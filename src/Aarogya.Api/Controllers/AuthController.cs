@@ -2,13 +2,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Authorization;
+using Aarogya.Api.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Aarogya.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[EnableRateLimiting(RateLimitPolicyNames.Auth)]
 [SuppressMessage(
   "Performance",
   "CA1515:Consider making public types internal",
