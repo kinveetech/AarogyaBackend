@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Aarogya.Api.Auditing;
@@ -267,4 +268,16 @@ catch (Exception ex)
 finally
 {
   await Log.CloseAndFlushAsync();
+}
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Public for WebApplicationFactory-based integration tests.")]
+[SuppressMessage(
+  "Major Code Smell",
+  "S1118",
+  Justification = "Top-level statements generate the entry point; this partial declaration enables test hosting.")]
+public partial class Program
+{
 }
