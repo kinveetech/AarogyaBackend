@@ -134,6 +134,10 @@ public static class DependencyInjection
         options.ConfigurationOptions = redisConfiguration;
       });
     }
+    else
+    {
+      services.AddDistributedMemoryCache();
+    }
 
     // Register a health check for PostgreSQL
     var healthChecks = services.AddHealthChecks()

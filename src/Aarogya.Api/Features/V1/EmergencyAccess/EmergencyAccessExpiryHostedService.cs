@@ -1,5 +1,6 @@
 using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
+using Aarogya.Api.Caching;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Domain.Entities;
@@ -19,7 +20,8 @@ internal sealed class EmergencyAccessExpiryHostedService(
   IPushNotificationService pushNotificationService,
   IOptions<EmergencyAccessOptions> options,
   IUtcClock clock,
-  ILogger<EmergencyAccessExpiryHostedService> logger)
+  ILogger<EmergencyAccessExpiryHostedService> logger,
+  IEntityCacheService? cacheService = null)
   : BackgroundService
 {
   private const string PreExpiryMarker = "|preexpiry_notified:";
@@ -121,6 +123,11 @@ internal sealed class EmergencyAccessExpiryHostedService(
     if (dirty)
     {
       await unitOfWork.SaveChangesAsync(cancellationToken);
+      if (cacheService is not null)
+      {
+        await cacheService.BumpNamespaceVersionAsync(EntityCacheNamespaces.AccessGrantListings, cancellationToken);
+        await cacheService.BumpNamespaceVersionAsync(EntityCacheNamespaces.ReportListings, cancellationToken);
+      }
     }
   }
 
