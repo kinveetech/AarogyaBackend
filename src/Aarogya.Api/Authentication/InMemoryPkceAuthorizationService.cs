@@ -31,6 +31,7 @@ internal sealed class InMemoryPkceAuthorizationService(
   private readonly AwsOptions _awsOptions = awsOptions.Value;
   private readonly JwtOptions _jwtOptions = jwtOptions.Value;
   private readonly ConcurrentDictionary<string, AuthorizationCodeEntry> _authorizationCodes = new(StringComparer.Ordinal);
+  private readonly ConcurrentDictionary<string, RefreshTokenEntry> _refreshTokens = new(StringComparer.Ordinal);
 
   public Task<PkceAuthorizeResult> CreateAuthorizationCodeAsync(
     PkceAuthorizeRequest request,
@@ -75,6 +76,7 @@ internal sealed class InMemoryPkceAuthorizationService(
     cancellationToken.ThrowIfCancellationRequested();
     var now = clock.UtcNow;
     EvictExpiredAuthorizationCodes(now);
+    EvictExpiredRefreshTokens(now);
 
     if (!ValidateTokenRequest(request, out var validationMessage))
     {
@@ -130,6 +132,13 @@ internal sealed class InMemoryPkceAuthorizationService(
     var accessToken = GenerateJwtToken(subject, isIdToken: false);
     var idToken = GenerateJwtToken(subject, isIdToken: true);
     var refreshToken = GenerateToken(48);
+    var refreshExpiresAt = now.AddSeconds(_pkceOptions.RefreshTokenExpirySeconds);
+    _refreshTokens[refreshToken] = new RefreshTokenEntry
+    {
+      ClientId = request.ClientId.Trim(),
+      Subject = subject,
+      ExpiresAt = refreshExpiresAt
+    };
 
     return Task.FromResult(new PkceTokenResult(
       true,
@@ -138,6 +147,114 @@ internal sealed class InMemoryPkceAuthorizationService(
       refreshToken,
       idToken,
       _pkceOptions.AccessTokenExpirySeconds));
+  }
+
+  public Task<PkceTokenResult> ExchangeRefreshTokenAsync(
+    PkceRefreshTokenRequest request,
+    CancellationToken cancellationToken = default)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+    var now = clock.UtcNow;
+    EvictExpiredRefreshTokens(now);
+
+    if (!ValidateRefreshTokenRequest(request, out var validationMessage))
+    {
+      return Task.FromResult(new PkceTokenResult(false, validationMessage));
+    }
+
+    if (!CanIssueJwtTokens(_jwtOptions))
+    {
+      return Task.FromResult(new PkceTokenResult(false, "JWT issuer is not configured."));
+    }
+
+    var refreshToken = request.RefreshToken.Trim();
+    if (!_refreshTokens.TryGetValue(refreshToken, out var entry))
+    {
+      return Task.FromResult(new PkceTokenResult(false, "Invalid or expired refresh token."));
+    }
+
+    lock (entry.Lock)
+    {
+      if (entry.IsRevoked)
+      {
+        _refreshTokens.TryRemove(refreshToken, out _);
+        return Task.FromResult(new PkceTokenResult(false, "Refresh token revoked."));
+      }
+
+      if (entry.ExpiresAt < now)
+      {
+        _refreshTokens.TryRemove(refreshToken, out _);
+        return Task.FromResult(new PkceTokenResult(false, "Refresh token expired."));
+      }
+
+      if (!string.Equals(entry.ClientId, request.ClientId.Trim(), StringComparison.Ordinal))
+      {
+        return Task.FromResult(new PkceTokenResult(false, "Client ID mismatch."));
+      }
+
+      entry.IsRevoked = true;
+    }
+
+    _refreshTokens.TryRemove(refreshToken, out _);
+
+    var nextRefreshToken = GenerateToken(48);
+    var nextRefreshExpiry = now.AddSeconds(_pkceOptions.RefreshTokenExpirySeconds);
+    _refreshTokens[nextRefreshToken] = new RefreshTokenEntry
+    {
+      ClientId = entry.ClientId,
+      Subject = entry.Subject,
+      ExpiresAt = nextRefreshExpiry
+    };
+
+    var accessToken = GenerateJwtToken(entry.Subject, isIdToken: false);
+    var idToken = GenerateJwtToken(entry.Subject, isIdToken: true);
+
+    return Task.FromResult(new PkceTokenResult(
+      true,
+      "Refresh token exchange successful.",
+      accessToken,
+      nextRefreshToken,
+      idToken,
+      _pkceOptions.AccessTokenExpirySeconds));
+  }
+
+  public Task<PkceRevokeResult> RevokeRefreshTokenAsync(
+    PkceRevokeRequest request,
+    CancellationToken cancellationToken = default)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+    var now = clock.UtcNow;
+    EvictExpiredRefreshTokens(now);
+
+    if (!ValidateRevokeRequest(request, out var validationMessage))
+    {
+      return Task.FromResult(new PkceRevokeResult(false, validationMessage));
+    }
+
+    var refreshToken = request.RefreshToken.Trim();
+    if (!_refreshTokens.TryGetValue(refreshToken, out var entry))
+    {
+      return Task.FromResult(new PkceRevokeResult(false, "Refresh token not found."));
+    }
+
+    lock (entry.Lock)
+    {
+      if (entry.IsRevoked)
+      {
+        _refreshTokens.TryRemove(refreshToken, out _);
+        return Task.FromResult(new PkceRevokeResult(false, "Refresh token already revoked."));
+      }
+
+      if (!string.Equals(entry.ClientId, request.ClientId.Trim(), StringComparison.Ordinal))
+      {
+        return Task.FromResult(new PkceRevokeResult(false, "Client ID mismatch."));
+      }
+
+      entry.IsRevoked = true;
+    }
+
+    _refreshTokens.TryRemove(refreshToken, out _);
+    return Task.FromResult(new PkceRevokeResult(true, "Refresh token revoked."));
   }
 
   private bool ValidateAuthorizeRequest(PkceAuthorizeRequest request, out string validationMessage)
@@ -220,6 +337,44 @@ internal sealed class InMemoryPkceAuthorizationService(
     return true;
   }
 
+  private static bool ValidateRefreshTokenRequest(PkceRefreshTokenRequest request, out string validationMessage)
+  {
+    validationMessage = string.Empty;
+
+    if (string.IsNullOrWhiteSpace(request.ClientId))
+    {
+      validationMessage = "Client ID is required.";
+      return false;
+    }
+
+    if (string.IsNullOrWhiteSpace(request.RefreshToken))
+    {
+      validationMessage = "Refresh token is required.";
+      return false;
+    }
+
+    return true;
+  }
+
+  private static bool ValidateRevokeRequest(PkceRevokeRequest request, out string validationMessage)
+  {
+    validationMessage = string.Empty;
+
+    if (string.IsNullOrWhiteSpace(request.ClientId))
+    {
+      validationMessage = "Client ID is required.";
+      return false;
+    }
+
+    if (string.IsNullOrWhiteSpace(request.RefreshToken))
+    {
+      validationMessage = "Refresh token is required.";
+      return false;
+    }
+
+    return true;
+  }
+
   private static string ComputeCodeChallenge(string codeVerifier)
   {
     var verifierBytes = Encoding.ASCII.GetBytes(codeVerifier);
@@ -246,6 +401,14 @@ internal sealed class InMemoryPkceAuthorizationService(
     foreach (var kvp in _authorizationCodes.Where(kvp => kvp.Value.ExpiresAt < now || kvp.Value.IsConsumed))
     {
       _authorizationCodes.TryRemove(kvp.Key, out _);
+    }
+  }
+
+  private void EvictExpiredRefreshTokens(DateTimeOffset now)
+  {
+    foreach (var kvp in _refreshTokens.Where(kvp => kvp.Value.ExpiresAt < now || kvp.Value.IsRevoked))
+    {
+      _refreshTokens.TryRemove(kvp.Key, out _);
     }
   }
 
@@ -313,5 +476,18 @@ internal sealed class InMemoryPkceAuthorizationService(
     public DateTimeOffset ExpiresAt { get; set; }
 
     public bool IsConsumed { get; set; }
+  }
+
+  private sealed class RefreshTokenEntry
+  {
+    public object Lock { get; } = new();
+
+    public string ClientId { get; set; } = string.Empty;
+
+    public string Subject { get; set; } = string.Empty;
+
+    public DateTimeOffset ExpiresAt { get; set; }
+
+    public bool IsRevoked { get; set; }
   }
 }

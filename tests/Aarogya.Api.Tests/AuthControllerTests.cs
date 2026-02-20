@@ -63,5 +63,11 @@ public sealed class AuthControllerTests
 
     public Task<PkceTokenResult> ExchangeAuthorizationCodeAsync(PkceTokenRequest request, CancellationToken cancellationToken = default)
       => Task.FromResult(new PkceTokenResult(true, "ok", "access", "refresh", "id", 900));
+
+    public Task<PkceTokenResult> ExchangeRefreshTokenAsync(PkceRefreshTokenRequest request, CancellationToken cancellationToken = default)
+      => Task.FromResult(new PkceTokenResult(true, "ok", "access", "refresh", "id", 900));
+
+    public Task<PkceRevokeResult> RevokeRefreshTokenAsync(PkceRevokeRequest request, CancellationToken cancellationToken = default)
+      => Task.FromResult(new PkceRevokeResult(true, "ok"));
   }
 }
