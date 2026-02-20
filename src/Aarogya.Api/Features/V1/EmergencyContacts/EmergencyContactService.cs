@@ -1,5 +1,6 @@
 using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
+using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Security;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
@@ -13,6 +14,7 @@ internal sealed class EmergencyContactService(
   IEmergencyContactRepository emergencyContactRepository,
   IUnitOfWork unitOfWork,
   IAuditLoggingService auditLoggingService,
+  ITransactionalEmailNotificationService transactionalEmailNotificationService,
   IUtcClock clock)
   : IEmergencyContactService
 {
@@ -74,6 +76,12 @@ internal sealed class EmergencyContactService(
       contact.Id,
       201,
       cancellationToken: cancellationToken);
+
+    await transactionalEmailNotificationService.SendEmergencyAccessEventAsync(
+      patient,
+      contact,
+      "created",
+      cancellationToken);
     return Map(contact);
   }
 
@@ -108,6 +116,12 @@ internal sealed class EmergencyContactService(
       contact.Id,
       200,
       cancellationToken: cancellationToken);
+
+    await transactionalEmailNotificationService.SendEmergencyAccessEventAsync(
+      patient,
+      contact,
+      "updated",
+      cancellationToken);
     return Map(contact);
   }
 
@@ -131,6 +145,12 @@ internal sealed class EmergencyContactService(
       contact.Id,
       200,
       cancellationToken: cancellationToken);
+
+    await transactionalEmailNotificationService.SendEmergencyAccessEventAsync(
+      patient,
+      contact,
+      "deleted",
+      cancellationToken);
     return true;
   }
 

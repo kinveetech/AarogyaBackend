@@ -1,11 +1,14 @@
+using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Domain.Entities;
 
 namespace Aarogya.Api.Features.V1.Reports;
 
-internal sealed class LoggingPatientNotificationService(ILogger<LoggingPatientNotificationService> logger)
+internal sealed class LoggingPatientNotificationService(
+  ILogger<LoggingPatientNotificationService> logger,
+  ITransactionalEmailNotificationService transactionalEmailNotificationService)
   : IPatientNotificationService
 {
-  public Task NotifyReportUploadedAsync(
+  public async Task NotifyReportUploadedAsync(
     User patient,
     Report report,
     CancellationToken cancellationToken = default)
@@ -15,6 +18,10 @@ internal sealed class LoggingPatientNotificationService(ILogger<LoggingPatientNo
       patient.Id,
       report.Id,
       report.ReportNumber);
-    return Task.CompletedTask;
+
+    await transactionalEmailNotificationService.SendReportUploadedAsync(
+      patient,
+      report,
+      cancellationToken);
   }
 }
