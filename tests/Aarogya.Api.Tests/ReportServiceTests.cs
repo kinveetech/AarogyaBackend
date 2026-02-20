@@ -4,6 +4,8 @@ using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
+using Aarogya.Domain.Specifications;
+using Aarogya.Domain.ValueObjects;
 using Amazon.S3;
 using Amazon.S3.Model;
 using FluentAssertions;
@@ -55,6 +57,7 @@ public sealed class ReportServiceTests
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
+      Mock.Of<IAuditLogRepository>(),
       unitOfWork.Object,
       Options.Create(CreateAwsOptions()),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 10, 0, 0, TimeSpan.Zero)));
@@ -98,6 +101,7 @@ public sealed class ReportServiceTests
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IReportRepository>(),
+      Mock.Of<IAuditLogRepository>(),
       Mock.Of<IUnitOfWork>(),
       Options.Create(CreateAwsOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));
@@ -108,6 +112,151 @@ public sealed class ReportServiceTests
 
     await action.Should().ThrowAsync<InvalidOperationException>()
       .WithMessage("*PatientSub is required*");
+  }
+
+  [Fact]
+  public async Task GetDetailForUserAsync_ShouldReturnDetailAndWriteAuditLog_WhenPatientOwnsReportAsync()
+  {
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient,
+      FirstName = "Seed",
+      LastName = "Patient",
+      Email = "seed.patient@aarogya.dev"
+    };
+
+    var report = new Report
+    {
+      Id = Guid.NewGuid(),
+      ReportNumber = "RPT-ABC123DEFG",
+      PatientId = patient.Id,
+      UploadedByUserId = patient.Id,
+      ReportType = ReportType.BloodTest,
+      Status = ReportStatus.Uploaded,
+      UploadedAt = new DateTimeOffset(2026, 2, 20, 8, 0, 0, TimeSpan.Zero),
+      CreatedAt = new DateTimeOffset(2026, 2, 20, 8, 0, 0, TimeSpan.Zero),
+      FileStorageKey = "reports/seed-PATIENT-1/2026/02/report.pdf",
+      Metadata = new ReportMetadata
+      {
+        Tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["lab-name"] = "Aarogya Diagnostics",
+          ["lab-code"] = "AAR-001"
+        }
+      },
+      Results = new ReportResults
+      {
+        Notes = "Fasting sample"
+      },
+      Parameters =
+      [
+        new ReportParameter
+        {
+          ParameterCode = "HGB",
+          ParameterName = "Hemoglobin",
+          MeasuredValueNumeric = 13.4m,
+          Unit = "g/dL",
+          ReferenceRangeText = "12-16",
+          IsAbnormal = false
+        }
+      ]
+    };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.FirstOrDefaultAsync(It.IsAny<ISpecification<Report>>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(report);
+
+    var s3Client = new Mock<IAmazonS3>();
+    s3Client
+      .Setup(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()))
+      .ReturnsAsync("https://example.com/signed-download");
+
+    var auditLogRepository = new Mock<IAuditLogRepository>();
+    var unitOfWork = new Mock<IUnitOfWork>();
+
+    var service = new ReportService(
+      s3Client.Object,
+      userRepository.Object,
+      Mock.Of<IAccessGrantRepository>(),
+      reportRepository.Object,
+      auditLogRepository.Object,
+      unitOfWork.Object,
+      Options.Create(CreateAwsOptions()),
+      new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 10, 0, 0, TimeSpan.Zero)));
+
+    var response = await service.GetDetailForUserAsync("seed-PATIENT-1", report.Id, CancellationToken.None);
+
+    response.ReportId.Should().Be(report.Id);
+    response.Download.Provider.Should().Be("s3");
+    response.Download.DownloadUrl.Should().Be(new Uri("https://example.com/signed-download"));
+    response.Parameters.Should().HaveCount(1);
+
+    auditLogRepository.Verify(x => x.AddAsync(It.IsAny<AuditLog>(), It.IsAny<CancellationToken>()), Times.Once);
+    unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+  }
+
+  [Fact]
+  public async Task GetDetailForUserAsync_ShouldThrowUnauthorized_WhenDoctorHasNoActiveGrantAsync()
+  {
+    var doctor = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-DOCTOR-1",
+      Role = UserRole.Doctor,
+      FirstName = "Seed",
+      LastName = "Doctor",
+      Email = "seed.doctor@aarogya.dev"
+    };
+
+    var report = new Report
+    {
+      Id = Guid.NewGuid(),
+      ReportNumber = "RPT-XYZ9876543",
+      PatientId = Guid.NewGuid(),
+      UploadedByUserId = Guid.NewGuid(),
+      ReportType = ReportType.BloodTest,
+      Status = ReportStatus.Uploaded,
+      UploadedAt = DateTimeOffset.UtcNow,
+      CreatedAt = DateTimeOffset.UtcNow,
+      FileStorageKey = "reports/seed-PATIENT-1/2026/02/report.pdf"
+    };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-DOCTOR-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(doctor);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.FirstOrDefaultAsync(It.IsAny<ISpecification<Report>>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(report);
+
+    var accessGrantRepository = new Mock<IAccessGrantRepository>();
+    accessGrantRepository
+      .Setup(x => x.ListAsync(It.IsAny<ISpecification<AccessGrant>>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync([]);
+
+    var service = new ReportService(
+      Mock.Of<IAmazonS3>(),
+      userRepository.Object,
+      accessGrantRepository.Object,
+      reportRepository.Object,
+      Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IUnitOfWork>(),
+      Options.Create(CreateAwsOptions()),
+      new FixedUtcClock(DateTimeOffset.UtcNow));
+
+    var action = async () => await service.GetDetailForUserAsync("seed-DOCTOR-1", report.Id, CancellationToken.None);
+
+    await action.Should().ThrowAsync<UnauthorizedAccessException>();
   }
 
   private static CreateReportRequest CreateRequest()

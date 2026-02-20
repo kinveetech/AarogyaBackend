@@ -19,6 +19,7 @@ internal sealed class ReportService(
   IUserRepository userRepository,
   IAccessGrantRepository accessGrantRepository,
   IReportRepository reportRepository,
+  IAuditLogRepository auditLogRepository,
   IUnitOfWork unitOfWork,
   IOptions<AwsOptions> awsOptions,
   IUtcClock clock)
@@ -112,6 +113,64 @@ internal sealed class ReportService(
     return new ReportListResponse(page, pageSize, totalCount, items);
   }
 
+  public async Task<ReportDetailResponse> GetDetailForUserAsync(
+    string userSub,
+    Guid reportId,
+    CancellationToken cancellationToken = default)
+  {
+    var user = await userRepository.GetByExternalAuthIdAsync(userSub, cancellationToken)
+      ?? throw new InvalidOperationException("Authenticated user is not provisioned in the database.");
+
+    var report = await reportRepository.FirstOrDefaultAsync(
+      new ReportByIdSpecification(reportId),
+      cancellationToken)
+      ?? throw new KeyNotFoundException("Report not found.");
+
+    var canAccess = await CanAccessReportAsync(user, report, cancellationToken);
+    if (!canAccess)
+    {
+      throw new UnauthorizedAccessException("You do not have access to this report.");
+    }
+
+    if (string.IsNullOrWhiteSpace(report.FileStorageKey))
+    {
+      throw new InvalidOperationException("Report file reference is missing.");
+    }
+
+    var download = await CreateSignedDownloadUrlAsync(report.FileStorageKey, null, cancellationToken);
+    await WriteReportAccessAuditLogAsync(user, report, cancellationToken);
+
+    report.Metadata.Tags.TryGetValue("lab-name", out var labName);
+    report.Metadata.Tags.TryGetValue("lab-code", out var labCode);
+
+    var parameters = report.Parameters
+      .OrderBy(parameter => parameter.ParameterName, StringComparer.OrdinalIgnoreCase)
+      .Select(parameter => new ReportDetailParameterResponse(
+        parameter.ParameterCode,
+        parameter.ParameterName,
+        parameter.MeasuredValueNumeric,
+        parameter.MeasuredValueText,
+        parameter.Unit,
+        parameter.ReferenceRangeText,
+        parameter.IsAbnormal))
+      .ToArray();
+
+    return new ReportDetailResponse(
+      report.Id,
+      report.ReportNumber,
+      ToReportTypeCode(report.ReportType),
+      ToStatusString(report.Status),
+      report.UploadedAt,
+      report.CreatedAt,
+      labName,
+      labCode,
+      report.CollectedAt,
+      report.ReportedAt,
+      report.Results.Notes,
+      parameters,
+      download);
+  }
+
   public async Task<ReportSummaryResponse> AddForUserAsync(
     string userSub,
     CreateReportRequest request,
@@ -197,25 +256,7 @@ internal sealed class ReportService(
       throw new InvalidOperationException("Object key does not belong to the authenticated user.");
     }
 
-    var now = clock.UtcNow;
-    var expiresAt = now.AddMinutes(GetExpiryMinutes(request.ExpiryMinutes));
-
-    if (TryGetCloudFrontSignedUrl(request.ObjectKey, expiresAt, out var cloudFrontUrl))
-    {
-      return new ReportSignedDownloadUrlResponse(request.ObjectKey, new Uri(cloudFrontUrl, UriKind.Absolute), expiresAt, "cloudfront");
-    }
-
-    var presignRequest = new GetPreSignedUrlRequest
-    {
-      BucketName = _awsOptions.S3.BucketName,
-      Key = request.ObjectKey,
-      Verb = HttpVerb.GET,
-      Expires = expiresAt.UtcDateTime,
-      Protocol = ResolveProtocol()
-    };
-
-    var s3Url = await s3Client.GetPreSignedURLAsync(presignRequest);
-    return new ReportSignedDownloadUrlResponse(request.ObjectKey, new Uri(s3Url, UriKind.Absolute), expiresAt, "s3");
+    return await CreateSignedDownloadUrlAsync(request.ObjectKey, request.ExpiryMinutes, cancellationToken);
   }
 
   private static string BuildSummaryTitle(Report report)
@@ -226,6 +267,112 @@ internal sealed class ReportService(
     }
 
     return $"{report.ReportType} - {report.ReportNumber}";
+  }
+
+  private async Task<bool> CanAccessReportAsync(
+    User user,
+    Report report,
+    CancellationToken cancellationToken)
+  {
+    if (user.Role == UserRole.Patient)
+    {
+      return report.PatientId == user.Id;
+    }
+
+    if (user.Role == UserRole.LabTechnician)
+    {
+      return report.UploadedByUserId == user.Id;
+    }
+
+    if (user.Role != UserRole.Doctor)
+    {
+      return false;
+    }
+
+    var now = clock.UtcNow;
+    var grants = await accessGrantRepository.ListAsync(
+      new ActiveAccessGrantsForDoctorSpecification(user.Id, now),
+      cancellationToken);
+
+    var patientGrants = grants
+      .Where(grant => grant.PatientId == report.PatientId)
+      .Where(grant => grant.Scope.CanReadReports && grant.Scope.CanDownloadReports)
+      .ToArray();
+
+    if (patientGrants.Length == 0)
+    {
+      return false;
+    }
+
+    var reportTypeCode = ToReportTypeCode(report.ReportType);
+    return Array.Exists(patientGrants, grant =>
+    {
+      var allowedTypes = grant.Scope.AllowedReportTypes
+        .Where(type => !string.IsNullOrWhiteSpace(type))
+        .Select(type => type.Trim())
+        .ToArray();
+
+      return allowedTypes.Length == 0
+        || allowedTypes.Contains(reportTypeCode, StringComparer.OrdinalIgnoreCase);
+    });
+  }
+
+  private async Task<ReportSignedDownloadUrlResponse> CreateSignedDownloadUrlAsync(
+    string objectKey,
+    int? requestedExpiryMinutes,
+    CancellationToken cancellationToken)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+    var now = clock.UtcNow;
+    var expiresAt = now.AddMinutes(GetExpiryMinutes(requestedExpiryMinutes));
+
+    if (TryGetCloudFrontSignedUrl(objectKey, expiresAt, out var cloudFrontUrl))
+    {
+      return new ReportSignedDownloadUrlResponse(objectKey, new Uri(cloudFrontUrl, UriKind.Absolute), expiresAt, "cloudfront");
+    }
+
+    var presignRequest = new GetPreSignedUrlRequest
+    {
+      BucketName = _awsOptions.S3.BucketName,
+      Key = objectKey,
+      Verb = HttpVerb.GET,
+      Expires = expiresAt.UtcDateTime,
+      Protocol = ResolveProtocol()
+    };
+
+    var s3Url = await s3Client.GetPreSignedURLAsync(presignRequest);
+    return new ReportSignedDownloadUrlResponse(objectKey, new Uri(s3Url, UriKind.Absolute), expiresAt, "s3");
+  }
+
+  private async Task WriteReportAccessAuditLogAsync(
+    User actor,
+    Report report,
+    CancellationToken cancellationToken)
+  {
+    var auditLog = new AuditLog
+    {
+      Id = Guid.NewGuid(),
+      OccurredAt = clock.UtcNow,
+      ActorUserId = actor.Id,
+      ActorRole = actor.Role,
+      Action = "report.viewed",
+      EntityType = "report",
+      EntityId = report.Id,
+      ResultStatus = 200,
+      Details = new AuditLogDetails
+      {
+        Summary = "Report detail accessed.",
+        Data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["reportId"] = report.Id.ToString("D", CultureInfo.InvariantCulture),
+          ["reportNumber"] = report.ReportNumber,
+          ["reportType"] = ToReportTypeCode(report.ReportType)
+        }
+      }
+    };
+
+    await auditLogRepository.AddAsync(auditLog, cancellationToken);
+    await unitOfWork.SaveChangesAsync(cancellationToken);
   }
 
   private async Task<User> ResolvePatientAsync(

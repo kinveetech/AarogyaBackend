@@ -27,6 +27,61 @@ public sealed class ReportsControllerTests
   }
 
   [Fact]
+  public async Task GetReportDetailAsync_ShouldReturnUnauthorized_WhenSubjectMissingAsync()
+  {
+    var controller = CreateController(
+      user: new ClaimsPrincipal(new ClaimsIdentity()),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.GetReportDetailAsync(Guid.NewGuid(), CancellationToken.None);
+
+    result.Should().BeOfType<UnauthorizedResult>();
+  }
+
+  [Fact]
+  public async Task GetReportDetailAsync_ShouldReturnOk_WhenServiceReturnsReportAsync()
+  {
+    var response = new ReportDetailResponse(
+      Guid.NewGuid(),
+      "RPT-ABC123DEFG",
+      "blood_test",
+      "uploaded",
+      new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero),
+      new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero),
+      "Aarogya Diagnostics",
+      "AAR-001",
+      new DateTimeOffset(2026, 2, 19, 0, 0, 0, TimeSpan.Zero),
+      new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero),
+      "Fasting sample",
+      [
+        new ReportDetailParameterResponse("HGB", "Hemoglobin", 13.4m, null, "g/dL", "12-16", false)
+      ],
+      new ReportSignedDownloadUrlResponse(
+        "reports/seed-PATIENT-1/2026/02/report.pdf",
+        new Uri("https://example.com/signed-download"),
+        new DateTimeOffset(2026, 2, 20, 0, 15, 0, TimeSpan.Zero),
+        "s3"));
+
+    var reportService = new Mock<IReportService>();
+    reportService
+      .Setup(x => x.GetDetailForUserAsync("seed-PATIENT-1", response.ReportId, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(response);
+
+    var controller = CreateController(
+      user: CreateUser("seed-PATIENT-1"),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: reportService.Object,
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.GetReportDetailAsync(response.ReportId, CancellationToken.None);
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    ok.Value.Should().BeEquivalentTo(response);
+  }
+
+  [Fact]
   public async Task ListReportsAsync_ShouldReturnOk_WithPagedResponseAsync()
   {
     var expected = new ReportListResponse(

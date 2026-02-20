@@ -64,6 +64,38 @@ public sealed record ReportListResponse(
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public API action signature.")]
+public sealed record ReportDetailParameterResponse(
+  string Code,
+  string Name,
+  decimal? NumericValue,
+  string? TextValue,
+  string? Unit,
+  string? ReferenceRange,
+  bool? IsAbnormal);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record ReportDetailResponse(
+  Guid ReportId,
+  string ReportNumber,
+  string ReportType,
+  string Status,
+  DateTimeOffset UploadedAt,
+  DateTimeOffset CreatedAt,
+  string? LabName,
+  string? LabCode,
+  DateTimeOffset? CollectedAt,
+  DateTimeOffset? ReportedAt,
+  string? Notes,
+  IReadOnlyList<ReportDetailParameterResponse> Parameters,
+  ReportSignedDownloadUrlResponse Download);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
 public sealed record CreateReportUploadUrlRequest(
   string FileName,
   string ContentType,
