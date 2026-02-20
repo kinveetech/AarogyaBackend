@@ -224,6 +224,26 @@ Notes:
 - Local/dev: set `UseAwsKms=false` and provide `LocalDataKey`.
 - Always set a strong `BlindIndexKey` via user-secrets or environment variables.
 
+### Transport Security (TLS)
+Issue #49 adds transport-level TLS enforcement controls for production paths:
+- PostgreSQL connection must use `SSL Mode=Require|VerifyCA|VerifyFull`
+- Redis connection must include `ssl=true`
+- AWS `ServiceUrl` must use `https://` when LocalStack is disabled
+
+Configuration:
+```json
+{
+  "TransportSecurity": {
+    "EnforceTls13": true
+  }
+}
+```
+
+Notes:
+- `TransportSecurity:EnforceTls13=true` is enabled in `appsettings.json` (production baseline).
+- `appsettings.Development.json` disables enforcement for local Docker/Aspire environments that use non-TLS local endpoints.
+- In production, avoid `Trust Server Certificate=true` in PostgreSQL connection strings.
+
 ### Aadhaar Vault Configuration
 Issue #19 introduces a dedicated Aadhaar vault schema with:
 - `aadhaar_vault.aadhaar_records` for encrypted Aadhaar + SHA-256 lookup + reference token

@@ -10,6 +10,7 @@ using Aarogya.Infrastructure;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -163,6 +164,12 @@ var rateLimitingOptions = builder.Configuration
   .GetSection(RateLimitingOptions.SectionName)
   .Get<RateLimitingOptions>() ?? new RateLimitingOptions();
 builder.Services.AddAarogyaRateLimiting(rateLimitingOptions);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+  options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+  options.KnownNetworks.Clear();
+  options.KnownProxies.Clear();
+});
 
 var app = builder.Build();
 
@@ -180,8 +187,13 @@ app.UseSwaggerUI(c =>
 
 app.UseAarogyaRequestLogging();
 app.UseAarogyaApiVersioning();
+app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+  app.UseHsts();
+}
 app.UseCors("AarogyaPolicy");
 app.UseAuthentication();
 if (rateLimitingOptions.EnableRateLimiting)

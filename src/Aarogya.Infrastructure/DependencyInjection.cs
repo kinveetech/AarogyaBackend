@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace Aarogya.Infrastructure;
 
@@ -38,6 +39,7 @@ public static class DependencyInjection
     var maxRetryCount = dbSection.GetSection("MaxRetryCount").Get<int?>() ?? 3;
     var maxRetryDelaySeconds = dbSection.GetSection("MaxRetryDelaySeconds").Get<int?>() ?? 5;
     var healthCheckTimeoutSeconds = dbSection.GetSection("HealthCheckTimeoutSeconds").Get<int?>() ?? 5;
+    var enforceTls13 = configuration.GetSection("TransportSecurity").GetSection("EnforceTls13").Get<bool?>() ?? false;
     var redisSection = configuration.GetSection("Redis");
     var redisConnectionString = configuration.GetConnectionString("Redis");
     var redisInstanceName = redisSection.GetSection("InstanceName").Get<string>() ?? "aarogya_";
@@ -45,6 +47,15 @@ public static class DependencyInjection
     var redisConnectTimeout = redisSection.GetSection("ConnectTimeoutMilliseconds").Get<int?>() ?? 5000;
     var redisConnectRetry = redisSection.GetSection("ConnectRetry").Get<int?>() ?? 3;
     var redisSyncTimeout = redisSection.GetSection("SyncTimeoutMilliseconds").Get<int?>() ?? 5000;
+
+    if (enforceTls13)
+    {
+      var secureConnectionBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+      {
+        SslMode = SslMode.Require
+      };
+      connectionString = secureConnectionBuilder.ConnectionString;
+    }
 
     services.AddDbContextPool<AarogyaDbContext>(options =>
     {
@@ -111,6 +122,10 @@ public static class DependencyInjection
         redisConfiguration.SyncTimeout = redisSyncTimeout;
         redisConfiguration.DefaultDatabase = redisDatabase;
         redisConfiguration.AbortOnConnectFail = false;
+        if (enforceTls13)
+        {
+          redisConfiguration.Ssl = true;
+        }
         options.ConfigurationOptions = redisConfiguration;
       });
     }
