@@ -20,6 +20,8 @@ public sealed class AwsOptions
 
   public S3Options S3 { get; set; } = new();
 
+  public SqsOptions Sqs { get; set; } = new();
+
   public SesOptions Ses { get; set; } = new();
 
   public CognitoOptions Cognito { get; set; } = new();
@@ -60,6 +62,28 @@ public sealed class SesOptions
 
   [Required]
   public string SenderName { get; set; } = string.Empty;
+}
+
+public sealed class SqsOptions
+{
+  [Required]
+  public string QueueName { get; set; } = "aarogya-dev-queue";
+
+  public bool ConfigureS3NotificationsOnStartup { get; set; } = true;
+
+  public bool EnableUploadEventConsumer { get; set; } = true;
+
+  [Range(1, 10)]
+  public int MaxNumberOfMessages { get; set; } = 5;
+
+  [Range(1, 20)]
+  public int ReceiveWaitTimeSeconds { get; set; } = 10;
+
+  [Range(1, 43200)]
+  public int VisibilityTimeoutSeconds { get; set; } = 30;
+
+  [Range(1, 300)]
+  public int EmptyPollDelayMilliseconds { get; set; } = 250;
 }
 
 public sealed class CognitoOptions

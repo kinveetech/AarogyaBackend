@@ -4,6 +4,7 @@ using Amazon.Extensions.NETCore.Setup;
 using Amazon.KeyManagementService;
 using Amazon.Runtime;
 using Amazon.S3;
+using Amazon.SQS;
 using Amazon.SimpleEmailV2;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +70,22 @@ public static class AwsServiceRegistration
     else
     {
       services.AddAWSService<IAmazonSimpleEmailServiceV2>();
+    }
+
+    // Register SQS client
+    if (useLocalStack && !string.IsNullOrWhiteSpace(serviceUrl))
+    {
+      services.AddSingleton<IAmazonSQS>(_ => new AmazonSQSClient(
+        awsOptions.Credentials ?? new BasicAWSCredentials("test", "test"),
+        new AmazonSQSConfig
+        {
+          RegionEndpoint = awsOptions.Region,
+          ServiceURL = serviceUrl
+        }));
+    }
+    else
+    {
+      services.AddAWSService<IAmazonSQS>();
     }
 
     // Register AWS KMS client

@@ -13,6 +13,8 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddSingleton<IReportService, InMemoryReportService>();
     services.AddScoped<IReportFileUploadService, S3ReportFileUploadService>();
     services.AddScoped<IReportChecksumVerificationService, S3ReportChecksumVerificationService>();
+    services.AddHostedService<S3UploadNotificationConfiguratorHostedService>();
+    services.AddHostedService<S3UploadEventConsumerHostedService>();
     services.AddSingleton<IAccessGrantService, InMemoryAccessGrantService>();
     services.AddSingleton<IEmergencyContactService, InMemoryEmergencyContactService>();
 
