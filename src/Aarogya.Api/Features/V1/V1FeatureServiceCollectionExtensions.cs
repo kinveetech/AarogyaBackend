@@ -10,7 +10,7 @@ internal static class V1FeatureServiceCollectionExtensions
   public static IServiceCollection AddV1FeatureServices(this IServiceCollection services)
   {
     services.AddScoped<IUserProfileService, UserProfileService>();
-    services.AddSingleton<IReportService, InMemoryReportService>();
+    services.AddScoped<IReportService, ReportService>();
     services.AddScoped<IReportFileUploadService, S3ReportFileUploadService>();
     services.AddScoped<IReportChecksumVerificationService, S3ReportChecksumVerificationService>();
     services.AddHostedService<S3UploadNotificationConfiguratorHostedService>();

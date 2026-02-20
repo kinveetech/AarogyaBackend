@@ -130,10 +130,60 @@ internal sealed class ApiKeyRotateCommandValidator : AbstractValidator<ApiKeyRot
 
 internal sealed class CreateReportRequestValidator : AbstractValidator<CreateReportRequest>
 {
+  private static readonly string[] AllowedReportTypes =
+  [
+    "blood_test",
+    "urine_test",
+    "radiology",
+    "cardiology",
+    "other"
+  ];
+
   public CreateReportRequestValidator()
   {
-    RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
+    RuleFor(x => x.ReportType)
+      .NotEmpty()
+      .Must(value => AllowedReportTypes.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase))
+      .WithMessage("ReportType must be one of blood_test, urine_test, radiology, cardiology, other.");
+
+    RuleFor(x => x.ObjectKey).NotEmpty().MaximumLength(1024).Must(value => value.Trim().StartsWith("reports/", StringComparison.Ordinal));
+
+    RuleFor(x => x.LabName).NotEmpty().MaximumLength(200);
+    RuleFor(x => x.LabCode).MaximumLength(100).When(x => x.LabCode is not null);
+    RuleFor(x => x.Notes).MaximumLength(2000).When(x => x.Notes is not null);
+    RuleFor(x => x.PatientSub).NotEmpty().MaximumLength(200).When(x => x.PatientSub is not null);
+
+    RuleFor(x => x.CollectedAt)
+      .LessThanOrEqualTo(DateTimeOffset.UtcNow)
+      .When(x => x.CollectedAt.HasValue);
+
+    RuleFor(x => x.ReportedAt)
+      .GreaterThanOrEqualTo(x => x.CollectedAt)
+      .When(x => x.CollectedAt.HasValue && x.ReportedAt.HasValue);
+
+    RuleFor(x => x.Parameters)
+      .NotNull()
+      .Must(parameters => parameters.Count > 0)
+      .WithMessage("At least one parameter is required.");
+
+    RuleForEach(x => x.Parameters).SetValidator(new CreateReportParameterRequestValidator());
   }
+}
+
+internal sealed class CreateReportParameterRequestValidator : AbstractValidator<CreateReportParameterRequest>
+{
+  public CreateReportParameterRequestValidator()
+  {
+    RuleFor(x => x.Code).NotEmpty().MaximumLength(50);
+    RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+    RuleFor(x => x.Unit).MaximumLength(50).When(x => x.Unit is not null);
+    RuleFor(x => x.ReferenceRange).MaximumLength(200).When(x => x.ReferenceRange is not null);
+    RuleFor(x => x.ValueText).MaximumLength(200).When(x => x.ValueText is not null);
+    RuleFor(x => x).Must(HaveAnyValue).WithMessage("Either Value or ValueText must be provided.");
+  }
+
+  private static bool HaveAnyValue(CreateReportParameterRequest request)
+    => request.Value.HasValue || !string.IsNullOrWhiteSpace(request.ValueText);
 }
 
 internal sealed class CreateReportUploadUrlRequestValidator : AbstractValidator<CreateReportUploadUrlRequest>

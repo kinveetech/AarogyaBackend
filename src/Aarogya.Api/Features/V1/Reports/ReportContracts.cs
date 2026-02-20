@@ -6,7 +6,31 @@ namespace Aarogya.Api.Features.V1.Reports;
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "Used by public API action signature for model binding.")]
-public sealed record CreateReportRequest(string Title);
+public sealed record CreateReportRequest(
+  string ReportType,
+  string ObjectKey,
+  string? LabName,
+  string? LabCode,
+  DateTimeOffset? CollectedAt,
+  DateTimeOffset? ReportedAt,
+  string? Notes,
+  string? PatientSub,
+  IReadOnlyList<CreateReportParameterRequest> Parameters,
+  string? SourceSystem = null);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record CreateReportParameterRequest(
+  string Code,
+  string Name,
+  decimal? Value,
+  string? ValueText,
+  string? Unit,
+  string? ReferenceRange,
+  bool? IsAbnormal,
+  IReadOnlyDictionary<string, string>? Attributes = null);
 
 [SuppressMessage(
   "Performance",
