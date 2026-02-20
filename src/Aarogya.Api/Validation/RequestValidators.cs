@@ -1,6 +1,7 @@
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Controllers;
 using Aarogya.Api.Features.V1.AccessGrants;
+using Aarogya.Api.Features.V1.EmergencyAccess;
 using Aarogya.Api.Features.V1.EmergencyContacts;
 using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Features.V1.Reports;
@@ -447,5 +448,19 @@ internal sealed class UpdateNotificationPreferencesRequestValidator : AbstractVa
     RuleFor(x => x.ReportUploaded).NotNull();
     RuleFor(x => x.AccessGranted).NotNull();
     RuleFor(x => x.EmergencyAccess).NotNull();
+  }
+}
+
+internal sealed class CreateEmergencyAccessRequestValidator : AbstractValidator<CreateEmergencyAccessRequest>
+{
+  public CreateEmergencyAccessRequestValidator()
+  {
+    RuleFor(x => x.PatientSub).NotEmpty().MaximumLength(200);
+    RuleFor(x => x.EmergencyContactPhone).MustBeIndianPhoneNumber();
+    RuleFor(x => x.DoctorSub).NotEmpty().MaximumLength(200);
+    RuleFor(x => x.Reason).NotEmpty().MaximumLength(500);
+    RuleFor(x => x.DurationHours)
+      .InclusiveBetween(1, 168)
+      .When(x => x.DurationHours.HasValue);
   }
 }

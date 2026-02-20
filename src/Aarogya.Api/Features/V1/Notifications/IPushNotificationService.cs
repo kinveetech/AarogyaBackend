@@ -36,4 +36,10 @@ public interface IPushNotificationService
     string eventType,
     SendPushNotificationRequest request,
     CancellationToken cancellationToken = default);
+
+  public Task<PushNotificationDeliveryResponse> SendToUserAsync(
+    string userSub,
+    string eventType,
+    SendPushNotificationRequest request,
+    CancellationToken cancellationToken = default);
 }

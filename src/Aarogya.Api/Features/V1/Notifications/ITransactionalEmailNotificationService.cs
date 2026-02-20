@@ -25,4 +25,11 @@ public interface ITransactionalEmailNotificationService
     EmergencyContact contact,
     string action,
     CancellationToken cancellationToken = default);
+
+  public Task SendEmergencyAccessRequestedAsync(
+    User patient,
+    EmergencyContact contact,
+    User doctor,
+    AccessGrant grant,
+    CancellationToken cancellationToken = default);
 }

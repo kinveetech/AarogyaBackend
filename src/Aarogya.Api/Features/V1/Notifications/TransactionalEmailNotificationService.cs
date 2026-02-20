@@ -94,6 +94,35 @@ internal sealed class TransactionalEmailNotificationService(
       cancellationToken);
   }
 
+  public async Task SendEmergencyAccessRequestedAsync(
+    Domain.Entities.User patient,
+    Domain.Entities.EmergencyContact contact,
+    Domain.Entities.User doctor,
+    Domain.Entities.AccessGrant grant,
+    CancellationToken cancellationToken = default)
+  {
+    if (string.IsNullOrWhiteSpace(patient.Email))
+    {
+      return;
+    }
+
+    var userSub = ResolveUserSub(patient);
+    if (!await preferenceService.IsEnabledAsync(userSub, NotificationEventTypes.EmergencyAccess, NotificationChannels.Email, cancellationToken))
+    {
+      return;
+    }
+
+    var unsubscribeUrl = BuildUnsubscribeUrl(patient.ExternalAuthId, patient.Email);
+    var template = TransactionalEmailTemplateBuilder.BuildEmergencyAccessRequested(patient, contact, doctor, grant, unsubscribeUrl);
+    await emailSender.SendAsync(
+      patient.Email,
+      $"{patient.FirstName} {patient.LastName}".Trim(),
+      template.Subject,
+      template.HtmlBody,
+      template.TextBody,
+      cancellationToken);
+  }
+
   private string BuildUnsubscribeUrl(string? userSub, string email)
   {
     var baseUrl = _options.UnsubscribeBaseUrl.TrimEnd('/');
