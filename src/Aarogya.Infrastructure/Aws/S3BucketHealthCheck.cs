@@ -38,7 +38,11 @@ internal sealed class S3BucketHealthCheck(
     {
       return HealthCheckResult.Unhealthy("S3 health check timed out.");
     }
-    catch (Exception ex)
+    catch (AmazonS3Exception ex)
+    {
+      return HealthCheckResult.Unhealthy("S3 health check failed.", ex);
+    }
+    catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
     {
       return HealthCheckResult.Unhealthy("S3 health check failed.", ex);
     }

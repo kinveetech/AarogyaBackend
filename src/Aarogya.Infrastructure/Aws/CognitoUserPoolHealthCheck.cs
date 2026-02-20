@@ -41,7 +41,11 @@ internal sealed class CognitoUserPoolHealthCheck(
     {
       return HealthCheckResult.Unhealthy("Cognito health check timed out.");
     }
-    catch (Exception ex)
+    catch (AmazonCognitoIdentityProviderException ex)
+    {
+      return HealthCheckResult.Unhealthy("Cognito health check failed.", ex);
+    }
+    catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
     {
       return HealthCheckResult.Unhealthy("Cognito health check failed.", ex);
     }
