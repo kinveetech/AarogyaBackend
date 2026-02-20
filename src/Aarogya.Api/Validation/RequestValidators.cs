@@ -1,6 +1,8 @@
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Controllers;
-using Aarogya.Api.Endpoints;
+using Aarogya.Api.Features.V1.AccessGrants;
+using Aarogya.Api.Features.V1.EmergencyContacts;
+using Aarogya.Api.Features.V1.Reports;
 using FluentValidation;
 
 namespace Aarogya.Api.Validation;

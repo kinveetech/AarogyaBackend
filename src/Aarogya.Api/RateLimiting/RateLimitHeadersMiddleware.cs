@@ -9,14 +9,19 @@ internal sealed class RateLimitHeadersMiddleware(
 {
   public async Task InvokeAsync(HttpContext context)
   {
-    await next(context);
-
     if (context.Items.TryGetValue(RateLimitDescriptor.HttpContextItemKey, out var itemValue)
       && itemValue is RateLimitDescriptor descriptor)
     {
       var snapshot = counter.TrackAccepted(descriptor, clock.UtcNow);
-      ApplyHeaders(context.Response.Headers, snapshot);
+      context.Response.OnStarting(state =>
+      {
+        var (httpContext, currentSnapshot) = ((HttpContext, RateLimitHeaderSnapshot))state;
+        ApplyHeaders(httpContext.Response.Headers, currentSnapshot);
+        return Task.CompletedTask;
+      }, (context, snapshot));
     }
+
+    await next(context);
   }
 
   public static void ApplyHeaders(IHeaderDictionary headers, RateLimitHeaderSnapshot snapshot)

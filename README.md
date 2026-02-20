@@ -5,23 +5,23 @@ ASP.NET Core 9.0 REST API following Clean Architecture principles.
 ## 🏗️ Architecture
 
 ```
+AppHost/                    # .NET Aspire orchestrator
 src/
-├── Aarogya.Api/            # Web API Layer
-│   ├── Controllers/        # API endpoints
-│   ├── Middleware/         # Custom middleware
+├── Aarogya.Api/            # HTTP/API layer
+│   ├── Controllers/        # Controller-based endpoints (/api/auth, /api/v1/*)
+│   ├── Features/           # V1 feature contracts and services
+│   ├── Authentication/     # OTP, PKCE, social auth, API keys
+│   ├── Authorization/      # Policies, roles, claims transformation
+│   ├── RateLimiting/       # Policy setup + response header middleware
+│   ├── Validation/         # FluentValidation validators + error contracts
 │   └── Program.cs          # Application startup
-├── Aarogya.Domain/         # Domain Layer
-│   ├── Entities/           # Domain models
-│   ├── Interfaces/         # Contracts
-│   └── Services/           # Business logic
-└── Aarogya.Infrastructure/ # Data & External Services
-    ├── Data/               # EF Core context
-    ├── Repositories/       # Data access
-    └── Services/           # External integrations
+├── Aarogya.Domain/         # Domain entities, value objects, repository contracts, specs
+└── Aarogya.Infrastructure/ # Persistence, AWS integrations, caching, security, seeding
 
 tests/
-├── Aarogya.Api.Tests/      # API integration tests
-└── Aarogya.Domain.Tests/   # Unit tests
+├── Aarogya.Api.Tests/          # API tests
+├── Aarogya.Domain.Tests/       # Domain tests
+└── Aarogya.Infrastructure.Tests/ # Infrastructure tests
 ```
 
 ## ⚙️ Current Service Setup
@@ -48,7 +48,7 @@ tests/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd backend
+   cd AarogyaBackend
    ```
 
 2. **Restore dependencies**
@@ -104,43 +104,63 @@ The dev container uses `.devcontainer/docker-compose.yml` and includes a local P
 
 ## 📡 API Endpoints
 
-### Authentication
+### Authentication and Authorization (`/api/auth`)
 ```
-POST   /api/auth/register          Register new user
-POST   /api/auth/login             User login
-POST   /api/auth/refresh           Refresh JWT token
-POST   /api/auth/logout            User logout
-POST   /api/auth/forgot-password   Password reset request
-POST   /api/auth/reset-password    Complete password reset
+POST   /api/auth/otp/request       Request phone OTP
+POST   /api/auth/otp/verify        Verify phone OTP
+POST   /api/auth/pkce/authorize    Create PKCE authorization code
+POST   /api/auth/pkce/token        Exchange PKCE code for tokens
+POST   /api/auth/token/refresh     Refresh tokens
+POST   /api/auth/token/revoke      Revoke refresh token
+POST   /api/auth/social/authorize  Build social provider authorize URL
+POST   /api/auth/social/token      Exchange social auth code for tokens
+GET    /api/auth/me                Get authenticated user claims
+POST   /api/auth/api-keys/issue    Issue partner API key (Admin)
+POST   /api/auth/api-keys/rotate   Rotate partner API key (Admin)
+GET    /api/auth/api-keys/me       Resolve API key identity (API key policy)
+POST   /api/auth/roles/assign      Assign role to user (Admin)
 ```
 
-### User Management
+### Versioned API (`/api/v1`)
 ```
-GET    /api/users/me               Get current user
-PUT    /api/users/me               Update user profile
-DELETE /api/users/me               Delete account
-POST   /api/users/me/avatar        Upload avatar
+GET    /api/v1/users/me                      Get current user profile
+GET    /api/v1/reports                       List reports for current user
+POST   /api/v1/reports                       Create report for current user
+GET    /api/v1/access-grants                 List grants for current patient
+POST   /api/v1/access-grants                 Create access grant (Patient policy)
+DELETE /api/v1/access-grants/{grantId}       Revoke access grant
+GET    /api/v1/emergency-contacts            List emergency contacts
+POST   /api/v1/emergency-contacts            Create emergency contact
+DELETE /api/v1/emergency-contacts/{contactId} Delete emergency contact
 ```
 
 ## 🔐 Authentication
 
-This API uses JWT Bearer token authentication.
+Protected endpoints support JWT Bearer tokens (issued from PKCE/social flows). Partner integrations are supported via API key authentication policy for specific routes.
 
 ### Getting a Token
 ```bash
-POST /api/auth/login
-Content-Type: application/json
+CLIENT_ID="mobile-app-client"
+REDIRECT_URI="aarogya://auth/callback"
+CODE_CHALLENGE="<s256-code-challenge>"
+CODE_VERIFIER="<matching-code-verifier>"
 
-{
-  "email": "user@example.com",
-  "password": "YourPassword123!"
-}
+# 1) create authorization code
+AUTH_CODE=$(curl -s -X POST http://localhost:5000/api/auth/pkce/authorize \
+  -H "Content-Type: application/json" \
+  -d "{\"clientId\":\"$CLIENT_ID\",\"redirectUri\":\"$REDIRECT_URI\",\"codeChallenge\":\"$CODE_CHALLENGE\",\"codeChallengeMethod\":\"S256\",\"platform\":\"ios\"}" \
+  | jq -r '.authorizationCode')
+
+# 2) exchange for tokens
+curl -s -X POST http://localhost:5000/api/auth/pkce/token \
+  -H "Content-Type: application/json" \
+  -d "{\"clientId\":\"$CLIENT_ID\",\"redirectUri\":\"$REDIRECT_URI\",\"authorizationCode\":\"$AUTH_CODE\",\"codeVerifier\":\"$CODE_VERIFIER\"}"
 ```
 
 ### Using the Token
 ```bash
-GET /api/users/me
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+curl -H "Authorization: Bearer <access-token>" \
+  http://localhost:5000/api/v1/users/me
 ```
 
 ### Token Configuration
@@ -259,6 +279,11 @@ dotnet test --collect:"XPlat Code Coverage"
 dotnet test tests/Aarogya.Api.Tests
 ```
 
+### Manual runtime test scenarios (Aspire + Kubernetes)
+Use the two-pass runtime checklist in `testing_scenarios.md` to execute the same scenario catalog in:
+- Pass A: .NET Aspire runtime
+- Pass B: Kubernetes runtime
+
 ## 🔧 Development Tools
 
 ### Code Formatting
@@ -303,8 +328,9 @@ psql "<connection-string>" -f docs/database/jsonb-index-verification.sql
 
 ### Infrastructure Layer
 - Microsoft.EntityFrameworkCore
-- Microsoft.EntityFrameworkCore.SqlServer
 - Npgsql.EntityFrameworkCore.PostgreSQL
+- Microsoft.Extensions.Caching.StackExchangeRedis
+- AWSSDK.Extensions.NETCore.Setup
 
 ### Data Access Abstractions
 - Generic repository contract: `IRepository<T>`

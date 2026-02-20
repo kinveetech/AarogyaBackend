@@ -2,6 +2,7 @@ using Aarogya.Api.Authentication;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Endpoints;
+using Aarogya.Api.Features.V1;
 using Aarogya.Api.Health;
 using Aarogya.Api.RateLimiting;
 using Aarogya.Api.Validation;
@@ -86,7 +87,7 @@ builder.Services
   });
 
 builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<OtpRequestCommandValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<OtpRequestCommandValidator>(includeInternalTypes: true);
 builder.Services.AddMemoryCache();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient(CognitoOAuthTokenClient.HttpClientName, client =>
@@ -145,7 +146,7 @@ builder.Services.AddCognitoJwtAuthentication(builder.Configuration);
 builder.Services.AddAarogyaAuthorization();
 
 builder.Services.AddAarogyaCorsPolicy(builder.Configuration);
-builder.Services.AddV1EndpointGroupServices();
+builder.Services.AddV1FeatureServices();
 
 var rateLimitingOptions = builder.Configuration
   .GetSection(RateLimitingOptions.SectionName)
@@ -179,7 +180,6 @@ if (rateLimitingOptions.EnableRateLimiting)
 }
 app.UseAuthorization();
 app.MapControllers();
-app.MapV1EndpointGroups();
 
 // Health check endpoints
 app.MapHealthChecks("/health", new HealthCheckOptions
