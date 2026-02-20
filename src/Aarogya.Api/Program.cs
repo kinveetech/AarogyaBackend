@@ -84,6 +84,11 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptionsWithValidateOnStart<FirebaseMessagingOptions>()
+  .BindConfiguration(FirebaseMessagingOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<AccessGrantOptions>()
   .BindConfiguration(AccessGrantOptions.SectionName)
   .ValidateDataAnnotations();

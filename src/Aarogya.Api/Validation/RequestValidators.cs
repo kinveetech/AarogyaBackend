@@ -2,6 +2,7 @@ using Aarogya.Api.Authorization;
 using Aarogya.Api.Controllers;
 using Aarogya.Api.Features.V1.AccessGrants;
 using Aarogya.Api.Features.V1.EmergencyContacts;
+using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Features.V1.Users;
 using FluentValidation;
@@ -392,5 +393,49 @@ internal sealed class UpdateUserProfileRequestValidator : AbstractValidator<Upda
       || request.Address is not null
       || request.BloodGroup is not null
       || request.DateOfBirth.HasValue;
+  }
+}
+
+internal sealed class RegisterDeviceTokenRequestValidator : AbstractValidator<RegisterDeviceTokenRequest>
+{
+  private static readonly string[] SupportedPlatforms = ["ios", "android"];
+
+  public RegisterDeviceTokenRequestValidator()
+  {
+    RuleFor(x => x.DeviceToken).NotEmpty().MaximumLength(4096);
+    RuleFor(x => x.Platform)
+      .NotEmpty()
+      .Must(platform => SupportedPlatforms.Contains(platform.Trim(), StringComparer.OrdinalIgnoreCase))
+      .WithMessage("Platform must be ios or android.");
+    RuleFor(x => x.DeviceName).MaximumLength(120).When(x => x.DeviceName is not null);
+    RuleFor(x => x.AppVersion).MaximumLength(40).When(x => x.AppVersion is not null);
+  }
+}
+
+internal sealed class SendPushNotificationRequestValidator : AbstractValidator<SendPushNotificationRequest>
+{
+  public SendPushNotificationRequestValidator()
+  {
+    RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
+    RuleFor(x => x.Body).NotEmpty().MaximumLength(2000);
+    RuleFor(x => x.Data).Must(HaveValidMetadata).WithMessage("Data keys and values must be non-empty and within size limits.");
+  }
+
+  private static bool HaveValidMetadata(IReadOnlyDictionary<string, string>? data)
+  {
+    if (data is null)
+    {
+      return true;
+    }
+
+    if (data.Count > 25)
+    {
+      return false;
+    }
+
+    return data.All(pair =>
+      !string.IsNullOrWhiteSpace(pair.Key)
+      && pair.Key.Length <= 100
+      && pair.Value.Length <= 2000);
   }
 }
