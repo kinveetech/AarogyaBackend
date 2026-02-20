@@ -1,4 +1,5 @@
 using Aarogya.Api.Authentication;
+using Aarogya.Api.Security;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
@@ -42,10 +43,10 @@ internal sealed class EmergencyContactService(
     {
       Id = Guid.NewGuid(),
       UserId = patient.Id,
-      Name = request.Name.Trim(),
-      Phone = request.PhoneNumber.Trim(),
-      Relationship = request.Relationship.Trim(),
-      Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
+      Name = InputSanitizer.SanitizePlainText(request.Name),
+      Phone = InputSanitizer.SanitizePlainText(request.PhoneNumber),
+      Relationship = InputSanitizer.SanitizePlainText(request.Relationship),
+      Email = InputSanitizer.SanitizeNullablePlainText(request.Email),
       CreatedAt = now,
       UpdatedAt = now
     };
@@ -71,10 +72,10 @@ internal sealed class EmergencyContactService(
       return null;
     }
 
-    contact.Name = request.Name.Trim();
-    contact.Phone = request.PhoneNumber.Trim();
-    contact.Relationship = request.Relationship.Trim();
-    contact.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+    contact.Name = InputSanitizer.SanitizePlainText(request.Name);
+    contact.Phone = InputSanitizer.SanitizePlainText(request.PhoneNumber);
+    contact.Relationship = InputSanitizer.SanitizePlainText(request.Relationship);
+    contact.Email = InputSanitizer.SanitizeNullablePlainText(request.Email);
     contact.UpdatedAt = clock.UtcNow;
 
     emergencyContactRepository.Update(contact);

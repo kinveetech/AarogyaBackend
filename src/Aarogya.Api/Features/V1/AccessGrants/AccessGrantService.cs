@@ -1,5 +1,6 @@
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
+using Aarogya.Api.Security;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
@@ -52,7 +53,8 @@ internal sealed class AccessGrantService(
   {
     ArgumentNullException.ThrowIfNull(request);
     var patient = await ResolvePatientAsync(patientSub, cancellationToken);
-    var doctor = await userRepository.GetByExternalAuthIdAsync(request.DoctorSub.Trim(), cancellationToken)
+    var doctorSub = InputSanitizer.SanitizePlainText(request.DoctorSub);
+    var doctor = await userRepository.GetByExternalAuthIdAsync(doctorSub, cancellationToken)
       ?? throw new InvalidOperationException("DoctorSub does not match a provisioned user.");
     if (doctor.Role != UserRole.Doctor)
     {
@@ -115,7 +117,7 @@ internal sealed class AccessGrantService(
       PatientId = patient.Id,
       GrantedToUserId = doctor.Id,
       GrantedByUserId = patient.Id,
-      GrantReason = request.Purpose.Trim(),
+      GrantReason = InputSanitizer.SanitizePlainText(request.Purpose),
       Scope = new AccessGrantScope
       {
         CanReadReports = true,

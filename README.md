@@ -271,6 +271,17 @@ Notes:
 - CORS is allow-list based via `Cors:AllowedOrigins`; origins not listed are blocked.
 - Preflight cache duration is set with `Access-Control-Max-Age` (10 minutes).
 
+### Input Sanitization
+Issue #51 introduces centralized input sanitization for user-provided text before persistence:
+- HTML tags are stripped from plain text fields
+- control characters are removed
+- repeated whitespace is normalized
+- user text persistence flows (profiles, emergency contacts, access grants, report metadata/results) use the shared sanitizer
+
+Additional guardrails:
+- JSON input is constrained to declared DTO contracts via explicit `System.Text.Json` type resolver configuration
+- source guardrail tests validate that raw SQL execution patterns are not introduced in application code
+
 ### Aadhaar Vault Configuration
 Issue #19 introduces a dedicated Aadhaar vault schema with:
 - `aadhaar_vault.aadhaar_records` for encrypted Aadhaar + SHA-256 lookup + reference token
