@@ -58,6 +58,7 @@ public sealed class ReportServiceTests
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
       Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IPatientNotificationService>(),
       unitOfWork.Object,
       Options.Create(CreateAwsOptions()),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 10, 0, 0, TimeSpan.Zero)));
@@ -79,7 +80,7 @@ public sealed class ReportServiceTests
   }
 
   [Fact]
-  public async Task AddForUserAsync_ShouldRequirePatientSub_ForLabTechnicianAsync()
+  public async Task AddForUserAsync_ShouldRequirePatientIdentifier_ForLabTechnicianAsync()
   {
     var uploader = new User
     {
@@ -102,6 +103,7 @@ public sealed class ReportServiceTests
       Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IReportRepository>(),
       Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IPatientNotificationService>(),
       Mock.Of<IUnitOfWork>(),
       Options.Create(CreateAwsOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));
@@ -111,7 +113,87 @@ public sealed class ReportServiceTests
     var action = async () => await service.AddForUserAsync("seed-LABTECH-1", request, CancellationToken.None);
 
     await action.Should().ThrowAsync<InvalidOperationException>()
-      .WithMessage("*PatientSub is required*");
+      .WithMessage("*PatientSub, PatientPhone, or PatientAadhaar is required*");
+  }
+
+  [Fact]
+  public async Task AddForUserAsync_ShouldResolvePatientByPhone_AndNotify_WhenLabTechnicianUploadsAsync()
+  {
+    var uploader = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-LABTECH-1",
+      Role = UserRole.LabTechnician,
+      FirstName = "Lab",
+      LastName = "Tech",
+      Email = "seed.lab@aarogya.dev"
+    };
+
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient,
+      FirstName = "Seed",
+      LastName = "Patient",
+      Email = "seed.patient@aarogya.dev",
+      Phone = "+919876543210"
+    };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-LABTECH-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(uploader);
+    userRepository
+      .Setup(x => x.GetByPhoneAsync("+919876543210", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    Report? createdReport = null;
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.GetByReportNumberAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync((Report?)null);
+    reportRepository
+      .Setup(x => x.AddAsync(It.IsAny<Report>(), It.IsAny<CancellationToken>()))
+      .Callback<Report, CancellationToken>((report, _) => createdReport = report)
+      .Returns(Task.CompletedTask);
+
+    var s3Client = new Mock<IAmazonS3>();
+    s3Client
+      .Setup(x => x.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(CreateObjectMetadataResponse("application/pdf", 2048));
+
+    var notificationService = new Mock<IPatientNotificationService>();
+    var service = new ReportService(
+      s3Client.Object,
+      userRepository.Object,
+      Mock.Of<IAccessGrantRepository>(),
+      reportRepository.Object,
+      Mock.Of<IAuditLogRepository>(),
+      notificationService.Object,
+      Mock.Of<IUnitOfWork>(),
+      Options.Create(CreateAwsOptions()),
+      new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 10, 0, 0, TimeSpan.Zero)));
+
+    var request = CreateRequest() with
+    {
+      ObjectKey = "reports/seed-LABTECH-1/2026/02/report.pdf",
+      PatientSub = null,
+      PatientPhone = "+919876543210",
+      PatientAadhaar = null
+    };
+
+    _ = await service.AddForUserAsync("seed-LABTECH-1", request, CancellationToken.None);
+
+    createdReport.Should().NotBeNull();
+    createdReport!.PatientId.Should().Be(patient.Id);
+    createdReport.SourceSystem.Should().Be("lab-upload");
+    notificationService.Verify(
+      x => x.NotifyReportUploadedAsync(
+        It.Is<User>(u => u.Id == patient.Id),
+        It.IsAny<Report>(),
+        It.IsAny<CancellationToken>()),
+      Times.Once);
   }
 
   [Fact]
@@ -188,6 +270,7 @@ public sealed class ReportServiceTests
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
       auditLogRepository.Object,
+      Mock.Of<IPatientNotificationService>(),
       unitOfWork.Object,
       Options.Create(CreateAwsOptions()),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 10, 0, 0, TimeSpan.Zero)));
@@ -250,6 +333,7 @@ public sealed class ReportServiceTests
       accessGrantRepository.Object,
       reportRepository.Object,
       Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IPatientNotificationService>(),
       Mock.Of<IUnitOfWork>(),
       Options.Create(CreateAwsOptions()),
       new FixedUtcClock(DateTimeOffset.UtcNow));

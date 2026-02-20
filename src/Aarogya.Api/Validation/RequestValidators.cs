@@ -152,6 +152,11 @@ internal sealed class CreateReportRequestValidator : AbstractValidator<CreateRep
     RuleFor(x => x.LabCode).MaximumLength(100).When(x => x.LabCode is not null);
     RuleFor(x => x.Notes).MaximumLength(2000).When(x => x.Notes is not null);
     RuleFor(x => x.PatientSub).NotEmpty().MaximumLength(200).When(x => x.PatientSub is not null);
+    RuleFor(x => x.PatientPhone).NotEmpty().MaximumLength(32).When(x => x.PatientPhone is not null);
+    RuleFor(x => x.PatientAadhaar)
+      .NotEmpty()
+      .Matches("^[0-9\\s-]{12,20}$")
+      .When(x => x.PatientAadhaar is not null);
 
     RuleFor(x => x.CollectedAt)
       .LessThanOrEqualTo(DateTimeOffset.UtcNow)

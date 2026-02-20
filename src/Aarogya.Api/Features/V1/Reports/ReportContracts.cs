@@ -16,6 +16,8 @@ public sealed record CreateReportRequest(
   string? Notes,
   string? PatientSub,
   IReadOnlyList<CreateReportParameterRequest> Parameters,
+  string? PatientPhone = null,
+  string? PatientAadhaar = null,
   string? SourceSystem = null);
 
 [SuppressMessage(
