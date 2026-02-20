@@ -18,7 +18,8 @@ public sealed class ReportsControllerTests
     var controller = CreateController(
       user: new ClaimsPrincipal(new ClaimsIdentity()),
       uploadService: Mock.Of<IReportFileUploadService>(),
-      reportService: Mock.Of<IReportService>());
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
 
     var result = await controller.UploadReportFileAsync(CreateFormFile("application/pdf", "report.pdf"), CancellationToken.None);
 
@@ -36,7 +37,8 @@ public sealed class ReportsControllerTests
     var controller = CreateController(
       user: CreateUser("seed-PATIENT-1"),
       uploadService: uploadService.Object,
-      reportService: Mock.Of<IReportService>());
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
 
     var result = await controller.UploadReportFileAsync(CreateFormFile("text/plain", "report.txt"), CancellationToken.None);
 
@@ -64,7 +66,8 @@ public sealed class ReportsControllerTests
     var controller = CreateController(
       user: CreateUser("seed-PATIENT-1"),
       uploadService: uploadService.Object,
-      reportService: Mock.Of<IReportService>());
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
 
     var result = await controller.UploadReportFileAsync(CreateFormFile("application/pdf", "report.pdf"), CancellationToken.None);
 
@@ -72,12 +75,79 @@ public sealed class ReportsControllerTests
     created.Value.Should().BeEquivalentTo(expected);
   }
 
+  [Fact]
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldReturnUnauthorized_WhenSubjectMissingAsync()
+  {
+    var controller = CreateController(
+      user: new ClaimsPrincipal(new ClaimsIdentity()),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.CreateVerifiedDownloadUrlAsync(
+      new CreateVerifiedReportDownloadRequest(Guid.NewGuid()),
+      CancellationToken.None);
+
+    result.Should().BeOfType<UnauthorizedResult>();
+  }
+
+  [Fact]
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldReturnNotFound_WhenReportIsMissingAsync()
+  {
+    var checksumService = new Mock<IReportChecksumVerificationService>();
+    checksumService
+      .Setup(x => x.CreateVerifiedDownloadUrlAsync(It.IsAny<string>(), It.IsAny<CreateVerifiedReportDownloadRequest>(), It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new KeyNotFoundException("Report not found."));
+
+    var controller = CreateController(
+      user: CreateUser("seed-PATIENT-1"),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: checksumService.Object);
+
+    var result = await controller.CreateVerifiedDownloadUrlAsync(
+      new CreateVerifiedReportDownloadRequest(Guid.NewGuid()),
+      CancellationToken.None);
+
+    result.Should().BeOfType<NotFoundObjectResult>();
+  }
+
+  [Fact]
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldReturnOk_WhenChecksumMatchesAsync()
+  {
+    var response = new VerifiedReportDownloadResponse(
+      Guid.NewGuid(),
+      "reports/seed-PATIENT-1/2026/02/20/abc.pdf",
+      new Uri("https://example.com/download"),
+      DateTimeOffset.UtcNow.AddMinutes(15),
+      true);
+
+    var checksumService = new Mock<IReportChecksumVerificationService>();
+    checksumService
+      .Setup(x => x.CreateVerifiedDownloadUrlAsync(It.IsAny<string>(), It.IsAny<CreateVerifiedReportDownloadRequest>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(response);
+
+    var controller = CreateController(
+      user: CreateUser("seed-PATIENT-1"),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: checksumService.Object);
+
+    var result = await controller.CreateVerifiedDownloadUrlAsync(
+      new CreateVerifiedReportDownloadRequest(response.ReportId),
+      CancellationToken.None);
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    ok.Value.Should().BeEquivalentTo(response);
+  }
+
   private static ReportsController CreateController(
     ClaimsPrincipal user,
     IReportFileUploadService uploadService,
-    IReportService reportService)
+    IReportService reportService,
+    IReportChecksumVerificationService checksumService)
   {
-    return new ReportsController(reportService, uploadService)
+    return new ReportsController(reportService, uploadService, checksumService)
     {
       ControllerContext = new ControllerContext
       {

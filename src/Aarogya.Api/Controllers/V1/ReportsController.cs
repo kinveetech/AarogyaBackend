@@ -26,13 +26,16 @@ public sealed class ReportsController : ControllerBase
 {
   private readonly IReportService _reportService;
   private readonly IReportFileUploadService _reportFileUploadService;
+  private readonly IReportChecksumVerificationService _reportChecksumVerificationService;
 
   public ReportsController(
     IReportService reportService,
-    IReportFileUploadService reportFileUploadService)
+    IReportFileUploadService reportFileUploadService,
+    IReportChecksumVerificationService reportChecksumVerificationService)
   {
     _reportService = reportService;
     _reportFileUploadService = reportFileUploadService;
+    _reportChecksumVerificationService = reportChecksumVerificationService;
   }
 
   [HttpGet]
@@ -142,6 +145,55 @@ public sealed class ReportsController : ControllerBase
         new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
           ["file"] = [ex.Message]
+        }));
+    }
+  }
+
+  [HttpPost("download-url/verified")]
+  [ProducesResponseType(typeof(VerifiedReportDownloadResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> CreateVerifiedDownloadUrlAsync(
+    [FromBody] CreateVerifiedReportDownloadRequest request,
+    CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    try
+    {
+      var result = await _reportChecksumVerificationService.CreateVerifiedDownloadUrlAsync(userSub, request, cancellationToken);
+      return Ok(result);
+    }
+    catch (KeyNotFoundException ex)
+    {
+      return NotFound(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["report"] = [ex.Message]
+        }));
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["authorization"] = [ex.Message]
+        }));
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["checksum"] = [ex.Message]
         }));
     }
   }

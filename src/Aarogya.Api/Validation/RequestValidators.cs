@@ -164,6 +164,15 @@ internal sealed class CreateReportDownloadUrlRequestValidator : AbstractValidato
   }
 }
 
+internal sealed class CreateVerifiedReportDownloadRequestValidator : AbstractValidator<CreateVerifiedReportDownloadRequest>
+{
+  public CreateVerifiedReportDownloadRequestValidator()
+  {
+    RuleFor(x => x.ReportId).NotEmpty();
+    RuleFor(x => x.ExpiryMinutes).InclusiveBetween(1, 10080).When(x => x.ExpiryMinutes.HasValue);
+  }
+}
+
 internal sealed class CreateAccessGrantRequestValidator : AbstractValidator<CreateAccessGrantRequest>
 {
   public CreateAccessGrantRequestValidator()
