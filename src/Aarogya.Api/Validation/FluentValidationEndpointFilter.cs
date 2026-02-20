@@ -16,11 +16,12 @@ internal sealed class FluentValidationEndpointFilter(IServiceProvider services) 
       }
 
       var validatorType = typeof(IValidator<>).MakeGenericType(argument.GetType());
-      var validator = services.GetService(validatorType) as IValidator;
-      if (validator is null)
+      var validatorService = services.GetService(validatorType);
+      if (validatorService is null)
       {
         continue;
       }
+      var validator = (IValidator)validatorService;
 
       var validationContext = new ValidationContext<object>(argument);
       var result = await validator.ValidateAsync(validationContext, context.HttpContext.RequestAborted);
