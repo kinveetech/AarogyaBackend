@@ -12,7 +12,7 @@ namespace Aarogya.Api.Controllers.V1;
 
 [ApiController]
 [Route("api/v1/emergency-contacts")]
-[Authorize(Policy = AarogyaPolicies.AnyRegisteredRole)]
+[Authorize(Policy = AarogyaPolicies.Patient)]
 [EnableRateLimiting(RateLimitPolicyNames.ApiV1)]
 [SuppressMessage(
   "Performance",
@@ -49,8 +49,40 @@ public sealed class EmergencyContactsController(IEmergencyContactService emergen
       return Unauthorized();
     }
 
-    var created = await emergencyContactService.AddForUserAsync(userSub, request, cancellationToken);
-    return Created(new Uri($"/api/v1/emergency-contacts/{created.ContactId}", UriKind.Relative), created);
+    try
+    {
+      var created = await emergencyContactService.AddForUserAsync(userSub, request, cancellationToken);
+      return Created(new Uri($"/api/v1/emergency-contacts/{created.ContactId}", UriKind.Relative), created);
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["contact"] = [ex.Message]
+        }));
+    }
+  }
+
+  [HttpPut("{contactId:guid}")]
+  [ProducesResponseType(typeof(EmergencyContactResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> UpdateEmergencyContactAsync(
+    Guid contactId,
+    [FromBody] UpdateEmergencyContactRequest request,
+    CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    var updated = await emergencyContactService.UpdateForUserAsync(userSub, contactId, request, cancellationToken);
+    return updated is null ? NotFound() : Ok(updated);
   }
 
   [HttpDelete("{contactId:guid}")]

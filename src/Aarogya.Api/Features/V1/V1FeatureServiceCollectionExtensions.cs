@@ -17,7 +17,7 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddHostedService<S3UploadNotificationConfiguratorHostedService>();
     services.AddHostedService<S3UploadEventConsumerHostedService>();
     services.AddScoped<IAccessGrantService, AccessGrantService>();
-    services.AddSingleton<IEmergencyContactService, InMemoryEmergencyContactService>();
+    services.AddScoped<IEmergencyContactService, EmergencyContactService>();
 
     return services;
   }

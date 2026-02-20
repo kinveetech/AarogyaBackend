@@ -17,6 +17,8 @@ public sealed class EmergencyContact : IAuditableEntity
 
   public byte[]? PhoneHash { get; set; }
 
+  public string? Email { get; set; }
+
   public bool IsPrimary { get; set; }
 
   public DateTimeOffset CreatedAt { get; set; }
