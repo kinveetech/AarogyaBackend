@@ -23,7 +23,28 @@ internal sealed class AccessGrantService(
   public async Task<IReadOnlyList<AccessGrantResponse>> GetForPatientAsync(string patientSub, CancellationToken cancellationToken = default)
   {
     var patient = await ResolvePatientAsync(patientSub, cancellationToken);
+    var now = clock.UtcNow;
     var grants = await accessGrantRepository.ListAsync(new AccessGrantsByPatientSpecification(patient.Id), cancellationToken);
+    return grants
+      .Where(grant => grant.Status == AccessGrantStatus.Active
+        && grant.StartsAt <= now
+        && (grant.ExpiresAt == null || grant.ExpiresAt > now))
+      .Select(MapGrant)
+      .ToArray();
+  }
+
+  public async Task<IReadOnlyList<AccessGrantResponse>> GetForDoctorAsync(string doctorSub, CancellationToken cancellationToken = default)
+  {
+    var doctor = await userRepository.GetByExternalAuthIdAsync(doctorSub, cancellationToken)
+      ?? throw new InvalidOperationException("Authenticated doctor user is not provisioned in the database.");
+    if (doctor.Role != UserRole.Doctor)
+    {
+      throw new InvalidOperationException("Only doctor users can list received grants.");
+    }
+
+    var grants = await accessGrantRepository.ListAsync(
+      new ActiveAccessGrantsByDoctorSpecification(doctor.Id, clock.UtcNow),
+      cancellationToken);
     return grants.Select(MapGrant).ToArray();
   }
 
@@ -36,6 +57,10 @@ internal sealed class AccessGrantService(
     if (doctor.Role != UserRole.Doctor)
     {
       throw new InvalidOperationException("DoctorSub must belong to a doctor user.");
+    }
+    if (string.Equals(patient.ExternalAuthId, doctor.ExternalAuthId, StringComparison.Ordinal))
+    {
+      throw new InvalidOperationException("Cannot grant access to self.");
     }
 
     var now = clock.UtcNow;
@@ -109,6 +134,7 @@ internal sealed class AccessGrantService(
 
     return new AccessGrantResponse(
       grant.Id,
+      patient.ExternalAuthId ?? string.Empty,
       doctor.ExternalAuthId ?? string.Empty,
       request.AllReports,
       reportIds,
@@ -156,6 +182,7 @@ internal sealed class AccessGrantService(
 
     return new AccessGrantResponse(
       grant.Id,
+      grant.Patient.ExternalAuthId ?? string.Empty,
       grant.GrantedToUser.ExternalAuthId ?? string.Empty,
       allReports,
       reportIds,
