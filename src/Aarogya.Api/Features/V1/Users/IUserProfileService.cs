@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Security.Claims;
 
 namespace Aarogya.Api.Features.V1.Users;
 
@@ -9,5 +8,10 @@ namespace Aarogya.Api.Features.V1.Users;
   Justification = "Used by public controller constructor injection.")]
 public interface IUserProfileService
 {
-  public UserProfileResponse GetCurrentUser(ClaimsPrincipal principal);
+  public Task<UserProfileResponse> GetCurrentUserAsync(string userSub, CancellationToken cancellationToken = default);
+
+  public Task<UserProfileResponse> UpdateCurrentUserAsync(
+    string userSub,
+    UpdateUserProfileRequest request,
+    CancellationToken cancellationToken = default);
 }

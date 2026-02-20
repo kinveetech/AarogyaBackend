@@ -3,6 +3,7 @@ using Aarogya.Api.Controllers;
 using Aarogya.Api.Features.V1.AccessGrants;
 using Aarogya.Api.Features.V1.EmergencyContacts;
 using Aarogya.Api.Features.V1.Reports;
+using Aarogya.Api.Features.V1.Users;
 using FluentValidation;
 
 namespace Aarogya.Api.Validation;
@@ -198,5 +199,76 @@ internal sealed class AadhaarNumberValidator : AbstractValidator<string>
   public AadhaarNumberValidator()
   {
     RuleFor(x => x).MustBeAadhaarNumber();
+  }
+}
+
+internal sealed class UpdateUserProfileRequestValidator : AbstractValidator<UpdateUserProfileRequest>
+{
+  private static readonly DateOnly MinimumBirthDate = new(1900, 1, 1);
+  private static readonly string[] AllowedBloodGroups =
+  [
+    "A+",
+    "A-",
+    "B+",
+    "B-",
+    "AB+",
+    "AB-",
+    "O+",
+    "O-"
+  ];
+
+  public UpdateUserProfileRequestValidator()
+  {
+    RuleFor(x => x)
+      .Must(HaveAtLeastOneField)
+      .WithMessage("At least one profile field must be supplied for update.");
+
+    RuleFor(x => x.FirstName)
+      .Must(value => value is not null && !string.IsNullOrWhiteSpace(value))
+      .WithMessage("First name cannot be empty.")
+      .MaximumLength(120)
+      .When(x => x.FirstName is not null);
+
+    RuleFor(x => x.LastName)
+      .Must(value => value is not null && !string.IsNullOrWhiteSpace(value))
+      .WithMessage("Last name cannot be empty.")
+      .MaximumLength(120)
+      .When(x => x.LastName is not null);
+
+    RuleFor(x => x.Email)
+      .EmailAddress()
+      .MaximumLength(256)
+      .When(x => x.Email is not null);
+
+    RuleFor(x => x.Phone)
+      .MustBeIndianPhoneNumber()
+      .When(x => x.Phone is not null);
+
+    RuleFor(x => x.Address)
+      .Must(value => value is not null && !string.IsNullOrWhiteSpace(value))
+      .WithMessage("Address cannot be empty.")
+      .MaximumLength(500)
+      .When(x => x.Address is not null);
+
+    RuleFor(x => x.BloodGroup)
+      .Must(value => value is not null && AllowedBloodGroups.Contains(value.Trim().ToUpperInvariant(), StringComparer.Ordinal))
+      .WithMessage("Blood group must be one of A+, A-, B+, B-, AB+, AB-, O+, O-.")
+      .When(x => x.BloodGroup is not null);
+
+    RuleFor(x => x.DateOfBirth)
+      .LessThanOrEqualTo(DateOnly.FromDateTime(DateTime.UtcNow))
+      .GreaterThanOrEqualTo(MinimumBirthDate)
+      .When(x => x.DateOfBirth.HasValue);
+  }
+
+  private static bool HaveAtLeastOneField(UpdateUserProfileRequest request)
+  {
+    return request.FirstName is not null
+      || request.LastName is not null
+      || request.Email is not null
+      || request.Phone is not null
+      || request.Address is not null
+      || request.BloodGroup is not null
+      || request.DateOfBirth.HasValue;
   }
 }
