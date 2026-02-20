@@ -46,10 +46,6 @@ public sealed class AuthController : ControllerBase
   [ProducesResponseType(typeof(OtpResponse), StatusCodes.Status429TooManyRequests)]
   public async Task<IActionResult> RequestPhoneOtpAsync([FromBody] OtpRequestCommand request, CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new OtpResponse("Invalid request payload."));
-    }
 
     var result = await _phoneOtpService.RequestOtpAsync(request.PhoneNumber, cancellationToken);
     if (!result.Success)
@@ -71,10 +67,6 @@ public sealed class AuthController : ControllerBase
   [ProducesResponseType(typeof(OtpResponse), StatusCodes.Status400BadRequest)]
   public async Task<IActionResult> VerifyPhoneOtpAsync([FromBody] OtpVerifyCommand request, CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new OtpResponse("Invalid request payload."));
-    }
 
     var result = await _phoneOtpService.VerifyOtpAsync(request.PhoneNumber, request.Otp, cancellationToken);
     if (!result.Success)
@@ -93,10 +85,6 @@ public sealed class AuthController : ControllerBase
     [FromBody] SocialAuthorizeCommand request,
     CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new PkceErrorResponse("Invalid request payload."));
-    }
 
     var result = await _socialAuthService.CreateAuthorizeUrlAsync(
       new SocialAuthorizeRequest(
@@ -123,10 +111,6 @@ public sealed class AuthController : ControllerBase
     [FromBody] SocialTokenCommand request,
     CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new PkceErrorResponse("Invalid request payload."));
-    }
 
     var result = await _socialAuthService.ExchangeCodeAsync(
       new SocialTokenRequest(
@@ -158,10 +142,6 @@ public sealed class AuthController : ControllerBase
     [FromBody] PkceAuthorizeCommand request,
     CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new PkceErrorResponse("Invalid request payload."));
-    }
 
     var result = await _pkceAuthorizationService.CreateAuthorizationCodeAsync(
       new PkceAuthorizeRequest(
@@ -190,10 +170,6 @@ public sealed class AuthController : ControllerBase
     [FromBody] PkceTokenCommand request,
     CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new PkceErrorResponse("Invalid request payload."));
-    }
 
     var result = await _pkceAuthorizationService.ExchangeAuthorizationCodeAsync(
       new PkceTokenRequest(
@@ -224,10 +200,6 @@ public sealed class AuthController : ControllerBase
     [FromBody] RefreshTokenCommand request,
     CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new PkceErrorResponse("Invalid request payload."));
-    }
 
     var result = await _pkceAuthorizationService.ExchangeRefreshTokenAsync(
       new PkceRefreshTokenRequest(request.ClientId, request.RefreshToken),
@@ -254,10 +226,6 @@ public sealed class AuthController : ControllerBase
     [FromBody] RevokeTokenCommand request,
     CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new PkceErrorResponse("Invalid request payload."));
-    }
 
     var result = await _pkceAuthorizationService.RevokeRefreshTokenAsync(
       new PkceRevokeRequest(request.ClientId, request.RefreshToken),
@@ -298,10 +266,6 @@ public sealed class AuthController : ControllerBase
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   public async Task<IActionResult> IssueApiKeyAsync([FromBody] ApiKeyIssueCommand request, CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new PkceErrorResponse("Invalid request payload."));
-    }
 
     var result = await _apiKeyService.IssueKeyAsync(new ApiKeyIssueRequest(request.PartnerId, request.PartnerName), cancellationToken);
     if (!result.Success)
@@ -325,10 +289,6 @@ public sealed class AuthController : ControllerBase
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   public async Task<IActionResult> RotateApiKeyAsync([FromBody] ApiKeyRotateCommand request, CancellationToken cancellationToken)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new PkceErrorResponse("Invalid request payload."));
-    }
 
     var result = await _apiKeyService.RotateKeyAsync(new ApiKeyRotateRequest(request.KeyId), cancellationToken);
     if (!result.Success)
@@ -367,10 +327,6 @@ public sealed class AuthController : ControllerBase
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   public IActionResult AssignRole([FromBody] RoleAssignmentCommand request)
   {
-    if (!ModelState.IsValid)
-    {
-      return BadRequest(new PkceErrorResponse("Invalid request payload."));
-    }
 
     var actorSub = User.FindFirstValue("sub");
     if (string.IsNullOrWhiteSpace(actorSub))

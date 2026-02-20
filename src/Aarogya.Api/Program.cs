@@ -3,8 +3,12 @@ using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Endpoints;
 using Aarogya.Api.Health;
+using Aarogya.Api.Validation;
 using Aarogya.Infrastructure;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
@@ -67,7 +71,16 @@ builder.Services
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services
+  .AddControllers()
+  .ConfigureApiBehaviorOptions(options =>
+  {
+    options.InvalidModelStateResponseFactory = context =>
+      new BadRequestObjectResult(ValidationErrorResponse.FromModelState(context.ModelState));
+  });
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<OtpRequestCommandValidator>();
 builder.Services.AddMemoryCache();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient(CognitoOAuthTokenClient.HttpClientName, client =>
