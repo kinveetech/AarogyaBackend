@@ -52,6 +52,11 @@ builder.Services
   .BindConfiguration(CorsOptions.SectionName);
 
 builder.Services
+  .AddOptionsWithValidateOnStart<SecurityHeadersOptions>()
+  .BindConfiguration(SecurityHeadersOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<DatabaseOptions>()
   .BindConfiguration(DatabaseOptions.SectionName)
   .ValidateDataAnnotations();
@@ -158,6 +163,7 @@ builder.Services.AddCognitoJwtAuthentication(builder.Configuration);
 builder.Services.AddAarogyaAuthorization();
 
 builder.Services.AddAarogyaCorsPolicy(builder.Configuration);
+builder.Services.AddAarogyaSecurityHeaders(builder.Configuration);
 builder.Services.AddV1FeatureServices();
 
 var rateLimitingOptions = builder.Configuration
@@ -188,6 +194,7 @@ app.UseSwaggerUI(c =>
 app.UseAarogyaRequestLogging();
 app.UseAarogyaApiVersioning();
 app.UseForwardedHeaders();
+app.UseAarogyaSecurityHeaders();
 
 app.UseHttpsRedirection();
 if (!app.Environment.IsDevelopment())
