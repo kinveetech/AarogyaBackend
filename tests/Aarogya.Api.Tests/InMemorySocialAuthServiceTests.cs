@@ -112,27 +112,22 @@ public sealed class InMemorySocialAuthServiceTests
         Issuer = "https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_poolId",
         SocialIdentityProviders = new CognitoSocialIdentityProviderOptions
         {
-          Google = new SocialProviderOptions
-          {
-            Enabled = true,
-            ClientId = "google-client-id",
-            ClientSecret = "google-client-secret"
-          },
-          Apple = new SocialProviderOptions
-          {
-            Enabled = true,
-            ClientId = "apple-client-id",
-            ClientSecret = "apple-client-secret"
-          },
-          Facebook = new SocialProviderOptions
-          {
-            Enabled = true,
-            ClientId = "facebook-client-id",
-            ClientSecret = "facebook-client-secret"
-          },
+          Google = CreateEnabledProvider("google-client-id", "google-client-secret"),
+          Apple = CreateEnabledProvider("apple-client-id", "apple-client-secret"),
+          Facebook = CreateEnabledProvider("facebook-client-id", "facebook-client-secret"),
           MobileRedirectUris = ["aarogya://auth/callback"]
         }
       }
+    };
+  }
+
+  private static SocialProviderOptions CreateEnabledProvider(string clientId, string clientSecret)
+  {
+    return new SocialProviderOptions
+    {
+      Enabled = true,
+      ClientId = clientId,
+      ClientSecret = clientSecret
     };
   }
 

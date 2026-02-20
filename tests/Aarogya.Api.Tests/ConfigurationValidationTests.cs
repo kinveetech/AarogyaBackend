@@ -107,6 +107,26 @@ public class ConfigurationValidationTests
     action.Should().NotThrow();
   }
 
+  [Fact]
+  public void ValidateRequiredConfiguration_ShouldNotThrowInProduction_WhenProviderIsDisabled()
+  {
+    var values = WithDefaultsForSocialProviderConfiguration(new Dictionary<string, string?>
+    {
+      ["ConnectionStrings:DefaultConnection"] = "Host=db;Username=user;Password=strong-password",
+      ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId",
+      ["Aws:Cognito:AppClientId"] = "example-app-client-id"
+    });
+
+    values["Aws:Cognito:SocialIdentityProviders:Apple:Enabled"] = "false";
+    values.Remove("Aws:Cognito:SocialIdentityProviders:Apple:ClientId");
+    values.Remove("Aws:Cognito:SocialIdentityProviders:Apple:ClientSecret");
+
+    var configuration = BuildConfiguration(values);
+    var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
+
+    action.Should().NotThrow();
+  }
+
   private static IConfiguration BuildConfiguration(Dictionary<string, string?> values)
   {
     return new ConfigurationBuilder()
@@ -116,15 +136,22 @@ public class ConfigurationValidationTests
 
   private static Dictionary<string, string?> WithDefaultsForSocialProviderConfiguration(Dictionary<string, string?> values)
   {
-    values["Aws:Cognito:SocialIdentityProviders:Google:Enabled"] = "true";
-    values["Aws:Cognito:SocialIdentityProviders:Google:ClientId"] = "google-client-id";
-    values["Aws:Cognito:SocialIdentityProviders:Google:ClientSecret"] = "google-client-secret";
-    values["Aws:Cognito:SocialIdentityProviders:Apple:Enabled"] = "true";
-    values["Aws:Cognito:SocialIdentityProviders:Apple:ClientId"] = "apple-client-id";
-    values["Aws:Cognito:SocialIdentityProviders:Apple:ClientSecret"] = "apple-client-secret";
-    values["Aws:Cognito:SocialIdentityProviders:Facebook:Enabled"] = "true";
-    values["Aws:Cognito:SocialIdentityProviders:Facebook:ClientId"] = "facebook-client-id";
-    values["Aws:Cognito:SocialIdentityProviders:Facebook:ClientSecret"] = "facebook-client-secret";
+    foreach (var provider in new[] { "Google", "Apple", "Facebook" })
+    {
+      var providerKey = $"Aws:Cognito:SocialIdentityProviders:{provider}";
+      var providerId = provider switch
+      {
+        "Google" => "google",
+        "Apple" => "apple",
+        "Facebook" => "facebook",
+        _ => throw new InvalidOperationException($"Unsupported provider '{provider}'.")
+      };
+
+      values[$"{providerKey}:Enabled"] = "true";
+      values[$"{providerKey}:ClientId"] = $"{providerId}-client-id";
+      values[$"{providerKey}:ClientSecret"] = $"{providerId}-client-secret";
+    }
+
     values["Aws:Cognito:SocialIdentityProviders:MobileRedirectUris:0"] = "aarogya://auth/callback";
     return values;
   }

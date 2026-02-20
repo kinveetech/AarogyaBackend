@@ -150,17 +150,27 @@ public static class StartupExtensions
       violations.Add("Missing Aws:Cognito:SocialIdentityProviders:MobileRedirectUris");
     }
 
-    ValidateProvider("Google");
-    ValidateProvider("Apple");
-    ValidateProvider("Facebook");
+    foreach (var provider in new[] { "Google", "Apple", "Facebook" })
+    {
+      ValidateProvider(provider);
+    }
+
     return;
 
     void ValidateProvider(string provider)
     {
-      var isEnabled = configuration.GetValue<bool?>($"Aws:Cognito:SocialIdentityProviders:{provider}:Enabled") ?? false;
+      var enabledKey = $"Aws:Cognito:SocialIdentityProviders:{provider}:Enabled";
+      var enabledRaw = configuration[enabledKey];
+      if (IsMissingConfigurationValue(enabledRaw))
+      {
+        violations.Add($"Missing {enabledKey}");
+        return;
+      }
+
+      var isEnabled = bool.TryParse(enabledRaw, out var parsedEnabled) && parsedEnabled;
       if (!isEnabled)
       {
-        violations.Add($"Missing Aws:Cognito:SocialIdentityProviders:{provider}:Enabled");
+        return;
       }
 
       var clientId = configuration[$"Aws:Cognito:SocialIdentityProviders:{provider}:ClientId"];
