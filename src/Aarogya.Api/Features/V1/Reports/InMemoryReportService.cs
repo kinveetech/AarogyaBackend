@@ -2,8 +2,8 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using Aarogya.Api.Configuration;
 using Aarogya.Api.Authentication;
+using Aarogya.Api.Configuration;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
@@ -119,14 +119,14 @@ internal sealed class InMemoryReportService(
     return $"reports/{userSub}/{timestamp}-{random}{extensionPart}";
   }
 
-  private Amazon.S3.Protocol ResolveProtocol()
+  private Protocol ResolveProtocol()
   {
     if (_awsOptions.UseLocalStack)
     {
-      return Amazon.S3.Protocol.HTTP;
+      return Protocol.HTTP;
     }
 
-    return Amazon.S3.Protocol.HTTPS;
+    return Protocol.HTTPS;
   }
 
   private bool TryGetCloudFrontSignedUrl(string objectKey, DateTimeOffset expiresAt, out string url)
