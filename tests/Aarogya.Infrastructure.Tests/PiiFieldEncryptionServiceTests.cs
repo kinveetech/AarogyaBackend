@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Security.Cryptography;
 using Aarogya.Infrastructure.Security;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
@@ -66,6 +67,31 @@ public sealed class PiiFieldEncryptionServiceTests
     var decrypted = service.Decrypt(encryptedWithLegacy);
 
     decrypted.Should().Be("alice@example.com");
+  }
+
+  [Fact]
+  public void Decrypt_ShouldThrow_WhenPayloadIsTampered()
+  {
+    var service = CreateService();
+    var ciphertext = service.Encrypt("alice@example.com")!;
+    ciphertext[^1] ^= 0xFF;
+
+    var action = () => service.Decrypt(ciphertext);
+
+    action.Should().Throw<CryptographicException>();
+  }
+
+  [Fact]
+  public void Decrypt_ShouldThrow_WhenPayloadVersionIsUnsupported()
+  {
+    var service = CreateService();
+    var unsupportedPayload = new byte[29];
+    unsupportedPayload[0] = 99;
+
+    var action = () => service.Decrypt(unsupportedPayload);
+
+    action.Should().Throw<CryptographicException>()
+      .WithMessage("*Unsupported encrypted payload version*");
   }
 
   private static PiiFieldEncryptionService CreateService(
