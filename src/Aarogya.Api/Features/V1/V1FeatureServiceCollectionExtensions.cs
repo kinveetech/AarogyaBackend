@@ -9,7 +9,7 @@ internal static class V1FeatureServiceCollectionExtensions
 {
   public static IServiceCollection AddV1FeatureServices(this IServiceCollection services)
   {
-    services.AddSingleton<IUserProfileService, InMemoryUserProfileService>();
+    services.AddScoped<IUserProfileService, UserProfileService>();
     services.AddSingleton<IReportService, InMemoryReportService>();
     services.AddScoped<IReportFileUploadService, S3ReportFileUploadService>();
     services.AddScoped<IReportChecksumVerificationService, S3ReportChecksumVerificationService>();

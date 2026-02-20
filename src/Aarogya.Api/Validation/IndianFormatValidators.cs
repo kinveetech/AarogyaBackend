@@ -11,8 +11,8 @@ internal static partial class IndianFormatValidators
   [GeneratedRegex(@"^[2-9]\d{11}$", RegexOptions.CultureInvariant, 200)]
   private static partial Regex AadhaarRegex();
 
-  public static IRuleBuilderOptions<T, string> MustBeIndianPhoneNumber<T>(
-    this IRuleBuilder<T, string> ruleBuilder)
+  public static IRuleBuilderOptions<T, string?> MustBeIndianPhoneNumber<T>(
+    this IRuleBuilder<T, string?> ruleBuilder)
   {
     return ruleBuilder.Must(value => !string.IsNullOrWhiteSpace(value) && IndianPhoneRegex().IsMatch(value.Trim()))
       .WithMessage("Phone number must be in Indian E.164 format (+91XXXXXXXXXX).");

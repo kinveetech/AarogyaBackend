@@ -33,6 +33,8 @@ internal sealed class UserConfiguration(IPiiFieldEncryptionService encryptionSer
     builder.Property(x => x.LastName).HasColumnName("last_name_encrypted").HasColumnType(ByteaType).HasConversion(_encryptedRequiredStringConverter).IsRequired();
     builder.Property(x => x.Email).HasColumnName("email_encrypted").HasColumnType(ByteaType).HasConversion(_encryptedRequiredStringConverter).IsRequired();
     builder.Property(x => x.Phone).HasColumnName("phone_encrypted").HasColumnType(ByteaType).HasConversion(_encryptedNullableStringConverter);
+    builder.Property(x => x.Address).HasColumnName("address_encrypted").HasColumnType(ByteaType).HasConversion(_encryptedNullableStringConverter);
+    builder.Property(x => x.BloodGroup).HasColumnName("blood_group_encrypted").HasColumnType(ByteaType).HasConversion(_encryptedNullableStringConverter);
 
     builder.Property(x => x.DateOfBirth).HasColumnName("date_of_birth");
     builder.Property(x => x.Gender).HasColumnName("gender");

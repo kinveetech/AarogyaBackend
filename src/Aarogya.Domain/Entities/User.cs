@@ -20,6 +20,10 @@ public sealed class User : IAuditableEntity
 
   public string? Phone { get; set; }
 
+  public string? Address { get; set; }
+
+  public string? BloodGroup { get; set; }
+
   public DateOnly? DateOfBirth { get; set; }
 
   public string? Gender { get; set; }
