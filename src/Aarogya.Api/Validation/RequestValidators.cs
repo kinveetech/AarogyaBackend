@@ -291,6 +291,18 @@ internal sealed class CreateEmergencyContactRequestValidator : AbstractValidator
     RuleFor(x => x.Name).NotEmpty().MaximumLength(120);
     RuleFor(x => x.PhoneNumber).MustBeIndianPhoneNumber();
     RuleFor(x => x.Relationship).NotEmpty().MaximumLength(60);
+    RuleFor(x => x.Email).EmailAddress().MaximumLength(256).When(x => x.Email is not null);
+  }
+}
+
+internal sealed class UpdateEmergencyContactRequestValidator : AbstractValidator<UpdateEmergencyContactRequest>
+{
+  public UpdateEmergencyContactRequestValidator()
+  {
+    RuleFor(x => x.Name).NotEmpty().MaximumLength(120);
+    RuleFor(x => x.PhoneNumber).MustBeIndianPhoneNumber();
+    RuleFor(x => x.Relationship).NotEmpty().MaximumLength(60);
+    RuleFor(x => x.Email).EmailAddress().MaximumLength(256).When(x => x.Email is not null);
   }
 }
 

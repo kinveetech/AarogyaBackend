@@ -9,6 +9,7 @@ namespace Aarogya.Infrastructure.Persistence.Configurations;
 internal sealed class EmergencyContactConfiguration(IPiiFieldEncryptionService encryptionService) : IEntityTypeConfiguration<EmergencyContact>
 {
   private readonly EncryptedRequiredStringToBytesConverter _encryptedStringConverter = new(encryptionService);
+  private readonly EncryptedNullableStringToBytesConverter _encryptedNullableStringConverter = new(encryptionService);
 
   public void Configure(EntityTypeBuilder<EmergencyContact> builder)
   {
@@ -22,6 +23,7 @@ internal sealed class EmergencyContactConfiguration(IPiiFieldEncryptionService e
     builder.Property(x => x.Relationship).HasColumnName("relationship").IsRequired();
     builder.Property(x => x.Phone).HasColumnName("phone_encrypted").HasColumnType("bytea").HasConversion(_encryptedStringConverter).IsRequired();
     builder.Property(x => x.PhoneHash).HasColumnName("phone_hash").HasColumnType("bytea");
+    builder.Property(x => x.Email).HasColumnName("email_encrypted").HasColumnType("bytea").HasConversion(_encryptedNullableStringConverter);
     builder.Property(x => x.IsPrimary).HasColumnName("is_primary").HasDefaultValue(false);
     builder.Property(x => x.CreatedAt).HasColumnName("created_at");
     builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");

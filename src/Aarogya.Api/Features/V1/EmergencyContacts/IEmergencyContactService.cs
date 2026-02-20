@@ -12,5 +12,11 @@ public interface IEmergencyContactService
 
   public Task<EmergencyContactResponse> AddForUserAsync(string userSub, CreateEmergencyContactRequest request, CancellationToken cancellationToken = default);
 
+  public Task<EmergencyContactResponse?> UpdateForUserAsync(
+    string userSub,
+    Guid contactId,
+    UpdateEmergencyContactRequest request,
+    CancellationToken cancellationToken = default);
+
   public Task<bool> DeleteForUserAsync(string userSub, Guid contactId, CancellationToken cancellationToken = default);
 }
