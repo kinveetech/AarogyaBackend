@@ -16,6 +16,10 @@ namespace Aarogya.Api.Controllers.V1;
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "ASP.NET Core controllers must be public to be discovered by the framework.")]
+[SuppressMessage(
+  "Design",
+  "S6960:This controller has multiple responsibilities and could be split into 2 smaller controllers.",
+  Justification = "Emergency access request and audit endpoints are part of the same API boundary.")]
 public sealed class EmergencyAccessController(
   IEmergencyAccessService emergencyAccessService,
   IEmergencyAccessAuditTrailService emergencyAccessAuditTrailService)
