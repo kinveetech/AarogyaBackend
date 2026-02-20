@@ -16,6 +16,7 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddSingleton<IEntityCacheService, DistributedEntityCacheService>();
     services.AddScoped<UserProfileService>();
     services.AddScoped<IUserProfileService, CachedUserProfileService>();
+    services.AddScoped<IUserDataRightsService, UserDataRightsService>();
     services.AddScoped<ReportService>();
     services.AddScoped<IReportService, CachedReportService>();
     services.AddScoped<ICloudFrontInvalidationService, CloudFrontInvalidationService>();

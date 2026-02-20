@@ -16,8 +16,7 @@ public sealed class UsersControllerTests
   [Fact]
   public async Task GetCurrentUserProfileAsync_ShouldReturnUnauthorized_WhenSubjectMissingAsync()
   {
-    var service = new Mock<IUserProfileService>();
-    var controller = CreateController(service.Object, new ClaimsPrincipal(new ClaimsIdentity()));
+    var controller = CreateController(new Mock<IUserProfileService>().Object, new ClaimsPrincipal(new ClaimsIdentity()));
 
     var result = await controller.GetCurrentUserProfileAsync(CancellationToken.None);
 
@@ -38,10 +37,10 @@ public sealed class UsersControllerTests
       new DateOnly(1995, 6, 5),
       ["Patient"]);
 
-    var service = new Mock<IUserProfileService>();
-    service.Setup(x => x.GetCurrentUserAsync("seed-PATIENT-1", It.IsAny<CancellationToken>())).ReturnsAsync(response);
+    var userProfileService = new Mock<IUserProfileService>();
+    userProfileService.Setup(x => x.GetCurrentUserAsync("seed-PATIENT-1", It.IsAny<CancellationToken>())).ReturnsAsync(response);
 
-    var controller = CreateController(service.Object, CreateUser("seed-PATIENT-1"));
+    var controller = CreateController(userProfileService.Object, CreateUser("seed-PATIENT-1"));
 
     var result = await controller.GetCurrentUserProfileAsync(CancellationToken.None);
 
@@ -52,8 +51,7 @@ public sealed class UsersControllerTests
   [Fact]
   public async Task UpdateCurrentUserProfileAsync_ShouldReturnUnauthorized_WhenSubjectMissingAsync()
   {
-    var service = new Mock<IUserProfileService>();
-    var controller = CreateController(service.Object, new ClaimsPrincipal(new ClaimsIdentity()));
+    var controller = CreateController(new Mock<IUserProfileService>().Object, new ClaimsPrincipal(new ClaimsIdentity()));
 
     var result = await controller.UpdateCurrentUserProfileAsync(
       new UpdateUserProfileRequest("A", null, null, null, null, null, null),
@@ -65,12 +63,12 @@ public sealed class UsersControllerTests
   [Fact]
   public async Task UpdateCurrentUserProfileAsync_ShouldReturnNotFound_WhenUserMissingAsync()
   {
-    var service = new Mock<IUserProfileService>();
-    service
+    var userProfileService = new Mock<IUserProfileService>();
+    userProfileService
       .Setup(x => x.UpdateCurrentUserAsync("seed-PATIENT-1", It.IsAny<UpdateUserProfileRequest>(), It.IsAny<CancellationToken>()))
       .ThrowsAsync(new KeyNotFoundException("Authenticated user is not provisioned in the database."));
 
-    var controller = CreateController(service.Object, CreateUser("seed-PATIENT-1"));
+    var controller = CreateController(userProfileService.Object, CreateUser("seed-PATIENT-1"));
 
     var result = await controller.UpdateCurrentUserProfileAsync(
       new UpdateUserProfileRequest("A", null, null, null, null, null, null),
@@ -89,12 +87,12 @@ public sealed class UsersControllerTests
       "LOCAL",
       new AadhaarDemographicsResponse("Verified Holder", null, null, "India"));
 
-    var service = new Mock<IUserProfileService>();
-    service
+    var userProfileService = new Mock<IUserProfileService>();
+    userProfileService
       .Setup(x => x.VerifyCurrentUserAadhaarAsync("seed-PATIENT-1", It.IsAny<VerifyAadhaarRequest>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(verification);
 
-    var controller = CreateController(service.Object, CreateUser("seed-PATIENT-1"));
+    var controller = CreateController(userProfileService.Object, CreateUser("seed-PATIENT-1"));
 
     var result = await controller.VerifyCurrentUserAadhaarAsync(new VerifyAadhaarRequest("123456789012"), CancellationToken.None);
 
@@ -105,12 +103,12 @@ public sealed class UsersControllerTests
   [Fact]
   public async Task VerifyCurrentUserAadhaarAsync_ShouldReturnBadRequest_WhenVerificationFailsAsync()
   {
-    var service = new Mock<IUserProfileService>();
-    service
+    var userProfileService = new Mock<IUserProfileService>();
+    userProfileService
       .Setup(x => x.VerifyCurrentUserAadhaarAsync("seed-PATIENT-1", It.IsAny<VerifyAadhaarRequest>(), It.IsAny<CancellationToken>()))
       .ThrowsAsync(new InvalidOperationException("Aadhaar validation failed."));
 
-    var controller = CreateController(service.Object, CreateUser("seed-PATIENT-1"));
+    var controller = CreateController(userProfileService.Object, CreateUser("seed-PATIENT-1"));
 
     var result = await controller.VerifyCurrentUserAadhaarAsync(new VerifyAadhaarRequest("123456789012"), CancellationToken.None);
 
@@ -118,7 +116,57 @@ public sealed class UsersControllerTests
     badRequest.Value.Should().BeOfType<ValidationErrorResponse>();
   }
 
-  private static UsersController CreateController(IUserProfileService service, ClaimsPrincipal user)
+  [Fact]
+  public async Task ExportCurrentUserDataAsync_ShouldReturnOkAsync()
+  {
+    var dataRightsService = new Mock<IUserDataRightsService>();
+    dataRightsService
+      .Setup(x => x.ExportCurrentUserDataAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new DataExportResponse(
+        DateTimeOffset.UtcNow,
+        new UserProfileExportData(Guid.NewGuid(), "seed-PATIENT-1", "patient@aarogya.dev", "Test", "Patient", null, null, null, null, true, "Patient"),
+        [],
+        [],
+        [],
+        [],
+        []));
+
+    var controller = CreateController(
+      new Mock<IUserProfileService>().Object,
+      CreateUser("seed-PATIENT-1"),
+      dataRightsService.Object);
+
+    var result = await controller.ExportCurrentUserDataAsync(CancellationToken.None);
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    ok.Value.Should().BeOfType<DataExportResponse>();
+  }
+
+  [Fact]
+  public async Task DeleteCurrentUserDataAsync_ShouldReturnBadRequest_WhenNotConfirmedAsync()
+  {
+    var dataRightsService = new Mock<IUserDataRightsService>();
+    dataRightsService
+      .Setup(x => x.DeleteCurrentUserDataAsync("seed-PATIENT-1", It.IsAny<DataDeletionRequest>(), It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new InvalidOperationException("ConfirmPermanentDeletion must be true to proceed."));
+
+    var controller = CreateController(
+      new Mock<IUserProfileService>().Object,
+      CreateUser("seed-PATIENT-1"),
+      dataRightsService.Object);
+
+    var result = await controller.DeleteCurrentUserDataAsync(
+      new DataDeletionRequest(false, "test"),
+      CancellationToken.None);
+
+    var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+    badRequest.Value.Should().BeOfType<ValidationErrorResponse>();
+  }
+
+  private static UsersController CreateController(
+    IUserProfileService userProfileService,
+    ClaimsPrincipal user,
+    IUserDataRightsService? userDataRightsService = null)
   {
     var consentService = new Mock<IConsentService>();
     consentService
@@ -128,7 +176,10 @@ public sealed class UsersControllerTests
         It.IsAny<CancellationToken>()))
       .Returns(Task.CompletedTask);
 
-    return new UsersController(service, consentService.Object)
+    return new UsersController(
+      userProfileService,
+      userDataRightsService ?? Mock.Of<IUserDataRightsService>(),
+      consentService.Object)
     {
       ControllerContext = new ControllerContext
       {

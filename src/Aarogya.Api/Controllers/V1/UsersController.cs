@@ -21,6 +21,7 @@ namespace Aarogya.Api.Controllers.V1;
   Justification = "ASP.NET Core controllers must be public to be discovered by the framework.")]
 public sealed class UsersController(
   IUserProfileService userProfileService,
+  IUserDataRightsService userDataRightsService,
   IConsentService consentService)
   : ControllerBase
 {
@@ -138,6 +139,86 @@ public sealed class UsersController(
         new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
           ["user"] = [ex.Message]
+        }));
+    }
+  }
+
+  [HttpGet("me/export")]
+  [ProducesResponseType(typeof(DataExportResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> ExportCurrentUserDataAsync(CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    try
+    {
+      await consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.ProfileManagement, cancellationToken);
+      var payload = await userDataRightsService.ExportCurrentUserDataAsync(userSub, cancellationToken);
+      return Ok(payload);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
+    }
+    catch (KeyNotFoundException ex)
+    {
+      return NotFound(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["user"] = [ex.Message]
+        }));
+    }
+  }
+
+  [HttpPost("me/deletion")]
+  [ProducesResponseType(typeof(DataDeletionResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> DeleteCurrentUserDataAsync(
+    [FromBody] DataDeletionRequest request,
+    CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    try
+    {
+      await consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.ProfileManagement, cancellationToken);
+      var response = await userDataRightsService.DeleteCurrentUserDataAsync(userSub, request, cancellationToken);
+      return Ok(response);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
+    }
+    catch (KeyNotFoundException ex)
+    {
+      return NotFound(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["user"] = [ex.Message]
+        }));
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["deletion"] = [ex.Message]
         }));
     }
   }
