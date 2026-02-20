@@ -38,6 +38,49 @@ public sealed class ReportsController : ControllerBase
     _reportChecksumVerificationService = reportChecksumVerificationService;
   }
 
+  [HttpGet("{id:guid}")]
+  [ProducesResponseType(typeof(ReportDetailResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> GetReportDetailAsync(Guid id, CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    try
+    {
+      var result = await _reportService.GetDetailForUserAsync(userSub, id, cancellationToken);
+      return Ok(result);
+    }
+    catch (KeyNotFoundException ex)
+    {
+      return NotFound(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["report"] = [ex.Message]
+        }));
+    }
+    catch (UnauthorizedAccessException)
+    {
+      return Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["report"] = [ex.Message]
+        }));
+    }
+  }
+
   [HttpGet]
   [ProducesResponseType(typeof(ReportListResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]

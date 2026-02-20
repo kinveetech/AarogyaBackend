@@ -13,6 +13,11 @@ public interface IReportService
     ReportListQueryRequest request,
     CancellationToken cancellationToken = default);
 
+  public Task<ReportDetailResponse> GetDetailForUserAsync(
+    string userSub,
+    Guid reportId,
+    CancellationToken cancellationToken = default);
+
   public Task<ReportSummaryResponse> AddForUserAsync(string userSub, CreateReportRequest request, CancellationToken cancellationToken = default);
 
   public Task<ReportSignedUploadUrlResponse> GetSignedUploadUrlAsync(
