@@ -4,6 +4,7 @@ set -euo pipefail
 AWS_ENDPOINT_URL="http://localhost:4566"
 AWS_REGION="${AWS_DEFAULT_REGION:-ap-south-1}"
 S3_BUCKET_NAME="${LOCALSTACK_S3_BUCKET_NAME:-aarogya-dev}"
+LOCALSTACK_ACCOUNT_ID="${LOCALSTACK_ACCOUNT_ID:-000000000000}"
 SQS_QUEUE_NAME="${LOCALSTACK_SQS_QUEUE_NAME:-aarogya-dev-queue}"
 COGNITO_USER_POOL_NAME="${LOCALSTACK_COGNITO_USER_POOL_NAME:-aarogya-dev-users}"
 COGNITO_MFA_CONFIGURATION="${LOCALSTACK_COGNITO_MFA_CONFIGURATION:-OPTIONAL}"
@@ -31,23 +32,6 @@ is_true() {
 
 log "Bootstrapping LocalStack resources in region ${AWS_REGION}"
 
-if aws --endpoint-url "$AWS_ENDPOINT_URL" s3api head-bucket --bucket "$S3_BUCKET_NAME" >/dev/null 2>&1; then
-  log "S3 bucket already exists: ${S3_BUCKET_NAME}"
-else
-  aws --endpoint-url "$AWS_ENDPOINT_URL" s3api create-bucket \
-    --bucket "$S3_BUCKET_NAME" \
-    --create-bucket-configuration "LocationConstraint=${AWS_REGION}" >/dev/null
-  log "Created S3 bucket: ${S3_BUCKET_NAME}"
-fi
-
-if aws --endpoint-url "$AWS_ENDPOINT_URL" sqs get-queue-url --queue-name "$SQS_QUEUE_NAME" >/dev/null 2>&1; then
-  log "SQS queue already exists: ${SQS_QUEUE_NAME}"
-else
-  aws --endpoint-url "$AWS_ENDPOINT_URL" sqs create-queue \
-    --queue-name "$SQS_QUEUE_NAME" >/dev/null
-  log "Created SQS queue: ${SQS_QUEUE_NAME}"
-fi
-
 existing_kms_alias="$(aws --endpoint-url "$AWS_ENDPOINT_URL" kms list-aliases --query "Aliases[?AliasName=='${KMS_ALIAS_NAME}'].AliasName | [0]" --output text 2>/dev/null || true)"
 if [[ -n "$existing_kms_alias" ]] && [[ "$existing_kms_alias" != "None" ]]; then
   log "KMS alias already exists: ${KMS_ALIAS_NAME}"
@@ -55,6 +39,107 @@ else
   kms_key_id="$(aws --endpoint-url "$AWS_ENDPOINT_URL" kms create-key --description "Aarogya LocalStack dev key" --query 'KeyMetadata.KeyId' --output text)"
   aws --endpoint-url "$AWS_ENDPOINT_URL" kms create-alias --alias-name "$KMS_ALIAS_NAME" --target-key-id "$kms_key_id" >/dev/null
   log "Created KMS alias: ${KMS_ALIAS_NAME} (key: ${kms_key_id})"
+fi
+
+if aws --endpoint-url "$AWS_ENDPOINT_URL" s3api head-bucket --bucket "$S3_BUCKET_NAME" >/dev/null 2>&1; then
+  log "S3 bucket already exists: ${S3_BUCKET_NAME}"
+else
+  if [[ "$AWS_REGION" == "us-east-1" ]]; then
+    aws --endpoint-url "$AWS_ENDPOINT_URL" s3api create-bucket \
+      --bucket "$S3_BUCKET_NAME" >/dev/null
+  else
+    aws --endpoint-url "$AWS_ENDPOINT_URL" s3api create-bucket \
+      --bucket "$S3_BUCKET_NAME" \
+      --create-bucket-configuration "LocationConstraint=${AWS_REGION}" >/dev/null
+  fi
+  log "Created S3 bucket: ${S3_BUCKET_NAME}"
+fi
+
+aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-versioning \
+  --bucket "$S3_BUCKET_NAME" \
+  --versioning-configuration Status=Enabled >/dev/null
+log "Enabled versioning for S3 bucket: ${S3_BUCKET_NAME}"
+
+aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-encryption \
+  --bucket "$S3_BUCKET_NAME" \
+  --server-side-encryption-configuration "{
+    \"Rules\": [
+      {
+        \"ApplyServerSideEncryptionByDefault\": {
+          \"SSEAlgorithm\": \"aws:kms\",
+          \"KMSMasterKeyID\": \"${KMS_ALIAS_NAME}\"
+        },
+        \"BucketKeyEnabled\": true
+      }
+    ]
+  }" >/dev/null
+log "Configured SSE-KMS encryption for S3 bucket: ${S3_BUCKET_NAME}"
+
+aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-lifecycle-configuration \
+  --bucket "$S3_BUCKET_NAME" \
+  --lifecycle-configuration "{
+    \"Rules\": [
+      {
+        \"ID\": \"archive-to-glacier-after-1-year\",
+        \"Status\": \"Enabled\",
+        \"Filter\": { \"Prefix\": \"\" },
+        \"Transitions\": [
+          {
+            \"Days\": 365,
+            \"StorageClass\": \"GLACIER\"
+          }
+        ]
+      }
+    ]
+  }" >/dev/null
+log "Configured lifecycle policy (Glacier after 365 days) for S3 bucket: ${S3_BUCKET_NAME}"
+
+aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-public-access-block \
+  --bucket "$S3_BUCKET_NAME" \
+  --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true >/dev/null
+log "Enabled public access block for S3 bucket: ${S3_BUCKET_NAME}"
+
+s3_policy_tmp="$(mktemp)"
+cat >"$s3_policy_tmp" <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowAccountRootAccess",
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::${LOCALSTACK_ACCOUNT_ID}:root" },
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::${S3_BUCKET_NAME}",
+        "arn:aws:s3:::${S3_BUCKET_NAME}/*"
+      ]
+    },
+    {
+      "Sid": "DenyNonAccountPrincipals",
+      "Effect": "Deny",
+      "NotPrincipal": { "AWS": "arn:aws:iam::${LOCALSTACK_ACCOUNT_ID}:root" },
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::${S3_BUCKET_NAME}",
+        "arn:aws:s3:::${S3_BUCKET_NAME}/*"
+      ]
+    }
+  ]
+}
+EOF
+
+aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-policy \
+  --bucket "$S3_BUCKET_NAME" \
+  --policy "file://${s3_policy_tmp}" >/dev/null
+rm -f "$s3_policy_tmp"
+log "Configured restrictive policy for S3 bucket: ${S3_BUCKET_NAME}"
+
+if aws --endpoint-url "$AWS_ENDPOINT_URL" sqs get-queue-url --queue-name "$SQS_QUEUE_NAME" >/dev/null 2>&1; then
+  log "SQS queue already exists: ${SQS_QUEUE_NAME}"
+else
+  aws --endpoint-url "$AWS_ENDPOINT_URL" sqs create-queue \
+    --queue-name "$SQS_QUEUE_NAME" >/dev/null
+  log "Created SQS queue: ${SQS_QUEUE_NAME}"
 fi
 
 password_policy="MinimumLength=${COGNITO_PASSWORD_MIN_LENGTH},RequireLowercase=${COGNITO_PASSWORD_REQUIRE_LOWERCASE},RequireUppercase=${COGNITO_PASSWORD_REQUIRE_UPPERCASE},RequireNumbers=${COGNITO_PASSWORD_REQUIRE_NUMBERS},RequireSymbols=${COGNITO_PASSWORD_REQUIRE_SYMBOLS},TemporaryPasswordValidityDays=7"
