@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Aarogya.Api.Authentication;
@@ -64,6 +65,9 @@ public sealed class InMemoryPkceAuthorizationServiceTests
     var jwt = new JwtSecurityTokenHandler().ReadJwtToken(exchange.AccessToken);
     jwt.Issuer.Should().Be("AarogyaAPI");
     jwt.Audiences.Should().ContainSingle("AarogyaClients");
+    jwt.Claims.Should().Contain(claim =>
+      (claim.Type == ClaimTypes.Role || claim.Type == "role")
+      && claim.Value == "Patient");
   }
 
   [Fact]

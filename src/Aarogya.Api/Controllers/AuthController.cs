@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Aarogya.Api.Authentication;
+using Aarogya.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,13 +21,16 @@ public sealed class AuthController : ControllerBase
 {
   private readonly IPhoneOtpService _phoneOtpService;
   private readonly IPkceAuthorizationService _pkceAuthorizationService;
+  private readonly IRoleAssignmentService _roleAssignmentService;
 
   public AuthController(
     IPhoneOtpService phoneOtpService,
-    IPkceAuthorizationService pkceAuthorizationService)
+    IPkceAuthorizationService pkceAuthorizationService,
+    IRoleAssignmentService roleAssignmentService)
   {
     _phoneOtpService = phoneOtpService;
     _pkceAuthorizationService = pkceAuthorizationService;
+    _roleAssignmentService = roleAssignmentService;
   }
 
   [AllowAnonymous]
@@ -196,7 +200,7 @@ public sealed class AuthController : ControllerBase
     return Ok(new PkceRevokeResponse(result.Message));
   }
 
-  [Authorize]
+  [Authorize(Policy = AarogyaPolicies.AnyRegisteredRole)]
   [HttpGet("me")]
   [ProducesResponseType(typeof(AuthClaimsResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -213,6 +217,44 @@ public sealed class AuthController : ControllerBase
       .ToList();
 
     return Ok(new AuthClaimsResponse(sub, email, roles));
+  }
+
+  [Authorize(Policy = AarogyaPolicies.Admin)]
+  [HttpPost("roles/assign")]
+  [ProducesResponseType(typeof(RoleAssignmentResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public IActionResult AssignRole([FromBody] RoleAssignmentCommand request)
+  {
+    if (!ModelState.IsValid)
+    {
+      return BadRequest(new PkceErrorResponse("Invalid request payload."));
+    }
+
+    var actorSub = User.FindFirstValue("sub");
+    if (string.IsNullOrWhiteSpace(actorSub))
+    {
+      return BadRequest(new PkceErrorResponse("Authenticated user subject is missing."));
+    }
+
+    var actorRoles = User.Claims
+      .Where(claim => claim.Type == ClaimTypes.Role)
+      .Select(claim => claim.Value)
+      .Distinct(StringComparer.OrdinalIgnoreCase)
+      .ToArray();
+
+    if (!_roleAssignmentService.TryAssignRole(
+      actorSub,
+      actorRoles,
+      request.TargetUserSub,
+      request.Role,
+      out var message))
+    {
+      return BadRequest(new PkceErrorResponse(message));
+    }
+
+    return Ok(new RoleAssignmentResponse(message));
   }
 }
 
@@ -307,6 +349,16 @@ public sealed record RevokeTokenCommand(
 [SuppressMessage(
   "Performance",
   "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record RoleAssignmentCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string TargetUserSub,
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string Role);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
   Justification = "Referenced by public response metadata attributes.")]
 public sealed record PkceAuthorizeResponse(string AuthorizationCode, DateTimeOffset ExpiresAt, string? State);
 
@@ -326,6 +378,12 @@ public sealed record PkceTokenResponse(
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public response metadata attributes.")]
 public sealed record PkceRevokeResponse(string Message);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public response metadata attributes.")]
+public sealed record RoleAssignmentResponse(string Message);
 
 [SuppressMessage(
   "Performance",
