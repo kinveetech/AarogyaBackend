@@ -13,7 +13,7 @@ CloudFormation template to provision a CloudFront distribution for report-file s
 aws cloudformation deploy \
   --stack-name aarogya-report-cdn \
   --template-file infra/aws/cloudfront-report-cdn/cloudfront-report-cdn.yaml \
-  --parameter-overrides ReportsBucketName=<reports-bucket-name> \
+  --parameter-overrides ReportsBucketName=<reports-bucket-name> LogsBucketDomainName=<logs-bucket>.s3.amazonaws.com \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 

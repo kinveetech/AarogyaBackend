@@ -5,6 +5,9 @@ Parameters:
   ReportsBucketName:
     Type: String
     Description: S3 bucket name that stores report files.
+  LogsBucketDomainName:
+    Type: String
+    Description: S3 logs bucket domain name (for example, my-logs-bucket.s3.amazonaws.com).
 
 Resources:
   ReportsOriginAccessIdentity:
@@ -59,6 +62,10 @@ Resources:
         PriceClass: PriceClass_200
         HttpVersion: http2and3
         Comment: Aarogya report files distribution
+        Logging:
+          Bucket: !Ref LogsBucketDomainName
+          IncludeCookies: false
+          Prefix: cloudfront/reports/
         Origins:
           - Id: reports-s3-origin
             DomainName: !Sub ${ReportsBucketName}.s3.${AWS::Region}.amazonaws.com
