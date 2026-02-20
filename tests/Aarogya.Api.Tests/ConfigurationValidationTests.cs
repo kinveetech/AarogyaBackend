@@ -127,6 +127,50 @@ public class ConfigurationValidationTests
     action.Should().NotThrow();
   }
 
+  [Fact]
+  public void ValidateRequiredConfiguration_ShouldThrowInProduction_WhenTlsEnforcementEnabledAndConnectionsAreInsecure()
+  {
+    var values = WithDefaultsForSocialProviderConfiguration(new Dictionary<string, string?>
+    {
+      ["ConnectionStrings:DefaultConnection"] = "Host=db;Port=5432;Database=aarogya;Username=aarogya;Password=strong-password",
+      ["ConnectionStrings:Redis"] = "redis:6379,abortConnect=false",
+      ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId",
+      ["Aws:Cognito:AppClientId"] = "example-app-client-id",
+      ["Aws:UseLocalStack"] = "false",
+      ["Aws:ServiceUrl"] = "http://s3.ap-south-1.amazonaws.com",
+      ["TransportSecurity:EnforceTls13"] = "true"
+    });
+    var configuration = BuildConfiguration(values);
+
+    var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
+
+    action.Should().Throw<InvalidOperationException>()
+      .WithMessage("*DefaultConnection must set SSL Mode*")
+      .WithMessage("*ConnectionStrings:Redis must include ssl=true*")
+      .WithMessage("*Aws:ServiceUrl must use HTTPS*");
+  }
+
+  [Fact]
+  public void ValidateRequiredConfiguration_ShouldNotThrowInProduction_WhenTlsEnforcementEnabledAndConnectionsAreSecure()
+  {
+    var values = WithDefaultsForSocialProviderConfiguration(new Dictionary<string, string?>
+    {
+      ["ConnectionStrings:DefaultConnection"] =
+        "Host=db;Port=5432;Database=aarogya;Username=aarogya;Password=strong-password;SSL Mode=VerifyFull;Trust Server Certificate=false",
+      ["ConnectionStrings:Redis"] = "cache.example.com:6380,ssl=true,abortConnect=false",
+      ["Aws:Cognito:UserPoolId"] = "ap-south-1_examplePoolId",
+      ["Aws:Cognito:AppClientId"] = "example-app-client-id",
+      ["Aws:UseLocalStack"] = "false",
+      ["Aws:ServiceUrl"] = "https://s3.ap-south-1.amazonaws.com",
+      ["TransportSecurity:EnforceTls13"] = "true"
+    });
+    var configuration = BuildConfiguration(values);
+
+    var action = () => StartupExtensions.ValidateRequiredConfiguration(configuration, new TestHostEnvironment("Production"));
+
+    action.Should().NotThrow();
+  }
+
   private static IConfiguration BuildConfiguration(Dictionary<string, string?> values)
   {
     return new ConfigurationBuilder()

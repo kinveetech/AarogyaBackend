@@ -219,6 +219,12 @@ public static class StartupExtensions
       violations.Add("Aws:ServiceUrl must be a valid absolute HTTP/HTTPS URL");
     }
 
+    var enforceTls13 = configuration.GetSection("TransportSecurity").GetSection("EnforceTls13").Get<bool?>() ?? false;
+    if (enforceTls13)
+    {
+      AddTransportSecurityViolations(configuration, violations);
+    }
+
     var corsOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
     foreach (var origin in corsOrigins)
     {
@@ -232,9 +238,46 @@ public static class StartupExtensions
     return violations;
   }
 
+  private static void AddTransportSecurityViolations(IConfiguration configuration, List<string> violations)
+  {
+    var defaultConnection = configuration["ConnectionStrings:DefaultConnection"] ?? string.Empty;
+    if (!HasSecurePostgreSqlSslMode(defaultConnection))
+    {
+      violations.Add("ConnectionStrings:DefaultConnection must set SSL Mode=Require|VerifyCA|VerifyFull when TransportSecurity:EnforceTls13=true");
+    }
+
+    if (defaultConnection.Contains("Trust Server Certificate=true", StringComparison.OrdinalIgnoreCase))
+    {
+      violations.Add("ConnectionStrings:DefaultConnection cannot trust server certificates when TransportSecurity:EnforceTls13=true");
+    }
+
+    var redisConnection = configuration["ConnectionStrings:Redis"] ?? string.Empty;
+    if (!string.IsNullOrWhiteSpace(redisConnection)
+      && !redisConnection.Contains("ssl=true", StringComparison.OrdinalIgnoreCase))
+    {
+      violations.Add("ConnectionStrings:Redis must include ssl=true when TransportSecurity:EnforceTls13=true");
+    }
+
+    var useLocalStack = configuration.GetSection("Aws:UseLocalStack").Get<bool?>() ?? false;
+    var awsServiceUrl = configuration["Aws:ServiceUrl"];
+    if (!useLocalStack
+      && !string.IsNullOrWhiteSpace(awsServiceUrl)
+      && !awsServiceUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+    {
+      violations.Add("Aws:ServiceUrl must use HTTPS when TransportSecurity:EnforceTls13=true");
+    }
+  }
+
   private static bool ContainsAny(string value, params string[] patterns)
   {
     return Array.Exists(patterns, pattern => value.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+  }
+
+  private static bool HasSecurePostgreSqlSslMode(string connectionString)
+  {
+    return connectionString.Contains("ssl mode=require", StringComparison.OrdinalIgnoreCase)
+      || connectionString.Contains("ssl mode=verifyca", StringComparison.OrdinalIgnoreCase)
+      || connectionString.Contains("ssl mode=verifyfull", StringComparison.OrdinalIgnoreCase);
   }
 
   private static bool IsMissingConfigurationValue(string? value)
