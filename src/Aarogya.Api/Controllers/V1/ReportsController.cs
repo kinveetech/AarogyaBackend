@@ -52,4 +52,51 @@ public sealed class ReportsController(IReportService reportService) : Controller
     var created = await reportService.AddForUserAsync(userSub, request, cancellationToken);
     return Created(new Uri($"/api/v1/reports/{created.ReportId}", UriKind.Relative), created);
   }
+
+  [HttpPost("upload-url")]
+  [ProducesResponseType(typeof(ReportSignedUploadUrlResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> CreateUploadUrlAsync(
+    [FromBody] CreateReportUploadUrlRequest request,
+    CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    var result = await reportService.GetSignedUploadUrlAsync(userSub, request, cancellationToken);
+    return Ok(result);
+  }
+
+  [HttpPost("download-url")]
+  [ProducesResponseType(typeof(ReportSignedDownloadUrlResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> CreateDownloadUrlAsync(
+    [FromBody] CreateReportDownloadUrlRequest request,
+    CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+    try
+    {
+      var result = await reportService.GetSignedDownloadUrlAsync(userSub, request, cancellationToken);
+      return Ok(result);
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["ObjectKey"] = [ex.Message]
+        }));
+    }
+  }
 }

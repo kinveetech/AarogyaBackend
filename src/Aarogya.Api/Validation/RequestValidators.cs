@@ -135,6 +135,35 @@ internal sealed class CreateReportRequestValidator : AbstractValidator<CreateRep
   }
 }
 
+internal sealed class CreateReportUploadUrlRequestValidator : AbstractValidator<CreateReportUploadUrlRequest>
+{
+  private static readonly string[] AllowedContentTypes =
+  [
+    "application/pdf",
+    "application/dicom",
+    "image/jpeg",
+    "image/png"
+  ];
+
+  public CreateReportUploadUrlRequestValidator()
+  {
+    RuleFor(x => x.FileName).NotEmpty().MaximumLength(255);
+    RuleFor(x => x.ContentType)
+      .NotEmpty()
+      .Must(contentType => AllowedContentTypes.Contains(contentType.Trim(), StringComparer.OrdinalIgnoreCase));
+    RuleFor(x => x.ExpiryMinutes).InclusiveBetween(1, 10080).When(x => x.ExpiryMinutes.HasValue);
+  }
+}
+
+internal sealed class CreateReportDownloadUrlRequestValidator : AbstractValidator<CreateReportDownloadUrlRequest>
+{
+  public CreateReportDownloadUrlRequestValidator()
+  {
+    RuleFor(x => x.ObjectKey).NotEmpty().MaximumLength(1024);
+    RuleFor(x => x.ExpiryMinutes).InclusiveBetween(1, 10080).When(x => x.ExpiryMinutes.HasValue);
+  }
+}
+
 internal sealed class CreateAccessGrantRequestValidator : AbstractValidator<CreateAccessGrantRequest>
 {
   public CreateAccessGrantRequestValidator()
