@@ -48,19 +48,24 @@ public static class AuthenticationExtensions
       {
         options.ForwardDefaultSelector = context =>
         {
+          var bearerToken = ExtractBearerToken(context.Request.Headers.Authorization);
+          if (!string.IsNullOrWhiteSpace(bearerToken))
+          {
+            if (hasLocalJwt)
+            {
+              var tokenIssuer = TryReadIssuer(bearerToken);
+              if (string.Equals(tokenIssuer, jwtOptions.Issuer, StringComparison.Ordinal))
+              {
+                return LocalJwtScheme;
+              }
+            }
+
+            return CognitoJwtScheme;
+          }
+
           if (context.Request.Headers.ContainsKey(ApiKeyAuthenticationHandler.HeaderName))
           {
             return ApiKeyScheme;
-          }
-
-          var bearerToken = ExtractBearerToken(context.Request.Headers.Authorization);
-          if (hasLocalJwt && !string.IsNullOrWhiteSpace(bearerToken))
-          {
-            var tokenIssuer = TryReadIssuer(bearerToken);
-            if (string.Equals(tokenIssuer, jwtOptions.Issuer, StringComparison.Ordinal))
-            {
-              return LocalJwtScheme;
-            }
           }
 
           return CognitoJwtScheme;

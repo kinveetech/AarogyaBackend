@@ -78,10 +78,7 @@ internal sealed class InMemoryApiKeyService(
     lock (existing.Sync)
     {
       var overlapUntil = now.AddMinutes(_options.RotationOverlapMinutes);
-      if (existing.ExpiresAt < overlapUntil)
-      {
-        existing.ExpiresAt = overlapUntil;
-      }
+      existing.ExpiresAt = overlapUntil;
 
       var newKeyId = Guid.NewGuid().ToString("N");
       var newApiKey = BuildApiKey();
