@@ -22,6 +22,13 @@ tests/
 ├── Aarogya.Api.Tests/          # API tests
 ├── Aarogya.Domain.Tests/       # Domain tests
 └── Aarogya.Infrastructure.Tests/ # Infrastructure tests
+
+infra/
+└── aws/audit-log-archival/     # AWS policy templates for CloudWatch -> Firehose -> S3 archival
+
+scripts/
+├── install-git-hooks.sh
+└── configure-audit-log-archival.sh # One-time setup script for WS6-3 compliance archival
 ```
 
 ## ⚙️ Current Service Setup
@@ -605,6 +612,20 @@ Request logging:
 Log retention:
 - Staging file logs keep 14 rolling daily files
 - Production file logs keep 30 rolling daily files
+
+### Compliance Archival (WS6-3 / Issue #53)
+
+For DISHA-aligned long-term retention, the repository includes infrastructure artifacts to archive audit logs from CloudWatch Logs into S3 with write-once retention:
+
+- setup script: `scripts/configure-audit-log-archival.sh`
+- policy templates: `infra/aws/audit-log-archival/`
+- runbook: `docs/infrastructure/audit-log-archival.md`
+
+Implemented controls:
+- CloudWatch Logs subscription -> Kinesis Data Firehose -> S3 archive
+- S3 Object Lock default retention in `COMPLIANCE` mode (minimum 2190 days / 6 years)
+- lifecycle transition to Glacier Deep Archive (`DEEP_ARCHIVE`) for cost optimization
+- S3 versioning + public access block + default encryption (AES256 or KMS)
 
 ## 🔍 API Documentation
 

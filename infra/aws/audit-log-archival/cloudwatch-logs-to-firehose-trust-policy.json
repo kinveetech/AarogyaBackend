@@ -1,0 +1,10 @@
+{
+  "Statement": {
+    "Sid": "TrustCloudWatchLogsToPutRecords",
+    "Effect": "Allow",
+    "Principal": {
+      "Service": "logs.${AWS_REGION}.amazonaws.com"
+    },
+    "Action": "sts:AssumeRole"
+  }
+}
