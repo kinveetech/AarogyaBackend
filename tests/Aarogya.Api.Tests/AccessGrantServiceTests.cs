@@ -56,6 +56,7 @@ public sealed class AccessGrantServiceTests
       new CreateAccessGrantRequest("seed-DOCTOR-1", true, null, "care-coordination", null),
       CancellationToken.None);
 
+    result.PatientSub.Should().Be("seed-PATIENT-1");
     result.AllReports.Should().BeTrue();
     result.ReportIds.Should().BeEmpty();
     result.Purpose.Should().Be("care-coordination");
@@ -137,6 +138,79 @@ public sealed class AccessGrantServiceTests
     revoked.Should().BeTrue();
     grant.Status.Should().Be(AccessGrantStatus.Revoked);
     unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+  }
+
+  [Fact]
+  public async Task GetForDoctorAsync_ShouldReturnActiveGrantsAsync()
+  {
+    var now = new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero);
+    var doctor = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-DOCTOR-1", Role = UserRole.Doctor };
+    var patient = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-PATIENT-1", Role = UserRole.Patient };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-DOCTOR-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(doctor);
+
+    var accessGrantRepository = new Mock<IAccessGrantRepository>();
+    accessGrantRepository
+      .Setup(x => x.ListAsync(It.IsAny<ISpecification<AccessGrant>>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(
+      [
+        new AccessGrant
+        {
+          Id = Guid.NewGuid(),
+          Patient = patient,
+          GrantedToUser = doctor,
+          Scope = new Domain.ValueObjects.AccessGrantScope(),
+          GrantReason = "active",
+          StartsAt = now.AddDays(-1),
+          ExpiresAt = now.AddDays(7),
+          Status = AccessGrantStatus.Active
+        }
+      ]);
+
+    var service = new AccessGrantService(
+      userRepository.Object,
+      Mock.Of<IReportRepository>(),
+      accessGrantRepository.Object,
+      Mock.Of<IUnitOfWork>(),
+      Options.Create(new AccessGrantOptions()),
+      new FixedUtcClock(now));
+
+    var result = await service.GetForDoctorAsync("seed-DOCTOR-1", CancellationToken.None);
+
+    result.Should().HaveCount(1);
+    result[0].PatientSub.Should().Be("seed-PATIENT-1");
+    result[0].DoctorSub.Should().Be("seed-DOCTOR-1");
+  }
+
+  [Fact]
+  public async Task CreateAsync_ShouldRejectSelfGrantAsync()
+  {
+    var patient = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-PATIENT-1", Role = UserRole.Patient };
+    var doctor = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-PATIENT-1", Role = UserRole.Doctor };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .SetupSequence(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient)
+      .ReturnsAsync(doctor);
+
+    var service = new AccessGrantService(
+      userRepository.Object,
+      Mock.Of<IReportRepository>(),
+      Mock.Of<IAccessGrantRepository>(),
+      Mock.Of<IUnitOfWork>(),
+      Options.Create(new AccessGrantOptions()),
+      new FixedUtcClock(DateTimeOffset.UtcNow));
+
+    var action = async () => await service.CreateAsync(
+      "seed-PATIENT-1",
+      new CreateAccessGrantRequest("seed-PATIENT-1", true, null, "self", DateTimeOffset.UtcNow.AddDays(2)),
+      CancellationToken.None);
+
+    await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Cannot grant access to self*");
   }
 
   private sealed class FixedUtcClock(DateTimeOffset utcNow) : IUtcClock

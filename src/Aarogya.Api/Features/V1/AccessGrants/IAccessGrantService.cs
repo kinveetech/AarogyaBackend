@@ -10,6 +10,8 @@ public interface IAccessGrantService
 {
   public Task<IReadOnlyList<AccessGrantResponse>> GetForPatientAsync(string patientSub, CancellationToken cancellationToken = default);
 
+  public Task<IReadOnlyList<AccessGrantResponse>> GetForDoctorAsync(string doctorSub, CancellationToken cancellationToken = default);
+
   public Task<AccessGrantResponse> CreateAsync(string patientSub, CreateAccessGrantRequest request, CancellationToken cancellationToken = default);
 
   public Task<bool> RevokeAsync(string patientSub, Guid grantId, CancellationToken cancellationToken = default);

@@ -20,6 +20,7 @@ public sealed record CreateAccessGrantRequest(
   Justification = "Referenced by public API action signature.")]
 public sealed record AccessGrantResponse(
   Guid GrantId,
+  string PatientSub,
   string DoctorSub,
   bool AllReports,
   IReadOnlyList<Guid> ReportIds,

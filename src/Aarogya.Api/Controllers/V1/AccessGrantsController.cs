@@ -12,7 +12,7 @@ namespace Aarogya.Api.Controllers.V1;
 
 [ApiController]
 [Route("api/v1/access-grants")]
-[Authorize(Policy = AarogyaPolicies.Patient)]
+[Authorize(Policy = AarogyaPolicies.AnyRegisteredRole)]
 [EnableRateLimiting(RateLimitPolicyNames.ApiV1)]
 [SuppressMessage(
   "Performance",
@@ -21,6 +21,7 @@ namespace Aarogya.Api.Controllers.V1;
 public sealed class AccessGrantsController(IAccessGrantService accessGrantService) : ControllerBase
 {
   [HttpGet]
+  [Authorize(Policy = AarogyaPolicies.Patient)]
   [ProducesResponseType(typeof(IReadOnlyList<AccessGrantResponse>), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -36,7 +37,25 @@ public sealed class AccessGrantsController(IAccessGrantService accessGrantServic
     return Ok(result);
   }
 
+  [HttpGet("received")]
+  [Authorize(Policy = AarogyaPolicies.Doctor)]
+  [ProducesResponseType(typeof(IReadOnlyList<AccessGrantResponse>), StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public async Task<IActionResult> ListReceivedAccessGrantsAsync(CancellationToken cancellationToken)
+  {
+    var doctorSub = User.GetSubjectOrNull();
+    if (doctorSub is null)
+    {
+      return Unauthorized();
+    }
+
+    var result = await accessGrantService.GetForDoctorAsync(doctorSub, cancellationToken);
+    return Ok(result);
+  }
+
   [HttpPost]
+  [Authorize(Policy = AarogyaPolicies.Patient)]
   [ProducesResponseType(typeof(AccessGrantResponse), StatusCodes.Status201Created)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -68,6 +87,7 @@ public sealed class AccessGrantsController(IAccessGrantService accessGrantServic
   }
 
   [HttpDelete("{grantId:guid}")]
+  [Authorize(Policy = AarogyaPolicies.Patient)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
