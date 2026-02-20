@@ -7,6 +7,7 @@ using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Endpoints;
 using Aarogya.Api.Features.V1;
+using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Health;
 using Aarogya.Api.RateLimiting;
@@ -94,6 +95,11 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptionsWithValidateOnStart<SmsNotificationsOptions>()
+  .BindConfiguration(SmsNotificationsOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<AccessGrantOptions>()
   .BindConfiguration(AccessGrantOptions.SectionName)
   .ValidateDataAnnotations();
@@ -153,6 +159,7 @@ builder.Services.AddHttpClient(CognitoOAuthTokenClient.HttpClientName, client =>
   client.Timeout = TimeSpan.FromSeconds(10);
 });
 builder.Services.AddSingleton<IUtcClock, SystemUtcClock>();
+builder.Services.AddSingleton<ISmsSender, MockSmsSender>();
 builder.Services.AddSingleton<IPhoneOtpSender, MockPhoneOtpSender>();
 builder.Services.AddSingleton<IPhoneOtpService, InMemoryPhoneOtpService>();
 builder.Services.AddSingleton<IApiKeyService, InMemoryApiKeyService>();

@@ -20,6 +20,7 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddSingleton<IReportVirusScanner, ClamAvReportVirusScanner>();
     services.AddScoped<ITransactionalEmailNotificationService, TransactionalEmailNotificationService>();
     services.AddScoped<ITransactionalEmailSender, SesTransactionalEmailSender>();
+    services.AddScoped<ICriticalSmsNotificationService, CriticalSmsNotificationService>();
     services.AddScoped<IPatientNotificationService, LoggingPatientNotificationService>();
     services.AddSingleton<IDeviceTokenRegistry, InMemoryDeviceTokenRegistry>();
     services.AddScoped<IPushNotificationService, PushNotificationService>();

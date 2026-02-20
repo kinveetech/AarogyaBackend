@@ -15,7 +15,7 @@ public interface IPhoneOtpService
 
 internal interface IPhoneOtpSender
 {
-  public Task SendOtpAsync(string phoneNumber, string otp, DateTimeOffset expiresAt, CancellationToken cancellationToken = default);
+  public Task<OtpDispatchResult> SendOtpAsync(string phoneNumber, string otp, DateTimeOffset expiresAt, CancellationToken cancellationToken = default);
 }
 
 internal interface IUtcClock
@@ -44,4 +44,9 @@ public sealed record OtpRequestResult(
   Justification = "Returned by a public service contract used by API controller.")]
 public sealed record OtpVerificationResult(
   bool Success,
+  string Message);
+
+internal sealed record OtpDispatchResult(
+  bool Sent,
+  bool IsRateLimited,
   string Message);

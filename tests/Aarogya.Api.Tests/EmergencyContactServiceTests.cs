@@ -46,6 +46,7 @@ public sealed class EmergencyContactServiceTests
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
       Mock.Of<ITransactionalEmailNotificationService>(),
+      Mock.Of<ICriticalSmsNotificationService>(),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero)));
 
     var response = await service.AddForUserAsync(
@@ -90,6 +91,7 @@ public sealed class EmergencyContactServiceTests
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
       Mock.Of<ITransactionalEmailNotificationService>(),
+      Mock.Of<ICriticalSmsNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var action = async () => await service.AddForUserAsync(
@@ -135,6 +137,7 @@ public sealed class EmergencyContactServiceTests
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
       Mock.Of<ITransactionalEmailNotificationService>(),
+      Mock.Of<ICriticalSmsNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var updated = await service.UpdateForUserAsync(
@@ -174,6 +177,7 @@ public sealed class EmergencyContactServiceTests
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
       Mock.Of<ITransactionalEmailNotificationService>(),
+      Mock.Of<ICriticalSmsNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var deleted = await service.DeleteForUserAsync("seed-PATIENT-1", Guid.NewGuid(), CancellationToken.None);
@@ -202,6 +206,7 @@ public sealed class EmergencyContactServiceTests
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAuditLoggingService>(),
       Mock.Of<ITransactionalEmailNotificationService>(),
+      Mock.Of<ICriticalSmsNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var action = async () => await service.AddForUserAsync(
@@ -249,6 +254,7 @@ public sealed class EmergencyContactServiceTests
       unitOfWork.Object,
       Mock.Of<IAuditLoggingService>(),
       Mock.Of<ITransactionalEmailNotificationService>(),
+      Mock.Of<ICriticalSmsNotificationService>(),
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var deleted = await service.DeleteForUserAsync("seed-PATIENT-1", contact.Id, CancellationToken.None);

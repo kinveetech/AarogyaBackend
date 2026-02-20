@@ -54,6 +54,23 @@ public sealed class InMemoryPhoneOtpServiceTests
   }
 
   [Fact]
+  public async Task RequestOtpAsync_ShouldReturnRateLimited_WhenSmsSenderRateLimitsAsync()
+  {
+    var clock = new FakeClock(new DateTimeOffset(2026, 02, 19, 0, 0, 0, TimeSpan.Zero));
+    var sender = new FakePhoneOtpSender
+    {
+      ForceRateLimit = true
+    };
+    var service = CreateService(clock, sender);
+
+    var result = await service.RequestOtpAsync("+919876543210");
+
+    result.Success.Should().BeFalse();
+    result.IsRateLimited.Should().BeTrue();
+    result.Message.Should().Contain("Too many OTP SMS requests");
+  }
+
+  [Fact]
   public async Task VerifyOtpAsync_ShouldSucceed_WithinExpiryWindowAsync()
   {
     var clock = new FakeClock(new DateTimeOffset(2026, 02, 19, 0, 0, 0, TimeSpan.Zero));
@@ -113,11 +130,21 @@ public sealed class InMemoryPhoneOtpServiceTests
   private sealed class FakePhoneOtpSender : IPhoneOtpSender
   {
     public List<(string PhoneNumber, string Otp, DateTimeOffset ExpiresAt)> Messages { get; } = [];
+    public bool ForceRateLimit { get; set; }
 
-    public Task SendOtpAsync(string phoneNumber, string otp, DateTimeOffset expiresAt, CancellationToken cancellationToken = default)
+    public Task<OtpDispatchResult> SendOtpAsync(
+      string phoneNumber,
+      string otp,
+      DateTimeOffset expiresAt,
+      CancellationToken cancellationToken = default)
     {
+      if (ForceRateLimit)
+      {
+        return Task.FromResult(new OtpDispatchResult(false, true, "Too many OTP SMS requests. Please try again later."));
+      }
+
       Messages.Add((phoneNumber, otp, expiresAt));
-      return Task.CompletedTask;
+      return Task.FromResult(new OtpDispatchResult(true, false, "OTP sent successfully."));
     }
   }
 }

@@ -15,6 +15,7 @@ internal sealed class EmergencyContactService(
   IUnitOfWork unitOfWork,
   IAuditLoggingService auditLoggingService,
   ITransactionalEmailNotificationService transactionalEmailNotificationService,
+  ICriticalSmsNotificationService criticalSmsNotificationService,
   IUtcClock clock)
   : IEmergencyContactService
 {
@@ -82,6 +83,11 @@ internal sealed class EmergencyContactService(
       contact,
       "created",
       cancellationToken);
+    await criticalSmsNotificationService.SendEmergencyAccessEventAsync(
+      patient,
+      contact,
+      "created",
+      cancellationToken);
     return Map(contact);
   }
 
@@ -122,6 +128,11 @@ internal sealed class EmergencyContactService(
       contact,
       "updated",
       cancellationToken);
+    await criticalSmsNotificationService.SendEmergencyAccessEventAsync(
+      patient,
+      contact,
+      "updated",
+      cancellationToken);
     return Map(contact);
   }
 
@@ -147,6 +158,11 @@ internal sealed class EmergencyContactService(
       cancellationToken: cancellationToken);
 
     await transactionalEmailNotificationService.SendEmergencyAccessEventAsync(
+      patient,
+      contact,
+      "deleted",
+      cancellationToken);
+    await criticalSmsNotificationService.SendEmergencyAccessEventAsync(
       patient,
       contact,
       "deleted",
