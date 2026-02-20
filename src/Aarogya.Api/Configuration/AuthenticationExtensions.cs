@@ -1,10 +1,16 @@
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Aarogya.Api.Configuration;
 
 public static class AuthenticationExtensions
 {
+  private const string CognitoJwtScheme = "CognitoJwt";
+  private const string LocalJwtScheme = "LocalJwt";
+
   public static IServiceCollection AddCognitoJwtAuthentication(
     this IServiceCollection services,
     IConfiguration configuration)
@@ -26,9 +32,33 @@ public static class AuthenticationExtensions
     }
 
     var issuer = ResolveCognitoIssuer(awsOptions);
+    var jwtOptions = new JwtOptions();
+    configuration.GetSection(JwtOptions.SectionName).Bind(jwtOptions);
+    var hasLocalJwt = HasLocalJwtConfiguration(jwtOptions);
 
-    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-      .AddJwtBearer(options =>
+    services.AddAuthentication(options =>
+      {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+      })
+      .AddPolicyScheme(JwtBearerDefaults.AuthenticationScheme, "Bearer token selector", options =>
+      {
+        options.ForwardDefaultSelector = context =>
+        {
+          var bearerToken = ExtractBearerToken(context.Request.Headers.Authorization);
+          if (hasLocalJwt && !string.IsNullOrWhiteSpace(bearerToken))
+          {
+            var tokenIssuer = TryReadIssuer(bearerToken);
+            if (string.Equals(tokenIssuer, jwtOptions.Issuer, StringComparison.Ordinal))
+            {
+              return LocalJwtScheme;
+            }
+          }
+
+          return CognitoJwtScheme;
+        };
+      })
+      .AddJwtBearer(CognitoJwtScheme, options =>
       {
         options.MapInboundClaims = false;
         options.Authority = issuer;
@@ -46,6 +76,29 @@ public static class AuthenticationExtensions
           RoleClaimType = "cognito:groups"
         };
       });
+
+    if (hasLocalJwt)
+    {
+      services.AddAuthentication()
+        .AddJwtBearer(LocalJwtScheme, options =>
+        {
+          options.MapInboundClaims = false;
+          options.RequireHttpsMetadata = false;
+
+          options.TokenValidationParameters = new TokenValidationParameters
+          {
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+            NameClaimType = "sub",
+            RoleClaimType = "role"
+          };
+        });
+    }
 
     return services;
   }
@@ -82,6 +135,52 @@ public static class AuthenticationExtensions
 
     return !awsOptions.UseLocalStack
       && !issuer.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+  }
+
+  private static bool HasLocalJwtConfiguration(JwtOptions jwtOptions)
+  {
+    if (string.IsNullOrWhiteSpace(jwtOptions.Key)
+      || string.IsNullOrWhiteSpace(jwtOptions.Issuer)
+      || string.IsNullOrWhiteSpace(jwtOptions.Audience))
+    {
+      return false;
+    }
+
+    if (jwtOptions.Key.Contains("SET_VIA", StringComparison.OrdinalIgnoreCase))
+    {
+      return false;
+    }
+
+    return jwtOptions.Key.Length >= 32;
+  }
+
+  private static string? TryReadIssuer(string token)
+  {
+    var handler = new JsonWebTokenHandler();
+    if (!handler.CanReadToken(token))
+    {
+      return null;
+    }
+
+    var jsonToken = handler.ReadJsonWebToken(token);
+    return jsonToken.Issuer;
+  }
+
+  private static string? ExtractBearerToken(StringValues authorizationHeader)
+  {
+    if (StringValues.IsNullOrEmpty(authorizationHeader))
+    {
+      return null;
+    }
+
+    var header = authorizationHeader.ToString();
+    const string bearerPrefix = "Bearer ";
+    if (!header.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+    {
+      return null;
+    }
+
+    return header[bearerPrefix.Length..].Trim();
   }
 
   private static bool IsPlaceholderValue(string? value)

@@ -29,6 +29,10 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptions<JwtOptions>()
+  .BindConfiguration(JwtOptions.SectionName);
+
+builder.Services
   .AddOptionsWithValidateOnStart<RedisOptions>()
   .BindConfiguration(RedisOptions.SectionName)
   .ValidateDataAnnotations();
@@ -47,6 +51,11 @@ builder.Services
   .BindConfiguration(OtpOptions.SectionName)
   .ValidateDataAnnotations();
 
+builder.Services
+  .AddOptionsWithValidateOnStart<PkceOptions>()
+  .BindConfiguration(PkceOptions.SectionName)
+  .ValidateDataAnnotations();
+
 // Add Infrastructure services (DbContext, health checks, etc.)
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -57,6 +66,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSingleton<IUtcClock, SystemUtcClock>();
 builder.Services.AddSingleton<IPhoneOtpSender, MockPhoneOtpSender>();
 builder.Services.AddSingleton<IPhoneOtpService, InMemoryPhoneOtpService>();
+builder.Services.AddSingleton<IPkceAuthorizationService, InMemoryPkceAuthorizationService>();
 
 // Configure Swagger
 builder.Services.AddSwaggerGen(c =>
