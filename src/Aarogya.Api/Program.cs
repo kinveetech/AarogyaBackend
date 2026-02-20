@@ -56,6 +56,11 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptionsWithValidateOnStart<EntityCacheOptions>()
+  .BindConfiguration(EntityCacheOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<CorsOptions>()
   .BindConfiguration(CorsOptions.SectionName);
 

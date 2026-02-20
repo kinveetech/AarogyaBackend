@@ -1,5 +1,6 @@
 using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
+using Aarogya.Api.Caching;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Security;
@@ -21,7 +22,8 @@ internal sealed class EmergencyAccessService(
   ICriticalSmsNotificationService criticalSmsNotificationService,
   IPushNotificationService pushNotificationService,
   IOptions<EmergencyAccessOptions> options,
-  IUtcClock clock)
+  IUtcClock clock,
+  IEntityCacheService? cacheService = null)
   : IEmergencyAccessService
 {
   private readonly EmergencyAccessOptions _options = options.Value;
@@ -78,6 +80,11 @@ internal sealed class EmergencyAccessService(
 
     await accessGrantRepository.AddAsync(grant, cancellationToken);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    if (cacheService is not null)
+    {
+      await cacheService.BumpNamespaceVersionAsync(EntityCacheNamespaces.AccessGrantListings, cancellationToken);
+      await cacheService.BumpNamespaceVersionAsync(EntityCacheNamespaces.ReportListings, cancellationToken);
+    }
 
     await auditLoggingService.LogDataAccessAsync(
       patient,

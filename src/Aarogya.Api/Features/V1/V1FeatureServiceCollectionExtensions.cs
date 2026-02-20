@@ -1,3 +1,4 @@
+using Aarogya.Api.Caching;
 using Aarogya.Api.Features.V1.AccessGrants;
 using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.EmergencyAccess;
@@ -12,8 +13,11 @@ internal static class V1FeatureServiceCollectionExtensions
 {
   public static IServiceCollection AddV1FeatureServices(this IServiceCollection services)
   {
-    services.AddScoped<IUserProfileService, UserProfileService>();
-    services.AddScoped<IReportService, ReportService>();
+    services.AddSingleton<IEntityCacheService, DistributedEntityCacheService>();
+    services.AddScoped<UserProfileService>();
+    services.AddScoped<IUserProfileService, CachedUserProfileService>();
+    services.AddScoped<ReportService>();
+    services.AddScoped<IReportService, CachedReportService>();
     services.AddScoped<ICloudFrontInvalidationService, CloudFrontInvalidationService>();
     services.AddScoped<IReportFileUploadService, S3ReportFileUploadService>();
     services.AddScoped<IReportChecksumVerificationService, S3ReportChecksumVerificationService>();
@@ -35,7 +39,8 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddHostedService<ClamAvDefinitionsUpdaterHostedService>();
     services.AddHostedService<ReportHardDeleteHostedService>();
     services.AddHostedService<EmergencyAccessExpiryHostedService>();
-    services.AddScoped<IAccessGrantService, AccessGrantService>();
+    services.AddScoped<AccessGrantService>();
+    services.AddScoped<IAccessGrantService, CachedAccessGrantService>();
     services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
     services.AddScoped<IEmergencyAccessAuditTrailService, EmergencyAccessAuditTrailService>();
     services.AddScoped<IEmergencyContactService, EmergencyContactService>();
