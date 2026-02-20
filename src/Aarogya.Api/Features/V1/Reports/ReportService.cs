@@ -17,6 +17,7 @@ namespace Aarogya.Api.Features.V1.Reports;
 internal sealed class ReportService(
   IAmazonS3 s3Client,
   IUserRepository userRepository,
+  IAccessGrantRepository accessGrantRepository,
   IReportRepository reportRepository,
   IUnitOfWork unitOfWork,
   IOptions<AwsOptions> awsOptions,
@@ -25,33 +26,90 @@ internal sealed class ReportService(
 {
   private readonly AwsOptions _awsOptions = awsOptions.Value;
 
-  public async Task<IReadOnlyList<ReportSummaryResponse>> GetForUserAsync(
+  public async Task<ReportListResponse> GetForUserAsync(
     string userSub,
+    ReportListQueryRequest request,
     CancellationToken cancellationToken = default)
   {
+    ArgumentNullException.ThrowIfNull(request);
     var user = await userRepository.GetByExternalAuthIdAsync(userSub, cancellationToken)
       ?? throw new InvalidOperationException("Authenticated user is not provisioned in the database.");
 
-    IReadOnlyList<Report> reports;
+    var reportTypeFilter = TryParseReportTypeOrNull(request.ReportType);
+    var statusFilter = TryParseStatusOrNull(request.Status);
+
+    IReadOnlyList<Report> accessibleReports;
     if (user.Role == UserRole.LabTechnician)
     {
-      // For lab users, show reports they uploaded.
-      reports = await reportRepository.ListAsync(
+      accessibleReports = await reportRepository.ListAsync(
         new ReportsByUploaderSpecification(user.Id),
         cancellationToken);
     }
+    else if (user.Role == UserRole.Doctor)
+    {
+      var now = clock.UtcNow;
+      var grants = await accessGrantRepository.ListAsync(
+        new ActiveAccessGrantsForDoctorSpecification(user.Id, now),
+        cancellationToken);
+
+      if (grants.Count == 0)
+      {
+        return new ReportListResponse(request.Page, request.PageSize, 0, []);
+      }
+
+      var patientIds = grants.Select(grant => grant.PatientId).Distinct().ToArray();
+      var allowedReportTypes = grants
+        .SelectMany(grant => grant.Scope.AllowedReportTypes)
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Select(value => value.Trim())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+      var allGrantedReports = new List<Report>();
+      foreach (var patientId in patientIds)
+      {
+        var patientReports = await reportRepository.ListByPatientAsync(patientId, cancellationToken);
+        allGrantedReports.AddRange(patientReports);
+      }
+
+      accessibleReports = allGrantedReports
+        .GroupBy(report => report.Id)
+        .Select(group => group.First())
+        .Where(report =>
+          allowedReportTypes.Length == 0
+          || Array.Exists(allowedReportTypes, allowed =>
+            allowed.Equals(ToReportTypeCode(report.ReportType), StringComparison.OrdinalIgnoreCase)))
+        .ToArray();
+    }
     else
     {
-      reports = await reportRepository.ListByPatientAsync(user.Id, cancellationToken);
+      accessibleReports = await reportRepository.ListByPatientAsync(user.Id, cancellationToken);
     }
 
-    return reports
+    var filtered = accessibleReports
+      .Where(report => !reportTypeFilter.HasValue || report.ReportType == reportTypeFilter.Value)
+      .Where(report => !statusFilter.HasValue || report.Status == statusFilter.Value)
+      .Where(report => !request.FromDate.HasValue || report.UploadedAt >= request.FromDate.Value)
+      .Where(report => !request.ToDate.HasValue || report.UploadedAt <= request.ToDate.Value)
+      .OrderByDescending(report => report.UploadedAt)
+      .ThenByDescending(report => report.CreatedAt)
+      .ToArray();
+
+    var totalCount = filtered.Length;
+    var page = Math.Max(1, request.Page);
+    var pageSize = Math.Clamp(request.PageSize, 1, 100);
+    var skip = (page - 1) * pageSize;
+    var paged = filtered.Skip(skip).Take(pageSize);
+
+    var items = paged
       .Select(report => new ReportSummaryResponse(
         report.Id,
         BuildSummaryTitle(report),
         ToStatusString(report.Status),
         report.CreatedAt))
       .ToArray();
+
+    return new ReportListResponse(page, pageSize, totalCount, items);
   }
 
   public async Task<ReportSummaryResponse> AddForUserAsync(
@@ -347,6 +405,57 @@ internal sealed class ReportService(
     }
 
     throw new InvalidOperationException("Unsupported report type.");
+  }
+
+  private static ReportType? TryParseReportTypeOrNull(string? value)
+  {
+    if (string.IsNullOrWhiteSpace(value))
+    {
+      return null;
+    }
+
+    return ParseReportType(value);
+  }
+
+  private static ReportStatus? TryParseStatusOrNull(string? value)
+  {
+    if (string.IsNullOrWhiteSpace(value))
+    {
+      return null;
+    }
+
+    var normalized = value.Trim();
+    if (normalized.Equals("draft", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Draft;
+    }
+
+    if (normalized.Equals("uploaded", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Uploaded;
+    }
+
+    if (normalized.Equals("processing", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Processing;
+    }
+
+    if (normalized.Equals("validated", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Validated;
+    }
+
+    if (normalized.Equals("published", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Published;
+    }
+
+    if (normalized.Equals("archived", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Archived;
+    }
+
+    throw new InvalidOperationException("Unsupported report status.");
   }
 
   private static string ToStatusString(ReportStatus status)

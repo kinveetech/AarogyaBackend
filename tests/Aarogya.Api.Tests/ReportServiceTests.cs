@@ -53,6 +53,7 @@ public sealed class ReportServiceTests
     var service = new ReportService(
       s3Client.Object,
       userRepository.Object,
+      Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
       unitOfWork.Object,
       Options.Create(CreateAwsOptions()),
@@ -95,6 +96,7 @@ public sealed class ReportServiceTests
     var service = new ReportService(
       Mock.Of<IAmazonS3>(),
       userRepository.Object,
+      Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IReportRepository>(),
       Mock.Of<IUnitOfWork>(),
       Options.Create(CreateAwsOptions()),

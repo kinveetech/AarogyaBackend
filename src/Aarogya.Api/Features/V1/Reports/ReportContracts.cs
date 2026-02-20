@@ -41,6 +41,28 @@ public sealed record ReportSummaryResponse(Guid ReportId, string Title, string S
 [SuppressMessage(
   "Performance",
   "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for query binding.")]
+public sealed record ReportListQueryRequest(
+  string? ReportType = null,
+  string? Status = null,
+  DateTimeOffset? FromDate = null,
+  DateTimeOffset? ToDate = null,
+  int Page = 1,
+  int PageSize = 20);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record ReportListResponse(
+  int Page,
+  int PageSize,
+  int TotalCount,
+  IReadOnlyList<ReportSummaryResponse> Items);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
   Justification = "Referenced by public API action signature.")]
 public sealed record CreateReportUploadUrlRequest(
   string FileName,
