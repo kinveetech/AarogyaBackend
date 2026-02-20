@@ -1,4 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
+using System.Text;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Features.V1.Common;
 using Aarogya.Api.Features.V1.Consents;
@@ -8,6 +10,7 @@ using Aarogya.Api.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Net.Http.Headers;
 
 namespace Aarogya.Api.Controllers.V1;
 
@@ -25,6 +28,8 @@ namespace Aarogya.Api.Controllers.V1;
   Justification = "This controller groups related report operations intentionally to keep route discovery cohesive.")]
 public sealed class ReportsController : ControllerBase
 {
+  private const string ReportListCacheControlValue = "private, max-age=30, must-revalidate";
+
   private readonly IReportService _reportService;
   private readonly IReportFileUploadService _reportFileUploadService;
   private readonly IReportChecksumVerificationService _reportChecksumVerificationService;
@@ -109,6 +114,14 @@ public sealed class ReportsController : ControllerBase
     {
       await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
       var result = await _reportService.GetForUserAsync(userSub, request, cancellationToken);
+      var etag = BuildReportListEtag(userSub, request, result);
+      SetReportListCachingHeaders(etag);
+
+      if (MatchesIfNoneMatch(etag))
+      {
+        return StatusCode(StatusCodes.Status304NotModified);
+      }
+
       return Ok(result);
     }
     catch (ConsentRequiredException ex)
@@ -361,5 +374,74 @@ public sealed class ReportsController : ControllerBase
         {
           ["consent"] = [$"Consent for purpose '{purpose}' is required."]
         }));
+  }
+
+  private void SetReportListCachingHeaders(string etag)
+  {
+    Response.Headers[HeaderNames.ETag] = etag;
+    Response.Headers[HeaderNames.CacheControl] = ReportListCacheControlValue;
+    Response.Headers[HeaderNames.Vary] = HeaderNames.Authorization;
+  }
+
+  private bool MatchesIfNoneMatch(string etag)
+  {
+    if (!Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var values))
+    {
+      return false;
+    }
+
+    foreach (var rawValue in values)
+    {
+      if (string.IsNullOrWhiteSpace(rawValue))
+      {
+        continue;
+      }
+
+      if (string.Equals(rawValue.Trim(), "*", StringComparison.Ordinal))
+      {
+        return true;
+      }
+
+      foreach (var token in rawValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+      {
+        var normalized = token.StartsWith("W/", StringComparison.OrdinalIgnoreCase)
+          ? token[2..].Trim()
+          : token.Trim();
+        if (string.Equals(normalized, etag, StringComparison.Ordinal))
+        {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private static string BuildReportListEtag(
+    string userSub,
+    ReportListQueryRequest request,
+    ReportListResponse response)
+  {
+    var builder = new StringBuilder();
+    builder.Append(userSub);
+    builder.Append('|').Append(request.ReportType);
+    builder.Append('|').Append(request.Status);
+    builder.Append('|').Append(request.FromDate?.ToUniversalTime().ToString("O"));
+    builder.Append('|').Append(request.ToDate?.ToUniversalTime().ToString("O"));
+    builder.Append('|').Append(response.Page);
+    builder.Append('|').Append(response.PageSize);
+    builder.Append('|').Append(response.TotalCount);
+
+    foreach (var item in response.Items)
+    {
+      builder.Append('|').Append(item.ReportId.ToString("D"));
+      builder.Append('|').Append(item.Title);
+      builder.Append('|').Append(item.Status);
+      builder.Append('|').Append(item.CreatedAt.ToUniversalTime().ToString("O"));
+    }
+
+    var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString()));
+    var hash = Convert.ToHexString(hashBytes);
+    return $"\"{hash}\"";
   }
 }

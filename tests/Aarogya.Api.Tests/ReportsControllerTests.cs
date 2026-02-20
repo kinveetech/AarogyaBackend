@@ -6,6 +6,7 @@ using Aarogya.Api.Validation;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using Moq;
 using Xunit;
 
@@ -113,6 +114,49 @@ public sealed class ReportsControllerTests
 
     var ok = result.Should().BeOfType<OkObjectResult>().Subject;
     ok.Value.Should().BeEquivalentTo(expected);
+    controller.Response.Headers[HeaderNames.ETag].ToString().Should().NotBeNullOrWhiteSpace();
+    controller.Response.Headers[HeaderNames.CacheControl].ToString().Should().Contain("private");
+  }
+
+  [Fact]
+  public async Task ListReportsAsync_ShouldReturnNotModified_WhenIfNoneMatchMatchesAsync()
+  {
+    var expected = new ReportListResponse(
+      Page: 1,
+      PageSize: 20,
+      TotalCount: 1,
+      Items:
+      [
+        new ReportSummaryResponse(
+          Guid.NewGuid(),
+          "blood_test - Aarogya Diagnostics",
+          "uploaded",
+          new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero))
+      ]);
+
+    var reportService = new Mock<IReportService>();
+    reportService
+      .Setup(x => x.GetForUserAsync("seed-PATIENT-1", It.IsAny<ReportListQueryRequest>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(expected);
+
+    var controller = CreateController(
+      user: CreateUser("seed-PATIENT-1"),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: reportService.Object,
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    _ = await controller.ListReportsAsync(new ReportListQueryRequest(), CancellationToken.None);
+    var etag = controller.Response.Headers[HeaderNames.ETag].ToString();
+    etag.Should().NotBeNullOrWhiteSpace();
+
+    controller.Response.Headers.Clear();
+    controller.Request.Headers[HeaderNames.IfNoneMatch] = etag;
+
+    var secondResult = await controller.ListReportsAsync(new ReportListQueryRequest(), CancellationToken.None);
+
+    var status = secondResult.Should().BeOfType<StatusCodeResult>().Subject;
+    status.StatusCode.Should().Be(StatusCodes.Status304NotModified);
+    controller.Response.Headers[HeaderNames.ETag].ToString().Should().Be(etag);
   }
 
   [Fact]

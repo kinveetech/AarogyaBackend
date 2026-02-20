@@ -162,6 +162,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<OtpRequestCommandValidator>(includeInternalTypes: true);
 builder.Services.AddMemoryCache();
+builder.Services.AddResponseCaching();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient(CognitoOAuthTokenClient.HttpClientName, client =>
@@ -262,6 +263,7 @@ if (!app.Environment.IsDevelopment())
   app.UseHsts();
 }
 app.UseCors("AarogyaPolicy");
+app.UseResponseCaching();
 app.UseAuthentication();
 if (rateLimitingOptions.EnableRateLimiting)
 {
