@@ -176,6 +176,81 @@ public sealed class EmergencyContactServiceTests
     deleted.Should().BeFalse();
   }
 
+  [Fact]
+  public async Task AddForUserAsync_ShouldRejectNonPatientUserAsync()
+  {
+    var doctor = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-DOCTOR-1",
+      Role = UserRole.Doctor
+    };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-DOCTOR-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(doctor);
+
+    var service = new EmergencyContactService(
+      userRepository.Object,
+      Mock.Of<IEmergencyContactRepository>(),
+      Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
+      new FixedUtcClock(DateTimeOffset.UtcNow));
+
+    var action = async () => await service.AddForUserAsync(
+      "seed-DOCTOR-1",
+      new CreateEmergencyContactRequest("Kin One", "+919876543210", "brother"),
+      CancellationToken.None);
+
+    await action.Should().ThrowAsync<InvalidOperationException>()
+      .WithMessage("*Only patient users can manage emergency contacts*");
+  }
+
+  [Fact]
+  public async Task DeleteForUserAsync_ShouldDeleteContact_WhenFoundAsync()
+  {
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient
+    };
+
+    var contact = new EmergencyContact
+    {
+      Id = Guid.NewGuid(),
+      UserId = patient.Id,
+      Name = "Kin One",
+      Phone = "+919876543210",
+      Relationship = "brother"
+    };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    var emergencyContactRepository = new Mock<IEmergencyContactRepository>();
+    emergencyContactRepository
+      .Setup(x => x.FirstOrDefaultAsync(It.IsAny<ISpecification<EmergencyContact>>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(contact);
+
+    var unitOfWork = new Mock<IUnitOfWork>();
+    var service = new EmergencyContactService(
+      userRepository.Object,
+      emergencyContactRepository.Object,
+      unitOfWork.Object,
+      Mock.Of<IAuditLoggingService>(),
+      new FixedUtcClock(DateTimeOffset.UtcNow));
+
+    var deleted = await service.DeleteForUserAsync("seed-PATIENT-1", contact.Id, CancellationToken.None);
+
+    deleted.Should().BeTrue();
+    emergencyContactRepository.Verify(x => x.Delete(contact), Times.Once);
+    unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+  }
+
   private sealed class FixedUtcClock(DateTimeOffset utcNow) : IUtcClock
   {
     public DateTimeOffset UtcNow { get; } = utcNow;

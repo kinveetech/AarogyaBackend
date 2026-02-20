@@ -131,6 +131,94 @@ public sealed class ConsentServiceTests
     result.Should().Contain(x => x.Purpose == ConsentPurposeCatalog.MedicalRecordsProcessing && !x.IsGranted);
   }
 
+  [Fact]
+  public async Task UpsertForUserAsync_ShouldDefaultSourceToApi_WhenSourceIsBlankAsync()
+  {
+    var user = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-user-1" };
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId!, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(user);
+
+    ConsentRecord? created = null;
+    var consentRepository = new Mock<IConsentRecordRepository>();
+    consentRepository
+      .Setup(x => x.AddAsync(It.IsAny<ConsentRecord>(), It.IsAny<CancellationToken>()))
+      .Callback<ConsentRecord, CancellationToken>((record, _) => created = record)
+      .Returns(Task.CompletedTask);
+
+    var service = new ConsentService(
+      userRepository.Object,
+      consentRepository.Object,
+      Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
+      new FixedUtcClock(DateTimeOffset.UtcNow));
+
+    var result = await service.UpsertForUserAsync(
+      user.ExternalAuthId!,
+      ConsentPurposeCatalog.MedicalDataSharing,
+      new UpsertConsentRequest(true, "   "),
+      CancellationToken.None);
+
+    result.Source.Should().Be("api");
+    created.Should().NotBeNull();
+    created!.Source.Should().Be("api");
+  }
+
+  [Fact]
+  public async Task EnsureGrantedAsync_ShouldNotThrow_WhenConsentExistsAsync()
+  {
+    var user = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-user-1" };
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId!, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(user);
+
+    var consentRepository = new Mock<IConsentRecordRepository>();
+    consentRepository
+      .Setup(x => x.IsGrantedAsync(user.Id, ConsentPurposeCatalog.ProfileManagement, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(true);
+
+    var service = new ConsentService(
+      userRepository.Object,
+      consentRepository.Object,
+      Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
+      new FixedUtcClock(DateTimeOffset.UtcNow));
+
+    var action = async () => await service.EnsureGrantedAsync(
+      user.ExternalAuthId!,
+      ConsentPurposeCatalog.ProfileManagement,
+      CancellationToken.None);
+
+    await action.Should().NotThrowAsync();
+  }
+
+  [Fact]
+  public async Task EnsureGrantedAsync_ShouldRejectUnsupportedPurposeAsync()
+  {
+    var user = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-user-1" };
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId!, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(user);
+
+    var service = new ConsentService(
+      userRepository.Object,
+      Mock.Of<IConsentRecordRepository>(),
+      Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAuditLoggingService>(),
+      new FixedUtcClock(DateTimeOffset.UtcNow));
+
+    var action = async () => await service.EnsureGrantedAsync(
+      user.ExternalAuthId!,
+      "unsupported-purpose",
+      CancellationToken.None);
+
+    await action.Should().ThrowAsync<InvalidOperationException>()
+      .WithMessage("*Unsupported consent purpose*");
+  }
+
   private sealed class FixedUtcClock(DateTimeOffset utcNow) : IUtcClock
   {
     public DateTimeOffset UtcNow { get; } = utcNow;
