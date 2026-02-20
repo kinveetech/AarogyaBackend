@@ -3,6 +3,7 @@ using Aarogya.Api.Features.V1.Users;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
+using Aarogya.Infrastructure.Aadhaar;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -34,10 +35,11 @@ public sealed class UserProfileServiceTests
     repository.Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>())).ReturnsAsync(user);
 
     var unitOfWork = new Mock<IUnitOfWork>();
+    var aadhaarVaultService = new Mock<IAadhaarVaultService>();
 
     var clock = new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 9, 0, 0, TimeSpan.Zero));
 
-    var service = new UserProfileService(repository.Object, unitOfWork.Object, clock);
+    var service = new UserProfileService(repository.Object, unitOfWork.Object, aadhaarVaultService.Object, clock);
 
     var response = await service.UpdateCurrentUserAsync(
       "seed-PATIENT-1",
@@ -75,11 +77,88 @@ public sealed class UserProfileServiceTests
     var service = new UserProfileService(
       repository.Object,
       Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAadhaarVaultService>(),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 9, 0, 0, TimeSpan.Zero)));
 
     var action = async () => await service.GetCurrentUserAsync("missing-sub", CancellationToken.None);
 
     await action.Should().ThrowAsync<KeyNotFoundException>();
+  }
+
+  [Fact]
+  public async Task VerifyCurrentUserAadhaarAsync_ShouldPersistReferenceTokenAndHashAsync()
+  {
+    var user = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient,
+      FirstName = "Before",
+      LastName = "Patient",
+      Email = "before@aarogya.dev"
+    };
+
+    var repository = new Mock<IUserRepository>();
+    repository.Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+    var unitOfWork = new Mock<IUnitOfWork>();
+    var aadhaarVaultService = new Mock<IAadhaarVaultService>();
+    var referenceToken = Guid.NewGuid();
+    aadhaarVaultService
+      .Setup(x => x.VerifyAndCreateReferenceTokenAsync("123456789012", user.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new AadhaarVerificationResult(
+        referenceToken,
+        false,
+        "LOCAL",
+        new MockAadhaarDemographics("Verified Holder", null, "F", "India"),
+        "request-1"));
+
+    var clock = new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 9, 0, 0, TimeSpan.Zero));
+    var service = new UserProfileService(repository.Object, unitOfWork.Object, aadhaarVaultService.Object, clock);
+
+    var response = await service.VerifyCurrentUserAadhaarAsync(
+      "seed-PATIENT-1",
+      new VerifyAadhaarRequest("123456789012"),
+      CancellationToken.None);
+
+    response.ReferenceToken.Should().Be(referenceToken);
+    response.Provider.Should().Be("LOCAL");
+    user.AadhaarRefToken.Should().Be(referenceToken);
+    user.AadhaarSha256.Should().NotBeNull();
+    user.UpdatedAt.Should().Be(clock.UtcNow);
+
+    repository.Verify(x => x.Update(user), Times.Once);
+    unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+  }
+
+  [Fact]
+  public async Task VerifyCurrentUserAadhaarAsync_ShouldRejectNonPatientAsync()
+  {
+    var user = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-DOCTOR-1",
+      Role = UserRole.Doctor,
+      FirstName = "Doctor",
+      LastName = "One",
+      Email = "doctor@aarogya.dev"
+    };
+
+    var repository = new Mock<IUserRepository>();
+    repository.Setup(x => x.GetByExternalAuthIdAsync("seed-DOCTOR-1", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+    var service = new UserProfileService(
+      repository.Object,
+      Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAadhaarVaultService>(),
+      new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 9, 0, 0, TimeSpan.Zero)));
+
+    var action = async () => await service.VerifyCurrentUserAadhaarAsync(
+      "seed-DOCTOR-1",
+      new VerifyAadhaarRequest("123456789012"),
+      CancellationToken.None);
+
+    await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*patient profiles*");
   }
 
   private sealed class FixedUtcClock(DateTimeOffset utcNow) : IUtcClock

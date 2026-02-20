@@ -1,12 +1,14 @@
 using Aarogya.Api.Authentication;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
+using Aarogya.Infrastructure.Aadhaar;
 
 namespace Aarogya.Api.Features.V1.Users;
 
 internal sealed class UserProfileService(
   IUserRepository userRepository,
   IUnitOfWork unitOfWork,
+  IAadhaarVaultService aadhaarVaultService,
   IUtcClock clock)
   : IUserProfileService
 {
@@ -71,6 +73,44 @@ internal sealed class UserProfileService(
     await unitOfWork.SaveChangesAsync(cancellationToken);
 
     return ToResponse(user);
+  }
+
+  public async Task<AadhaarVerificationResponse> VerifyCurrentUserAadhaarAsync(
+    string userSub,
+    VerifyAadhaarRequest request,
+    CancellationToken cancellationToken = default)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+
+    var user = await userRepository.GetByExternalAuthIdAsync(userSub, cancellationToken)
+      ?? throw new KeyNotFoundException("Authenticated user is not provisioned in the database.");
+
+    if (user.Role != UserRole.Patient)
+    {
+      throw new InvalidOperationException("Only patient profiles can attach Aadhaar verification.");
+    }
+
+    var normalizedAadhaar = AadhaarHashing.Normalize(request.AadhaarNumber);
+    var verification = await aadhaarVaultService.VerifyAndCreateReferenceTokenAsync(normalizedAadhaar, user.Id, cancellationToken);
+
+    user.AadhaarRefToken = verification.ReferenceToken;
+    user.AadhaarSha256 = AadhaarHashing.ComputeSha256(normalizedAadhaar);
+    user.UpdatedAt = clock.UtcNow;
+
+    userRepository.Update(user);
+    await unitOfWork.SaveChangesAsync(cancellationToken);
+
+    return new AadhaarVerificationResponse(
+      verification.ReferenceToken,
+      verification.IsExistingRecord,
+      verification.Provider,
+      verification.Demographics is null
+        ? null
+        : new AadhaarDemographicsResponse(
+          verification.Demographics.FullName,
+          verification.Demographics.DateOfBirth,
+          verification.Demographics.Gender,
+          verification.Demographics.Address));
   }
 
   private static UserProfileResponse ToResponse(Domain.Entities.User user)

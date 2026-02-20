@@ -10,6 +10,7 @@ internal sealed class AadhaarVaultRecordConfiguration(IPiiFieldEncryptionService
   : IEntityTypeConfiguration<AadhaarVaultRecord>
 {
   private readonly EncryptedRequiredStringToBytesConverter _encryptedStringConverter = new(encryptionService);
+  private readonly EncryptedNullableStringToBytesConverter _encryptedNullableStringConverter = new(encryptionService);
 
   public void Configure(EntityTypeBuilder<AadhaarVaultRecord> builder)
   {
@@ -27,6 +28,11 @@ internal sealed class AadhaarVaultRecordConfiguration(IPiiFieldEncryptionService
 
     builder.Property(x => x.AadhaarSha256).HasColumnName("aadhaar_sha256").HasColumnType("bytea").IsRequired();
     builder.Property(x => x.ProviderRequestId).HasColumnName("provider_request_id");
+    builder.Property(x => x.VerificationProvider).HasColumnName("verification_provider").HasMaxLength(80);
+    builder.Property(x => x.DemographicsJson)
+      .HasColumnName("demographics_encrypted")
+      .HasColumnType("bytea")
+      .HasConversion(_encryptedNullableStringConverter);
     builder.Property(x => x.CreatedAt).HasColumnName("created_at");
     builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 

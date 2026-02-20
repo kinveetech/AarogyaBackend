@@ -11,7 +11,9 @@ public sealed class AadhaarVaultService(
   IMockAadhaarApiClient mockAadhaarApiClient)
   : IAadhaarVaultService
 {
-  public async Task<Guid> CreateOrGetReferenceTokenAsync(
+  private static readonly JsonSerializerOptions JsonSerializerOptions = new(JsonSerializerDefaults.Web);
+
+  public async Task<AadhaarVerificationResult> VerifyAndCreateReferenceTokenAsync(
     string aadhaarNumber,
     Guid? actorUserId = null,
     CancellationToken cancellationToken = default)
@@ -25,12 +27,23 @@ public sealed class AadhaarVaultService(
     }
 
     var aadhaarSha256 = AadhaarHashing.ComputeSha256(normalizedAadhaar);
-
     var existing = await aadhaarVaultRepository.GetBySha256Async(aadhaarSha256, cancellationToken);
     if (existing is not null)
     {
+      var isUpdated = TryHydrateExistingDemographics(existing, validation);
       await WriteAccessAuditLogAsync(existing.ReferenceToken, actorUserId, "lookup_existing", 200, new { validation.RequestId }, cancellationToken);
-      return existing.ReferenceToken;
+
+      if (isUpdated)
+      {
+        await dbContext.SaveChangesAsync(cancellationToken);
+      }
+
+      return new AadhaarVerificationResult(
+        existing.ReferenceToken,
+        true,
+        existing.VerificationProvider,
+        ReadDemographics(existing.DemographicsJson),
+        validation.RequestId);
     }
 
     var tokenResponse = await mockAadhaarApiClient.TokenizeAsync(aadhaarSha256, cancellationToken);
@@ -42,7 +55,9 @@ public sealed class AadhaarVaultService(
       ReferenceToken = referenceToken,
       AadhaarNumber = normalizedAadhaar,
       AadhaarSha256 = aadhaarSha256,
-      ProviderRequestId = tokenResponse.RequestId ?? validation.RequestId
+      ProviderRequestId = tokenResponse.RequestId ?? validation.RequestId,
+      VerificationProvider = validation.Provider,
+      DemographicsJson = SerializeDemographics(validation.Demographics)
     };
 
     await aadhaarVaultRepository.AddAsync(vaultRecord, cancellationToken);
@@ -55,7 +70,21 @@ public sealed class AadhaarVaultService(
 
     await dbContext.SaveChangesAsync(cancellationToken);
 
-    return referenceToken;
+    return new AadhaarVerificationResult(
+      referenceToken,
+      false,
+      validation.Provider,
+      validation.Demographics,
+      tokenResponse.RequestId ?? validation.RequestId);
+  }
+
+  public async Task<Guid> CreateOrGetReferenceTokenAsync(
+    string aadhaarNumber,
+    Guid? actorUserId = null,
+    CancellationToken cancellationToken = default)
+  {
+    var verification = await VerifyAndCreateReferenceTokenAsync(aadhaarNumber, actorUserId, cancellationToken);
+    return verification.ReferenceToken;
   }
 
   public async Task<string?> GetAadhaarByReferenceTokenAsync(
@@ -91,5 +120,37 @@ public sealed class AadhaarVaultService(
     };
 
     await dbContext.AadhaarVaultAccessLogs.AddAsync(log, cancellationToken);
+  }
+
+  private static string? SerializeDemographics(MockAadhaarDemographics? demographics)
+    => demographics is null ? null : JsonSerializer.Serialize(demographics, JsonSerializerOptions);
+
+  private static MockAadhaarDemographics? ReadDemographics(string? demographicsJson)
+    => string.IsNullOrWhiteSpace(demographicsJson)
+      ? null
+      : JsonSerializer.Deserialize<MockAadhaarDemographics>(demographicsJson, JsonSerializerOptions);
+
+  private static bool TryHydrateExistingDemographics(AadhaarVaultRecord existing, MockAadhaarValidationResponse validation)
+  {
+    var changed = false;
+
+    if (!string.IsNullOrWhiteSpace(validation.Provider) && string.IsNullOrWhiteSpace(existing.VerificationProvider))
+    {
+      existing.VerificationProvider = validation.Provider;
+      changed = true;
+    }
+
+    if (validation.Demographics is not null && string.IsNullOrWhiteSpace(existing.DemographicsJson))
+    {
+      existing.DemographicsJson = SerializeDemographics(validation.Demographics);
+      changed = true;
+    }
+
+    if (changed)
+    {
+      existing.UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    return changed;
   }
 }
