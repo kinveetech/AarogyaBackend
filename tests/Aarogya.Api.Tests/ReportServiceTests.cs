@@ -343,6 +343,77 @@ public sealed class ReportServiceTests
     await action.Should().ThrowAsync<UnauthorizedAccessException>();
   }
 
+  [Fact]
+  public async Task GetDetailForUserAsync_ShouldDenyDoctor_WhenGrantDoesNotIncludeReportIdAsync()
+  {
+    var doctor = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-DOCTOR-1",
+      Role = UserRole.Doctor
+    };
+
+    var report = new Report
+    {
+      Id = Guid.NewGuid(),
+      PatientId = Guid.NewGuid(),
+      UploadedByUserId = Guid.NewGuid(),
+      ReportType = ReportType.BloodTest,
+      Status = ReportStatus.Uploaded,
+      UploadedAt = DateTimeOffset.UtcNow,
+      CreatedAt = DateTimeOffset.UtcNow,
+      FileStorageKey = "reports/seed-PATIENT-1/2026/02/report.pdf",
+      ReportNumber = "RPT-1234567890"
+    };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-DOCTOR-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(doctor);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.FirstOrDefaultAsync(It.IsAny<ISpecification<Report>>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(report);
+
+    var accessGrantRepository = new Mock<IAccessGrantRepository>();
+    accessGrantRepository
+      .Setup(x => x.ListAsync(It.IsAny<ISpecification<AccessGrant>>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(
+      [
+        new AccessGrant
+        {
+          Id = Guid.NewGuid(),
+          PatientId = report.PatientId,
+          GrantedToUserId = doctor.Id,
+          Status = AccessGrantStatus.Active,
+          StartsAt = DateTimeOffset.UtcNow.AddDays(-1),
+          ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
+          Scope = new AccessGrantScope
+          {
+            CanReadReports = true,
+            CanDownloadReports = true,
+            AllowedReportIds = [Guid.NewGuid()]
+          }
+        }
+      ]);
+
+    var service = new ReportService(
+      Mock.Of<IAmazonS3>(),
+      userRepository.Object,
+      accessGrantRepository.Object,
+      reportRepository.Object,
+      Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IPatientNotificationService>(),
+      Mock.Of<IUnitOfWork>(),
+      Options.Create(CreateAwsOptions()),
+      new FixedUtcClock(DateTimeOffset.UtcNow));
+
+    var action = async () => await service.GetDetailForUserAsync("seed-DOCTOR-1", report.Id, CancellationToken.None);
+
+    await action.Should().ThrowAsync<UnauthorizedAccessException>();
+  }
+
   private static CreateReportRequest CreateRequest()
   {
     return new CreateReportRequest(

@@ -51,8 +51,20 @@ public sealed class AccessGrantsController(IAccessGrantService accessGrantServic
       return Unauthorized();
     }
 
-    var created = await accessGrantService.CreateAsync(patientSub, request, cancellationToken);
-    return Created(new Uri($"/api/v1/access-grants/{created.GrantId}", UriKind.Relative), created);
+    try
+    {
+      var created = await accessGrantService.CreateAsync(patientSub, request, cancellationToken);
+      return Created(new Uri($"/api/v1/access-grants/{created.GrantId}", UriKind.Relative), created);
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["grant"] = [ex.Message]
+        }));
+    }
   }
 
   [HttpDelete("{grantId:guid}")]

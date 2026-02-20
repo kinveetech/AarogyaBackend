@@ -9,11 +9,21 @@ namespace Aarogya.Api.Features.V1.AccessGrants;
   Justification = "Used by public API action signature for model binding.")]
 public sealed record CreateAccessGrantRequest(
   string DoctorSub,
-  IReadOnlyList<Guid> ReportIds,
-  [property: JsonRequired] DateTimeOffset ExpiresAt);
+  [property: JsonRequired] bool AllReports,
+  IReadOnlyList<Guid>? ReportIds,
+  [property: JsonRequired] string Purpose,
+  DateTimeOffset? ExpiresAt = null);
 
 [SuppressMessage(
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public API action signature.")]
-public sealed record AccessGrantResponse(Guid GrantId, string DoctorSub, IReadOnlyList<Guid> ReportIds, DateTimeOffset ExpiresAt, bool Revoked);
+public sealed record AccessGrantResponse(
+  Guid GrantId,
+  string DoctorSub,
+  bool AllReports,
+  IReadOnlyList<Guid> ReportIds,
+  string Purpose,
+  DateTimeOffset StartsAt,
+  DateTimeOffset ExpiresAt,
+  bool Revoked);

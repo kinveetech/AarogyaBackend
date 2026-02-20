@@ -59,28 +59,23 @@ internal sealed class ReportService(
         return new ReportListResponse(request.Page, request.PageSize, 0, []);
       }
 
-      var patientIds = grants.Select(grant => grant.PatientId).Distinct().ToArray();
-      var allowedReportTypes = grants
-        .SelectMany(grant => grant.Scope.AllowedReportTypes)
-        .Where(value => !string.IsNullOrWhiteSpace(value))
-        .Select(value => value.Trim())
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToArray();
+      var grantsByPatient = grants
+        .GroupBy(grant => grant.PatientId)
+        .ToDictionary(group => group.Key, group => group.ToArray());
+      var patientIds = grantsByPatient.Keys.ToArray();
 
       var allGrantedReports = new List<Report>();
       foreach (var patientId in patientIds)
       {
         var patientReports = await reportRepository.ListByPatientAsync(patientId, cancellationToken);
-        allGrantedReports.AddRange(patientReports);
+        var patientGrants = grantsByPatient[patientId];
+        allGrantedReports.AddRange(
+          patientReports.Where(report => IsReportAllowedByGrant(patientGrants, report, requiresDownloadAccess: false)));
       }
 
       accessibleReports = allGrantedReports
         .GroupBy(report => report.Id)
         .Select(group => group.First())
-        .Where(report =>
-          allowedReportTypes.Length == 0
-          || Array.Exists(allowedReportTypes, allowed =>
-            allowed.Equals(ToReportTypeCode(report.ReportType), StringComparison.OrdinalIgnoreCase)))
         .ToArray();
     }
     else
@@ -307,24 +302,51 @@ internal sealed class ReportService(
 
     var patientGrants = grants
       .Where(grant => grant.PatientId == report.PatientId)
-      .Where(grant => grant.Scope.CanReadReports && grant.Scope.CanDownloadReports)
+      .Where(grant => grant.Scope.CanReadReports)
       .ToArray();
 
-    if (patientGrants.Length == 0)
+    return IsReportAllowedByGrant(patientGrants, report, requiresDownloadAccess: true);
+  }
+
+  private static bool IsReportAllowedByGrant(
+    IReadOnlyList<AccessGrant> grants,
+    Report report,
+    bool requiresDownloadAccess)
+  {
+    if (grants.Count == 0)
     {
       return false;
     }
 
-    var reportTypeCode = ToReportTypeCode(report.ReportType);
-    return Array.Exists(patientGrants, grant =>
+    return grants.Any(grant =>
     {
+      if (!grant.Scope.CanReadReports)
+      {
+        return false;
+      }
+
+      if (requiresDownloadAccess && !grant.Scope.CanDownloadReports)
+      {
+        return false;
+      }
+
       var allowedTypes = grant.Scope.AllowedReportTypes
         .Where(type => !string.IsNullOrWhiteSpace(type))
         .Select(type => type.Trim())
         .ToArray();
+      if (allowedTypes.Length > 0
+        && !allowedTypes.Contains(ToReportTypeCode(report.ReportType), StringComparer.OrdinalIgnoreCase))
+      {
+        return false;
+      }
 
-      return allowedTypes.Length == 0
-        || allowedTypes.Contains(reportTypeCode, StringComparer.OrdinalIgnoreCase);
+      var allowedReportIds = grant.Scope.AllowedReportIds?.Where(id => id != Guid.Empty).Distinct().ToArray() ?? [];
+      if (allowedReportIds.Length > 0 && !allowedReportIds.Contains(report.Id))
+      {
+        return false;
+      }
+
+      return true;
     });
   }
 
