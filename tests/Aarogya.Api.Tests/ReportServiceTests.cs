@@ -1,3 +1,4 @@
+using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Features.V1.Reports;
@@ -57,7 +58,7 @@ public sealed class ReportServiceTests
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
-      Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IAuditLoggingService>(),
       Mock.Of<IPatientNotificationService>(),
       unitOfWork.Object,
       Options.Create(CreateAwsOptions()),
@@ -102,7 +103,7 @@ public sealed class ReportServiceTests
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IReportRepository>(),
-      Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IAuditLoggingService>(),
       Mock.Of<IPatientNotificationService>(),
       Mock.Of<IUnitOfWork>(),
       Options.Create(CreateAwsOptions()),
@@ -169,7 +170,7 @@ public sealed class ReportServiceTests
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
-      Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IAuditLoggingService>(),
       notificationService.Object,
       Mock.Of<IUnitOfWork>(),
       Options.Create(CreateAwsOptions()),
@@ -261,7 +262,7 @@ public sealed class ReportServiceTests
       .Setup(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()))
       .ReturnsAsync("https://example.com/signed-download");
 
-    var auditLogRepository = new Mock<IAuditLogRepository>();
+    var auditLoggingService = new Mock<IAuditLoggingService>();
     var unitOfWork = new Mock<IUnitOfWork>();
 
     var service = new ReportService(
@@ -269,7 +270,7 @@ public sealed class ReportServiceTests
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
-      auditLogRepository.Object,
+      auditLoggingService.Object,
       Mock.Of<IPatientNotificationService>(),
       unitOfWork.Object,
       Options.Create(CreateAwsOptions()),
@@ -282,8 +283,16 @@ public sealed class ReportServiceTests
     response.Download.DownloadUrl.Should().Be(new Uri("https://example.com/signed-download"));
     response.Parameters.Should().HaveCount(1);
 
-    auditLogRepository.Verify(x => x.AddAsync(It.IsAny<AuditLog>(), It.IsAny<CancellationToken>()), Times.Once);
-    unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    auditLoggingService.Verify(
+      x => x.LogDataAccessAsync(
+        It.IsAny<User>(),
+        "report.viewed",
+        "report",
+        report.Id,
+        200,
+        It.IsAny<IReadOnlyDictionary<string, string>>(),
+        It.IsAny<CancellationToken>()),
+      Times.Once);
   }
 
   [Fact]
@@ -332,7 +341,7 @@ public sealed class ReportServiceTests
       userRepository.Object,
       accessGrantRepository.Object,
       reportRepository.Object,
-      Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IAuditLoggingService>(),
       Mock.Of<IPatientNotificationService>(),
       Mock.Of<IUnitOfWork>(),
       Options.Create(CreateAwsOptions()),
@@ -403,7 +412,7 @@ public sealed class ReportServiceTests
       userRepository.Object,
       accessGrantRepository.Object,
       reportRepository.Object,
-      Mock.Of<IAuditLogRepository>(),
+      Mock.Of<IAuditLoggingService>(),
       Mock.Of<IPatientNotificationService>(),
       Mock.Of<IUnitOfWork>(),
       Options.Create(CreateAwsOptions()),

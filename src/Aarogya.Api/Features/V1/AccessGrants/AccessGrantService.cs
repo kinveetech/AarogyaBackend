@@ -1,3 +1,4 @@
+using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Security;
@@ -15,6 +16,7 @@ internal sealed class AccessGrantService(
   IReportRepository reportRepository,
   IAccessGrantRepository accessGrantRepository,
   IUnitOfWork unitOfWork,
+  IAuditLoggingService auditLoggingService,
   IOptions<AccessGrantOptions> options,
   IUtcClock clock)
   : IAccessGrantService
@@ -26,6 +28,18 @@ internal sealed class AccessGrantService(
     var patient = await ResolvePatientAsync(patientSub, cancellationToken);
     var now = clock.UtcNow;
     var grants = await accessGrantRepository.ListAsync(new AccessGrantsByPatientSpecification(patient.Id), cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      patient,
+      "access_grant.list.patient",
+      "access_grant",
+      null,
+      200,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["count"] = grants.Count.ToString()
+      },
+      cancellationToken);
+
     return grants
       .Where(grant => grant.Status == AccessGrantStatus.Active
         && grant.StartsAt <= now
@@ -46,6 +60,18 @@ internal sealed class AccessGrantService(
     var grants = await accessGrantRepository.ListAsync(
       new ActiveAccessGrantsByDoctorSpecification(doctor.Id, clock.UtcNow),
       cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      doctor,
+      "access_grant.list.doctor",
+      "access_grant",
+      null,
+      200,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["count"] = grants.Count.ToString()
+      },
+      cancellationToken);
+
     return grants.Select(MapGrant).ToArray();
   }
 
@@ -133,6 +159,18 @@ internal sealed class AccessGrantService(
 
     await accessGrantRepository.AddAsync(grant, cancellationToken);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      patient,
+      "access_grant.created",
+      "access_grant",
+      grant.Id,
+      201,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["doctorUserId"] = doctor.Id.ToString("D"),
+        ["allReports"] = request.AllReports.ToString()
+      },
+      cancellationToken);
 
     return new AccessGrantResponse(
       grant.Id,
@@ -161,6 +199,13 @@ internal sealed class AccessGrantService(
     grant.RevokedAt = clock.UtcNow;
     accessGrantRepository.Update(grant);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      patient,
+      "access_grant.revoked",
+      "access_grant",
+      grant.Id,
+      200,
+      cancellationToken: cancellationToken);
     return true;
   }
 

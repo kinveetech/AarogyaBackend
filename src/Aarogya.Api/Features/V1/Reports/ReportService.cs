@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Security;
@@ -20,7 +21,7 @@ internal sealed class ReportService(
   IUserRepository userRepository,
   IAccessGrantRepository accessGrantRepository,
   IReportRepository reportRepository,
-  IAuditLogRepository auditLogRepository,
+  IAuditLoggingService auditLoggingService,
   IPatientNotificationService patientNotificationService,
   IUnitOfWork unitOfWork,
   IOptions<AwsOptions> awsOptions,
@@ -107,6 +108,20 @@ internal sealed class ReportService(
         report.CreatedAt))
       .ToArray();
 
+    await auditLoggingService.LogDataAccessAsync(
+      user,
+      "report.listed",
+      "report",
+      null,
+      200,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["totalCount"] = totalCount.ToString(CultureInfo.InvariantCulture),
+        ["page"] = page.ToString(CultureInfo.InvariantCulture),
+        ["pageSize"] = pageSize.ToString(CultureInfo.InvariantCulture)
+      },
+      cancellationToken);
+
     return new ReportListResponse(page, pageSize, totalCount, items);
   }
 
@@ -135,7 +150,17 @@ internal sealed class ReportService(
     }
 
     var download = await CreateSignedDownloadUrlAsync(report.FileStorageKey, null, cancellationToken);
-    await WriteReportAccessAuditLogAsync(user, report, cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      user,
+      "report.viewed",
+      "report",
+      report.Id,
+      200,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["reportType"] = ToReportTypeCode(report.ReportType)
+      },
+      cancellationToken);
 
     report.Metadata.Tags.TryGetValue("lab-name", out var labName);
     report.Metadata.Tags.TryGetValue("lab-code", out var labCode);
@@ -213,6 +238,18 @@ internal sealed class ReportService(
 
     await reportRepository.AddAsync(report, cancellationToken);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      uploader,
+      "report.created",
+      "report",
+      report.Id,
+      201,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["reportType"] = ToReportTypeCode(report.ReportType),
+        ["patientUserId"] = report.PatientId.ToString("D")
+      },
+      cancellationToken);
 
     if (uploader.Role == UserRole.LabTechnician)
     {
@@ -376,37 +413,6 @@ internal sealed class ReportService(
 
     var s3Url = await s3Client.GetPreSignedURLAsync(presignRequest);
     return new ReportSignedDownloadUrlResponse(objectKey, new Uri(s3Url, UriKind.Absolute), expiresAt, "s3");
-  }
-
-  private async Task WriteReportAccessAuditLogAsync(
-    User actor,
-    Report report,
-    CancellationToken cancellationToken)
-  {
-    var auditLog = new AuditLog
-    {
-      Id = Guid.NewGuid(),
-      OccurredAt = clock.UtcNow,
-      ActorUserId = actor.Id,
-      ActorRole = actor.Role,
-      Action = "report.viewed",
-      EntityType = "report",
-      EntityId = report.Id,
-      ResultStatus = 200,
-      Details = new AuditLogDetails
-      {
-        Summary = "Report detail accessed.",
-        Data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-          ["reportId"] = report.Id.ToString("D", CultureInfo.InvariantCulture),
-          ["reportNumber"] = report.ReportNumber,
-          ["reportType"] = ToReportTypeCode(report.ReportType)
-        }
-      }
-    };
-
-    await auditLogRepository.AddAsync(auditLog, cancellationToken);
-    await unitOfWork.SaveChangesAsync(cancellationToken);
   }
 
   private async Task<User> ResolvePatientAsync(

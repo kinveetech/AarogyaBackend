@@ -1,3 +1,4 @@
+using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Features.V1.Users;
 using Aarogya.Domain.Entities;
@@ -39,7 +40,7 @@ public sealed class UserProfileServiceTests
 
     var clock = new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 9, 0, 0, TimeSpan.Zero));
 
-    var service = new UserProfileService(repository.Object, unitOfWork.Object, aadhaarVaultService.Object, clock);
+    var service = new UserProfileService(repository.Object, unitOfWork.Object, aadhaarVaultService.Object, Mock.Of<IAuditLoggingService>(), clock);
 
     var response = await service.UpdateCurrentUserAsync(
       "seed-PATIENT-1",
@@ -78,6 +79,7 @@ public sealed class UserProfileServiceTests
       repository.Object,
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAadhaarVaultService>(),
+      Mock.Of<IAuditLoggingService>(),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 9, 0, 0, TimeSpan.Zero)));
 
     var action = async () => await service.GetCurrentUserAsync("missing-sub", CancellationToken.None);
@@ -114,7 +116,7 @@ public sealed class UserProfileServiceTests
         "request-1"));
 
     var clock = new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 9, 0, 0, TimeSpan.Zero));
-    var service = new UserProfileService(repository.Object, unitOfWork.Object, aadhaarVaultService.Object, clock);
+    var service = new UserProfileService(repository.Object, unitOfWork.Object, aadhaarVaultService.Object, Mock.Of<IAuditLoggingService>(), clock);
 
     var response = await service.VerifyCurrentUserAadhaarAsync(
       "seed-PATIENT-1",
@@ -151,6 +153,7 @@ public sealed class UserProfileServiceTests
       repository.Object,
       Mock.Of<IUnitOfWork>(),
       Mock.Of<IAadhaarVaultService>(),
+      Mock.Of<IAuditLoggingService>(),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 9, 0, 0, TimeSpan.Zero)));
 
     var action = async () => await service.VerifyCurrentUserAadhaarAsync(

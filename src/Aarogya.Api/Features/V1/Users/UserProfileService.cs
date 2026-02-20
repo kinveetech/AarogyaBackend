@@ -1,3 +1,4 @@
+using Aarogya.Api.Auditing;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Security;
 using Aarogya.Domain.Enums;
@@ -10,6 +11,7 @@ internal sealed class UserProfileService(
   IUserRepository userRepository,
   IUnitOfWork unitOfWork,
   IAadhaarVaultService aadhaarVaultService,
+  IAuditLoggingService auditLoggingService,
   IUtcClock clock)
   : IUserProfileService
 {
@@ -19,6 +21,13 @@ internal sealed class UserProfileService(
   {
     var user = await userRepository.GetByExternalAuthIdAsync(userSub, cancellationToken)
       ?? throw new KeyNotFoundException("Authenticated user is not provisioned in the database.");
+    await auditLoggingService.LogDataAccessAsync(
+      user,
+      "user_profile.read",
+      "user",
+      user.Id,
+      200,
+      cancellationToken: cancellationToken);
 
     return ToResponse(user);
   }
@@ -72,6 +81,13 @@ internal sealed class UserProfileService(
 
     userRepository.Update(user);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      user,
+      "user_profile.updated",
+      "user",
+      user.Id,
+      200,
+      cancellationToken: cancellationToken);
 
     return ToResponse(user);
   }
@@ -100,6 +116,18 @@ internal sealed class UserProfileService(
 
     userRepository.Update(user);
     await unitOfWork.SaveChangesAsync(cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      user,
+      "user_aadhaar.verified",
+      "user",
+      user.Id,
+      200,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["referenceToken"] = verification.ReferenceToken.ToString("D"),
+        ["provider"] = verification.Provider ?? "unknown"
+      },
+      cancellationToken);
 
     return new AadhaarVerificationResponse(
       verification.ReferenceToken,
