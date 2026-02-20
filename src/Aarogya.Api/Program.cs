@@ -29,6 +29,10 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptions<JwtOptions>()
+  .BindConfiguration(JwtOptions.SectionName);
+
+builder.Services
   .AddOptionsWithValidateOnStart<RedisOptions>()
   .BindConfiguration(RedisOptions.SectionName)
   .ValidateDataAnnotations();

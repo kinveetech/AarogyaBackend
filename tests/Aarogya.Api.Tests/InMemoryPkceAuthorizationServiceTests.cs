@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
 using Aarogya.Api.Authentication;
@@ -60,6 +61,9 @@ public sealed class InMemoryPkceAuthorizationServiceTests
     exchange.RefreshToken.Should().NotBeNullOrWhiteSpace();
     exchange.IdToken.Should().NotBeNullOrWhiteSpace();
     exchange.TokenType.Should().Be("Bearer");
+    var jwt = new JwtSecurityTokenHandler().ReadJwtToken(exchange.AccessToken);
+    jwt.Issuer.Should().Be("AarogyaAPI");
+    jwt.Audiences.Should().ContainSingle("AarogyaClients");
   }
 
   [Fact]
@@ -145,6 +149,26 @@ public sealed class InMemoryPkceAuthorizationServiceTests
     authorize.Message.Should().Contain("ios or android");
   }
 
+  [Fact]
+  public async Task CreateAuthorizationCodeAsync_ShouldFail_WhenS256ChallengeLengthIsNot43Async()
+  {
+    var clock = new FakeClock(new DateTimeOffset(2026, 02, 20, 0, 0, 0, TimeSpan.Zero));
+    var service = CreateService(clock);
+    var invalidChallenge = new string('A', 44);
+
+    var authorize = await service.CreateAuthorizationCodeAsync(new PkceAuthorizeRequest(
+      "mobile-client-id",
+      new Uri("myapp://auth/callback"),
+      invalidChallenge,
+      "S256",
+      "ios",
+      "openid",
+      null));
+
+    authorize.Success.Should().BeFalse();
+    authorize.Message.Should().Contain("Code challenge is invalid");
+  }
+
   private static InMemoryPkceAuthorizationService CreateService(FakeClock clock, PkceOptions? pkceOptions = null)
   {
     return new InMemoryPkceAuthorizationService(
@@ -157,6 +181,12 @@ public sealed class InMemoryPkceAuthorizationServiceTests
           UserPoolId = "ap-south-1_pool",
           UserPoolName = "aarogya-dev-users"
         }
+      }),
+      Options.Create(new JwtOptions
+      {
+        Key = "test-signing-key-12345678901234567890",
+        Issuer = "AarogyaAPI",
+        Audience = "AarogyaClients"
       }),
       clock);
   }

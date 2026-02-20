@@ -1,15 +1,19 @@
 using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Aarogya.Api.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Aarogya.Api.Authentication;
 
 internal sealed class InMemoryPkceAuthorizationService(
   IOptions<PkceOptions> pkceOptions,
   IOptions<AwsOptions> awsOptions,
+  IOptions<JwtOptions> jwtOptions,
   IUtcClock clock)
   : IPkceAuthorizationService
 {
@@ -19,12 +23,13 @@ internal sealed class InMemoryPkceAuthorizationService(
     TimeSpan.FromMilliseconds(200));
 
   private static readonly Regex CodeChallengeRegex = new(
-    @"^[A-Za-z0-9\-_]{43,128}$",
+    @"^[A-Za-z0-9\-_]{43}$",
     RegexOptions.Compiled | RegexOptions.CultureInvariant,
     TimeSpan.FromMilliseconds(200));
 
   private readonly PkceOptions _pkceOptions = pkceOptions.Value;
   private readonly AwsOptions _awsOptions = awsOptions.Value;
+  private readonly JwtOptions _jwtOptions = jwtOptions.Value;
   private readonly ConcurrentDictionary<string, AuthorizationCodeEntry> _authorizationCodes = new(StringComparer.Ordinal);
 
   public Task<PkceAuthorizeResult> CreateAuthorizationCodeAsync(
@@ -116,9 +121,15 @@ internal sealed class InMemoryPkceAuthorizationService(
 
     _authorizationCodes.TryRemove(request.AuthorizationCode.Trim(), out _);
 
-    var accessToken = GenerateToken(48);
+    if (!CanIssueJwtTokens(_jwtOptions))
+    {
+      return Task.FromResult(new PkceTokenResult(false, "JWT issuer is not configured."));
+    }
+
+    var subject = GenerateToken(16);
+    var accessToken = GenerateJwtToken(subject, isIdToken: false);
+    var idToken = GenerateJwtToken(subject, isIdToken: true);
     var refreshToken = GenerateToken(48);
-    var idToken = GenerateToken(48);
 
     return Task.FromResult(new PkceTokenResult(
       true,
@@ -232,13 +243,55 @@ internal sealed class InMemoryPkceAuthorizationService(
 
   private void EvictExpiredAuthorizationCodes(DateTimeOffset now)
   {
-    foreach (var kvp in _authorizationCodes)
+    foreach (var kvp in _authorizationCodes.Where(kvp => kvp.Value.ExpiresAt < now || kvp.Value.IsConsumed))
     {
-      if (kvp.Value.ExpiresAt < now || kvp.Value.IsConsumed)
-      {
-        _authorizationCodes.TryRemove(kvp.Key, out _);
-      }
+      _authorizationCodes.TryRemove(kvp.Key, out _);
     }
+  }
+
+  private string GenerateJwtToken(string subject, bool isIdToken)
+  {
+    var now = clock.UtcNow;
+    var expiresAt = now.AddSeconds(_pkceOptions.AccessTokenExpirySeconds);
+    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
+    var signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+    var claims = new List<Claim>
+    {
+      new(JwtRegisteredClaimNames.Sub, subject),
+      new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
+      new("token_use", isIdToken ? "id" : "access")
+    };
+
+    var descriptor = new SecurityTokenDescriptor
+    {
+      Issuer = _jwtOptions.Issuer,
+      Audience = _jwtOptions.Audience,
+      Subject = new ClaimsIdentity(claims),
+      NotBefore = now.UtcDateTime,
+      Expires = expiresAt.UtcDateTime,
+      SigningCredentials = signingCredentials
+    };
+
+    var handler = new JwtSecurityTokenHandler();
+    var token = handler.CreateToken(descriptor);
+    return handler.WriteToken(token);
+  }
+
+  private static bool CanIssueJwtTokens(JwtOptions jwtOptions)
+  {
+    if (string.IsNullOrWhiteSpace(jwtOptions.Key))
+    {
+      return false;
+    }
+
+    if (jwtOptions.Key.Contains("SET_VIA", StringComparison.OrdinalIgnoreCase))
+    {
+      return false;
+    }
+
+    return jwtOptions.Key.Length >= 32
+      && !string.IsNullOrWhiteSpace(jwtOptions.Issuer)
+      && !string.IsNullOrWhiteSpace(jwtOptions.Audience);
   }
 
   private sealed class AuthorizationCodeEntry
