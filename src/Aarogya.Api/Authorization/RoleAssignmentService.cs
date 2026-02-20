@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Aarogya.Api.Authorization;
@@ -14,10 +15,14 @@ public interface IRoleAssignmentService
     string targetSub,
     string targetRole,
     out string message);
+
+  public IReadOnlyCollection<string> GetAssignedRoles(string userSub);
 }
 
 internal sealed class InMemoryRoleAssignmentService : IRoleAssignmentService
 {
+  private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _userRoles = new(StringComparer.Ordinal);
+
   public bool TryAssignRole(
     string actorSub,
     IReadOnlyCollection<string> actorRoles,
@@ -47,7 +52,22 @@ internal sealed class InMemoryRoleAssignmentService : IRoleAssignmentService
       return false;
     }
 
+    var assignedRoles = _userRoles.GetOrAdd(targetSub, _ => new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase));
+    assignedRoles[normalizedRole] = 0;
+
     message = $"Role '{normalizedRole}' assigned to user '{targetSub}'.";
     return true;
+  }
+
+  public IReadOnlyCollection<string> GetAssignedRoles(string userSub)
+  {
+    if (string.IsNullOrWhiteSpace(userSub))
+    {
+      return Array.Empty<string>();
+    }
+
+    return _userRoles.TryGetValue(userSub, out var roles)
+      ? roles.Keys.ToArray()
+      : Array.Empty<string>();
   }
 }

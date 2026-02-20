@@ -427,8 +427,7 @@ internal sealed class InMemoryPkceAuthorizationService(
       new(JwtRegisteredClaimNames.Sub, subject),
       new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
       new("token_use", isIdToken ? "id" : "access"),
-      new("role", role),
-      new(ClaimTypes.Role, role)
+      new("cognito:groups", role)
     };
 
     var descriptor = new SecurityTokenDescriptor

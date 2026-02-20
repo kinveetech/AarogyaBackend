@@ -10,11 +10,12 @@ public sealed class AuthorizationRbacTests
   [Fact]
   public async Task ClaimsTransformation_ShouldMapCognitoGroupsToRoleClaimsAsync()
   {
+    var roleAssignmentService = new InMemoryRoleAssignmentService();
     var principal = BuildPrincipal(
       new Claim("sub", "user-1"),
       new Claim("cognito:groups", "Doctor"));
 
-    var transformer = new AarogyaRoleClaimsTransformation();
+    var transformer = new AarogyaRoleClaimsTransformation(roleAssignmentService);
     var transformed = await transformer.TransformAsync(principal);
 
     transformed.Claims.Should().Contain(claim => claim.Type == ClaimTypes.Role && claim.Value == AarogyaRoles.Doctor);
@@ -23,11 +24,12 @@ public sealed class AuthorizationRbacTests
   [Fact]
   public async Task ClaimsTransformation_ShouldExpandAdminHierarchyAsync()
   {
+    var roleAssignmentService = new InMemoryRoleAssignmentService();
     var principal = BuildPrincipal(
       new Claim("sub", "admin-1"),
       new Claim("cognito:groups", "Admin"));
 
-    var transformer = new AarogyaRoleClaimsTransformation();
+    var transformer = new AarogyaRoleClaimsTransformation(roleAssignmentService);
     var transformed = await transformer.TransformAsync(principal);
 
     transformed.Claims.Should().Contain(claim => claim.Type == ClaimTypes.Role && claim.Value == AarogyaRoles.Admin);
@@ -66,6 +68,7 @@ public sealed class AuthorizationRbacTests
 
     success.Should().BeTrue();
     message.Should().Contain("assigned");
+    service.GetAssignedRoles("user-456").Should().Contain(AarogyaRoles.Doctor);
   }
 
   private static ClaimsPrincipal BuildPrincipal(params Claim[] claims)

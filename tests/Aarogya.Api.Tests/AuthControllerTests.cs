@@ -79,5 +79,8 @@ public sealed class AuthControllerTests
       message = "ok";
       return true;
     }
+
+    public IReadOnlyCollection<string> GetAssignedRoles(string userSub)
+      => [];
   }
 }
