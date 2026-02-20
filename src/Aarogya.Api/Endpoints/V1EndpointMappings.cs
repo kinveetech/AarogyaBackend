@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Aarogya.Api.Authorization;
+using Aarogya.Api.RateLimiting;
 using Aarogya.Api.Validation;
 
 namespace Aarogya.Api.Endpoints;
@@ -19,6 +20,7 @@ internal static class V1EndpointMappings
   {
     var v1 = app.MapGroup("/api/v1")
       .AddEndpointFilter<FluentValidationEndpointFilter>()
+      .RequireRateLimiting(RateLimitPolicyNames.ApiV1)
       .WithOpenApi();
 
     MapUsers(v1);

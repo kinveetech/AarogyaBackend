@@ -3,6 +3,7 @@ using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Endpoints;
 using Aarogya.Api.Health;
+using Aarogya.Api.RateLimiting;
 using Aarogya.Api.Validation;
 using Aarogya.Infrastructure;
 using FluentValidation;
@@ -65,6 +66,11 @@ builder.Services
 builder.Services
   .AddOptionsWithValidateOnStart<ApiKeyOptions>()
   .BindConfiguration(ApiKeyOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
+  .AddOptionsWithValidateOnStart<RateLimitingOptions>()
+  .BindConfiguration(RateLimitingOptions.SectionName)
   .ValidateDataAnnotations();
 
 // Add Infrastructure services (DbContext, health checks, etc.)
@@ -141,6 +147,11 @@ builder.Services.AddAarogyaAuthorization();
 builder.Services.AddAarogyaCorsPolicy(builder.Configuration);
 builder.Services.AddV1EndpointGroupServices();
 
+var rateLimitingOptions = builder.Configuration
+  .GetSection(RateLimitingOptions.SectionName)
+  .Get<RateLimitingOptions>() ?? new RateLimitingOptions();
+builder.Services.AddAarogyaRateLimiting(rateLimitingOptions);
+
 var app = builder.Build();
 
 // Validate required configuration at startup
@@ -161,6 +172,11 @@ app.UseAarogyaApiVersioning();
 app.UseHttpsRedirection();
 app.UseCors("AarogyaPolicy");
 app.UseAuthentication();
+if (rateLimitingOptions.EnableRateLimiting)
+{
+  app.UseRateLimiter();
+  app.UseMiddleware<RateLimitHeadersMiddleware>();
+}
 app.UseAuthorization();
 app.MapControllers();
 app.MapV1EndpointGroups();
