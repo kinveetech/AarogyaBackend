@@ -4,6 +4,7 @@ namespace Aarogya.Api.Features.V1.Notifications;
 
 internal sealed class CriticalSmsNotificationService(
   ISmsSender smsSender,
+  INotificationPreferenceService preferenceService,
   ILogger<CriticalSmsNotificationService> logger)
   : ICriticalSmsNotificationService
 {
@@ -18,8 +19,14 @@ internal sealed class CriticalSmsNotificationService(
       return;
     }
 
+    var userSub = string.IsNullOrWhiteSpace(patient.ExternalAuthId) ? patient.Id.ToString("D") : patient.ExternalAuthId;
+    if (!await preferenceService.IsEnabledAsync(userSub, NotificationEventTypes.EmergencyAccess, NotificationChannels.Sms, cancellationToken))
+    {
+      return;
+    }
+
     var message = $"Aarogya alert: emergency contact {contact.Name} was {action}.";
-    var result = await smsSender.SendAsync(patient.Phone, message, "emergency_access", cancellationToken);
+    var result = await smsSender.SendAsync(patient.Phone, message, NotificationEventTypes.EmergencyAccess, cancellationToken);
     if (!result.Success)
     {
       logger.LogWarning(

@@ -5,24 +5,31 @@ namespace Aarogya.Api.Features.V1.Notifications;
 
 internal sealed class TransactionalEmailNotificationService(
   ITransactionalEmailSender emailSender,
+  INotificationPreferenceService preferenceService,
   IOptions<EmailNotificationsOptions> options)
   : ITransactionalEmailNotificationService
 {
   private readonly EmailNotificationsOptions _options = options.Value;
 
-  public Task SendReportUploadedAsync(
+  public async Task SendReportUploadedAsync(
     Domain.Entities.User patient,
     Domain.Entities.Report report,
     CancellationToken cancellationToken = default)
   {
     if (string.IsNullOrWhiteSpace(patient.Email))
     {
-      return Task.CompletedTask;
+      return;
+    }
+
+    var userSub = ResolveUserSub(patient);
+    if (!await preferenceService.IsEnabledAsync(userSub, NotificationEventTypes.ReportUploaded, NotificationChannels.Email, cancellationToken))
+    {
+      return;
     }
 
     var unsubscribeUrl = BuildUnsubscribeUrl(patient.ExternalAuthId, patient.Email);
     var template = TransactionalEmailTemplateBuilder.BuildReportUploaded(patient, report, unsubscribeUrl);
-    return emailSender.SendAsync(
+    await emailSender.SendAsync(
       patient.Email,
       $"{patient.FirstName} {patient.LastName}".Trim(),
       template.Subject,
@@ -31,7 +38,7 @@ internal sealed class TransactionalEmailNotificationService(
       cancellationToken);
   }
 
-  public Task SendAccessGrantedAsync(
+  public async Task SendAccessGrantedAsync(
     Domain.Entities.User patient,
     Domain.Entities.User doctor,
     Domain.Entities.AccessGrant grant,
@@ -39,12 +46,18 @@ internal sealed class TransactionalEmailNotificationService(
   {
     if (string.IsNullOrWhiteSpace(doctor.Email))
     {
-      return Task.CompletedTask;
+      return;
+    }
+
+    var userSub = ResolveUserSub(doctor);
+    if (!await preferenceService.IsEnabledAsync(userSub, NotificationEventTypes.AccessGranted, NotificationChannels.Email, cancellationToken))
+    {
+      return;
     }
 
     var unsubscribeUrl = BuildUnsubscribeUrl(doctor.ExternalAuthId, doctor.Email);
     var template = TransactionalEmailTemplateBuilder.BuildAccessGranted(doctor, patient, grant, unsubscribeUrl);
-    return emailSender.SendAsync(
+    await emailSender.SendAsync(
       doctor.Email,
       $"{doctor.FirstName} {doctor.LastName}".Trim(),
       template.Subject,
@@ -53,7 +66,7 @@ internal sealed class TransactionalEmailNotificationService(
       cancellationToken);
   }
 
-  public Task SendEmergencyAccessEventAsync(
+  public async Task SendEmergencyAccessEventAsync(
     Domain.Entities.User patient,
     Domain.Entities.EmergencyContact contact,
     string action,
@@ -61,12 +74,18 @@ internal sealed class TransactionalEmailNotificationService(
   {
     if (string.IsNullOrWhiteSpace(patient.Email))
     {
-      return Task.CompletedTask;
+      return;
+    }
+
+    var userSub = ResolveUserSub(patient);
+    if (!await preferenceService.IsEnabledAsync(userSub, NotificationEventTypes.EmergencyAccess, NotificationChannels.Email, cancellationToken))
+    {
+      return;
     }
 
     var unsubscribeUrl = BuildUnsubscribeUrl(patient.ExternalAuthId, patient.Email);
     var template = TransactionalEmailTemplateBuilder.BuildEmergencyAccessEvent(patient, contact, action, unsubscribeUrl);
-    return emailSender.SendAsync(
+    await emailSender.SendAsync(
       patient.Email,
       $"{patient.FirstName} {patient.LastName}".Trim(),
       template.Subject,
@@ -81,4 +100,7 @@ internal sealed class TransactionalEmailNotificationService(
     var identity = string.IsNullOrWhiteSpace(userSub) ? email : userSub;
     return $"{baseUrl}?user={Uri.EscapeDataString(identity)}";
   }
+
+  private static string ResolveUserSub(Domain.Entities.User user)
+    => string.IsNullOrWhiteSpace(user.ExternalAuthId) ? user.Id.ToString("D") : user.ExternalAuthId;
 }
