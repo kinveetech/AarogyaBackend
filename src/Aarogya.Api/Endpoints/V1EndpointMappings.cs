@@ -34,7 +34,12 @@ internal static class V1EndpointMappings
       .RequireAuthorization(AarogyaPolicies.AnyRegisteredRole);
 
     users.MapGet("/me", (HttpContext context, IUsersEndpointService service)
-      => TypedResults.Ok(service.GetCurrentUser(context.User)));
+      => TypedResults.Ok(service.GetCurrentUser(context.User)))
+      .WithName("GetCurrentUserProfileV1")
+      .WithSummary("Get current user profile")
+      .WithDescription("Returns the authenticated user's profile and resolved roles.")
+      .Produces<UserProfileResponse>(StatusCodes.Status200OK)
+      .Produces(StatusCodes.Status401Unauthorized);
   }
 
   private static void MapReports(RouteGroupBuilder v1)
@@ -53,7 +58,12 @@ internal static class V1EndpointMappings
 
       var result = await service.GetForUserAsync(userSub, ct);
       return Results.Ok(result);
-    });
+    })
+      .WithName("ListReportsV1")
+      .WithSummary("List reports")
+      .WithDescription("Returns report summaries available to the authenticated user.")
+      .Produces<IReadOnlyList<ReportSummaryResponse>>(StatusCodes.Status200OK)
+      .Produces(StatusCodes.Status401Unauthorized);
 
     reports.MapPost("/", async (CreateReportRequest request, HttpContext context, IReportsEndpointService service, CancellationToken ct) =>
     {
@@ -70,7 +80,14 @@ internal static class V1EndpointMappings
 
       var result = await service.AddForUserAsync(userSub, request, ct);
       return Results.Created($"/api/v1/reports/{result.ReportId}", result);
-    });
+    })
+      .WithName("CreateReportV1")
+      .WithSummary("Create report")
+      .WithDescription("Creates a report placeholder metadata entry for the authenticated user.")
+      .Accepts<CreateReportRequest>("application/json")
+      .Produces<ReportSummaryResponse>(StatusCodes.Status201Created)
+      .Produces<ApiError>(StatusCodes.Status400BadRequest)
+      .Produces(StatusCodes.Status401Unauthorized);
   }
 
   private static void MapAccessGrants(RouteGroupBuilder v1)
@@ -89,7 +106,13 @@ internal static class V1EndpointMappings
 
       var result = await service.GetForPatientAsync(patientSub, ct);
       return Results.Ok(result);
-    });
+    })
+      .WithName("ListAccessGrantsV1")
+      .WithSummary("List access grants")
+      .WithDescription("Returns access grants created by the authenticated patient.")
+      .Produces<IReadOnlyList<AccessGrantResponse>>(StatusCodes.Status200OK)
+      .Produces(StatusCodes.Status401Unauthorized)
+      .Produces(StatusCodes.Status403Forbidden);
 
     grants.MapPost("/", async (CreateAccessGrantRequest request, HttpContext context, IAccessGrantsEndpointService service, CancellationToken ct) =>
     {
@@ -108,7 +131,15 @@ internal static class V1EndpointMappings
 
       var created = await service.CreateAsync(patientSub, request, ct);
       return Results.Created($"/api/v1/access-grants/{created.GrantId}", created);
-    });
+    })
+      .WithName("CreateAccessGrantV1")
+      .WithSummary("Create access grant")
+      .WithDescription("Creates a doctor access grant for selected reports.")
+      .Accepts<CreateAccessGrantRequest>("application/json")
+      .Produces<AccessGrantResponse>(StatusCodes.Status201Created)
+      .Produces<ApiError>(StatusCodes.Status400BadRequest)
+      .Produces(StatusCodes.Status401Unauthorized)
+      .Produces(StatusCodes.Status403Forbidden);
 
     grants.MapDelete("/{grantId:guid}", async (Guid grantId, HttpContext context, IAccessGrantsEndpointService service, CancellationToken ct) =>
     {
@@ -120,7 +151,14 @@ internal static class V1EndpointMappings
 
       var revoked = await service.RevokeAsync(patientSub, grantId, ct);
       return revoked ? Results.NoContent() : Results.NotFound();
-    });
+    })
+      .WithName("RevokeAccessGrantV1")
+      .WithSummary("Revoke access grant")
+      .WithDescription("Revokes a previously issued access grant.")
+      .Produces(StatusCodes.Status204NoContent)
+      .Produces(StatusCodes.Status401Unauthorized)
+      .Produces(StatusCodes.Status403Forbidden)
+      .Produces(StatusCodes.Status404NotFound);
   }
 
   private static void MapEmergencyContacts(RouteGroupBuilder v1)
@@ -139,7 +177,12 @@ internal static class V1EndpointMappings
 
       var result = await service.GetForUserAsync(userSub, ct);
       return Results.Ok(result);
-    });
+    })
+      .WithName("ListEmergencyContactsV1")
+      .WithSummary("List emergency contacts")
+      .WithDescription("Returns emergency contacts for the authenticated user.")
+      .Produces<IReadOnlyList<EmergencyContactResponse>>(StatusCodes.Status200OK)
+      .Produces(StatusCodes.Status401Unauthorized);
 
     contacts.MapPost("/", async (CreateEmergencyContactRequest request, HttpContext context, IEmergencyContactsEndpointService service, CancellationToken ct) =>
     {
@@ -158,7 +201,14 @@ internal static class V1EndpointMappings
 
       var created = await service.AddForUserAsync(userSub, request, ct);
       return Results.Created($"/api/v1/emergency-contacts/{created.ContactId}", created);
-    });
+    })
+      .WithName("CreateEmergencyContactV1")
+      .WithSummary("Create emergency contact")
+      .WithDescription("Adds an emergency contact for the authenticated user.")
+      .Accepts<CreateEmergencyContactRequest>("application/json")
+      .Produces<EmergencyContactResponse>(StatusCodes.Status201Created)
+      .Produces<ApiError>(StatusCodes.Status400BadRequest)
+      .Produces(StatusCodes.Status401Unauthorized);
 
     contacts.MapDelete("/{contactId:guid}", async (Guid contactId, HttpContext context, IEmergencyContactsEndpointService service, CancellationToken ct) =>
     {
@@ -170,7 +220,13 @@ internal static class V1EndpointMappings
 
       var deleted = await service.DeleteForUserAsync(userSub, contactId, ct);
       return deleted ? Results.NoContent() : Results.NotFound();
-    });
+    })
+      .WithName("DeleteEmergencyContactV1")
+      .WithSummary("Delete emergency contact")
+      .WithDescription("Deletes an emergency contact for the authenticated user.")
+      .Produces(StatusCodes.Status204NoContent)
+      .Produces(StatusCodes.Status401Unauthorized)
+      .Produces(StatusCodes.Status404NotFound);
   }
 
   private static string? GetRequiredSub(ClaimsPrincipal principal)
