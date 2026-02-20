@@ -753,6 +753,16 @@ internal sealed class ReportService(
       return ReportStatus.Processing;
     }
 
+    if (normalized.Equals("clean", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Clean;
+    }
+
+    if (normalized.Equals("infected", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Infected;
+    }
+
     if (normalized.Equals("validated", StringComparison.OrdinalIgnoreCase))
     {
       return ReportStatus.Validated;
@@ -778,6 +788,8 @@ internal sealed class ReportService(
       ReportStatus.Draft => "draft",
       ReportStatus.Uploaded => "uploaded",
       ReportStatus.Processing => "processing",
+      ReportStatus.Clean => "clean",
+      ReportStatus.Infected => "infected",
       ReportStatus.Validated => "validated",
       ReportStatus.Published => "published",
       ReportStatus.Archived => "archived",

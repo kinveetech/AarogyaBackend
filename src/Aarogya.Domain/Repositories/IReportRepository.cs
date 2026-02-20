@@ -7,4 +7,6 @@ public interface IReportRepository : IRepository<Report>
   public Task<IReadOnlyList<Report>> ListByPatientAsync(Guid patientId, CancellationToken cancellationToken = default);
 
   public Task<Report?> GetByReportNumberAsync(string reportNumber, CancellationToken cancellationToken = default);
+
+  public Task<Report?> GetByFileStorageKeyAsync(string fileStorageKey, CancellationToken cancellationToken = default);
 }

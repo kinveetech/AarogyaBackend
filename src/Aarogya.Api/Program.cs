@@ -6,6 +6,7 @@ using Aarogya.Api.Authorization;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Endpoints;
 using Aarogya.Api.Features.V1;
+using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Health;
 using Aarogya.Api.RateLimiting;
 using Aarogya.Api.Security;
@@ -89,6 +90,11 @@ builder.Services
 builder.Services
   .AddOptionsWithValidateOnStart<RateLimitingOptions>()
   .BindConfiguration(RateLimitingOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
+  .AddOptionsWithValidateOnStart<VirusScanningOptions>()
+  .BindConfiguration(VirusScanningOptions.SectionName)
   .ValidateDataAnnotations();
 
 builder.Services

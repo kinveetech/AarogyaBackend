@@ -207,6 +207,8 @@ internal sealed class ReportListQueryRequestValidator : AbstractValidator<Report
     "draft",
     "uploaded",
     "processing",
+    "clean",
+    "infected",
     "validated",
     "published",
     "archived"
