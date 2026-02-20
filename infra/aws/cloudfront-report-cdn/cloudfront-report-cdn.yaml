@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFront distribution for Aarogya report files with OAI-restricted S3 origin.
+
+Parameters:
+  ReportsBucketName:
+    Type: String
+    Description: S3 bucket name that stores report files.
+  LogsBucketDomainName:
+    Type: String
+    Description: S3 logs bucket domain name (for example, my-logs-bucket.s3.amazonaws.com).
+
+Resources:
+  ReportsOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: Aarogya reports OAI
+
+  ReportsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ReportsBucketName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt ReportsOriginAccessIdentity.S3CanonicalUserId
+            Action:
+              - s3:GetObject
+            Resource: !Sub arn:aws:s3:::${ReportsBucketName}/reports/*
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !Sub arn:aws:s3:::${ReportsBucketName}
+              - !Sub arn:aws:s3:::${ReportsBucketName}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+  ReportsResponseHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub aarogya-reports-no-store-${AWS::StackName}
+        Comment: Prevent client/proxy caching for report files.
+        CustomHeadersConfig:
+          Items:
+            - Header: Cache-Control
+              Value: private, no-store, max-age=0
+              Override: true
+
+  ReportsDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        IPV6Enabled: true
+        PriceClass: PriceClass_200
+        HttpVersion: http2and3
+        Comment: Aarogya report files distribution
+        Logging:
+          Bucket: !Ref LogsBucketDomainName
+          IncludeCookies: false
+          Prefix: cloudfront/reports/
+        Origins:
+          - Id: reports-s3-origin
+            DomainName: !Sub ${ReportsBucketName}.s3.${AWS::Region}.amazonaws.com
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${ReportsOriginAccessIdentity}
+        DefaultCacheBehavior:
+          TargetOriginId: reports-s3-origin
+          ViewerProtocolPolicy: https-only
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          DefaultTTL: 0
+          MinTTL: 0
+          MaxTTL: 0
+          TrustedSigners:
+            Enabled: true
+            Quantity: 1
+            Items:
+              - self
+          ResponseHeadersPolicyId: !Ref ReportsResponseHeadersPolicy
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: none
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+Outputs:
+  DistributionId:
+    Description: CloudFront distribution ID
+    Value: !Ref ReportsDistribution
+  DistributionDomainName:
+    Description: CloudFront domain for signed URL generation
+    Value: !GetAtt ReportsDistribution.DomainName
+  OriginAccessIdentityId:
+    Description: CloudFront Origin Access Identity ID
+    Value: !Ref ReportsOriginAccessIdentity

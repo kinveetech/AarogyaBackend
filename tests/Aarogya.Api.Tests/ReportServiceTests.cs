@@ -55,6 +55,7 @@ public sealed class ReportServiceTests
 
     var service = new ReportService(
       s3Client.Object,
+      Mock.Of<ICloudFrontInvalidationService>(),
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
@@ -100,6 +101,7 @@ public sealed class ReportServiceTests
 
     var service = new ReportService(
       Mock.Of<IAmazonS3>(),
+      Mock.Of<ICloudFrontInvalidationService>(),
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       Mock.Of<IReportRepository>(),
@@ -167,6 +169,7 @@ public sealed class ReportServiceTests
     var notificationService = new Mock<IPatientNotificationService>();
     var service = new ReportService(
       s3Client.Object,
+      Mock.Of<ICloudFrontInvalidationService>(),
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
@@ -267,6 +270,7 @@ public sealed class ReportServiceTests
 
     var service = new ReportService(
       s3Client.Object,
+      Mock.Of<ICloudFrontInvalidationService>(),
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
@@ -338,6 +342,7 @@ public sealed class ReportServiceTests
 
     var service = new ReportService(
       Mock.Of<IAmazonS3>(),
+      Mock.Of<ICloudFrontInvalidationService>(),
       userRepository.Object,
       accessGrantRepository.Object,
       reportRepository.Object,
@@ -409,6 +414,7 @@ public sealed class ReportServiceTests
 
     var service = new ReportService(
       Mock.Of<IAmazonS3>(),
+      Mock.Of<ICloudFrontInvalidationService>(),
       userRepository.Object,
       accessGrantRepository.Object,
       reportRepository.Object,
@@ -440,6 +446,7 @@ public sealed class ReportServiceTests
       UploadedByUserId = Guid.NewGuid(),
       ReportType = ReportType.BloodTest,
       ReportNumber = "RPT-DEL001",
+      FileStorageKey = "reports/seed-PATIENT-1/2026/02/report.pdf",
       Status = ReportStatus.Clean
     };
 
@@ -455,10 +462,12 @@ public sealed class ReportServiceTests
 
     var unitOfWork = new Mock<IUnitOfWork>();
     var auditLoggingService = new Mock<IAuditLoggingService>();
+    var cloudFrontInvalidationService = new Mock<ICloudFrontInvalidationService>();
     var now = new DateTimeOffset(2026, 2, 20, 12, 30, 0, TimeSpan.Zero);
 
     var service = new ReportService(
       Mock.Of<IAmazonS3>(),
+      cloudFrontInvalidationService.Object,
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
@@ -474,6 +483,9 @@ public sealed class ReportServiceTests
     report.IsDeleted.Should().BeTrue();
     report.DeletedAt.Should().Be(now);
     unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    cloudFrontInvalidationService.Verify(
+      x => x.InvalidateObjectAsync(report.FileStorageKey!, It.IsAny<CancellationToken>()),
+      Times.Once);
     auditLoggingService.Verify(
       x => x.LogDataAccessAsync(
         It.IsAny<User>(),
@@ -508,6 +520,7 @@ public sealed class ReportServiceTests
 
     var service = new ReportService(
       Mock.Of<IAmazonS3>(),
+      Mock.Of<ICloudFrontInvalidationService>(),
       userRepository.Object,
       Mock.Of<IAccessGrantRepository>(),
       reportRepository.Object,
