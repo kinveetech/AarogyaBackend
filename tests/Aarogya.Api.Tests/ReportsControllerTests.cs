@@ -13,6 +13,42 @@ namespace Aarogya.Api.Tests;
 public sealed class ReportsControllerTests
 {
   [Fact]
+  public async Task CreateReportAsync_ShouldReturnForbidden_ForDoctorRoleAsync()
+  {
+    var reportService = new Mock<IReportService>();
+
+    var controller = CreateController(
+      user: CreateUser("seed-DOCTOR-1", ClaimTypes.Role, "Doctor"),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: reportService.Object,
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.CreateReportAsync(CreateReportRequest(), CancellationToken.None);
+
+    result.Should().BeOfType<ForbidResult>();
+  }
+
+  [Fact]
+  public async Task CreateReportAsync_ShouldReturnBadRequest_WhenServiceThrowsValidationErrorAsync()
+  {
+    var reportService = new Mock<IReportService>();
+    reportService
+      .Setup(x => x.AddForUserAsync(It.IsAny<string>(), It.IsAny<CreateReportRequest>(), It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new InvalidOperationException("Object key does not belong to the uploader scope."));
+
+    var controller = CreateController(
+      user: CreateUser("seed-PATIENT-1", ClaimTypes.Role, "Patient"),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: reportService.Object,
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.CreateReportAsync(CreateReportRequest(), CancellationToken.None);
+
+    var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+    badRequest.Value.Should().BeOfType<ValidationErrorResponse>();
+  }
+
+  [Fact]
   public async Task UploadReportFileAsync_ShouldReturnUnauthorized_WhenSubjectMissingAsync()
   {
     var controller = CreateController(
@@ -159,12 +195,49 @@ public sealed class ReportsControllerTests
     };
   }
 
-  private static ClaimsPrincipal CreateUser(string sub)
+  private static ClaimsPrincipal CreateUser(
+    string sub,
+    string? additionalClaimType = null,
+    string? additionalClaimValue = null)
   {
+    var claims = new List<Claim>
+    {
+      new("sub", sub)
+    };
+
+    if (!string.IsNullOrWhiteSpace(additionalClaimType) && !string.IsNullOrWhiteSpace(additionalClaimValue))
+    {
+      claims.Add(new Claim(additionalClaimType, additionalClaimValue));
+    }
+
     return new ClaimsPrincipal(new ClaimsIdentity(
-    [
-      new Claim("sub", sub)
-    ], "TestAuth"));
+      claims,
+      "TestAuth"));
+  }
+
+  private static CreateReportRequest CreateReportRequest()
+  {
+    return new CreateReportRequest(
+      ReportType: "blood_test",
+      ObjectKey: "reports/seed-PATIENT-1/2026/02/report.pdf",
+      LabName: "Aarogya Diagnostics",
+      LabCode: "AAR-001",
+      CollectedAt: new DateTimeOffset(2026, 2, 19, 0, 0, 0, TimeSpan.Zero),
+      ReportedAt: new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero),
+      Notes: "Test",
+      PatientSub: null,
+      Parameters:
+      [
+        new CreateReportParameterRequest(
+          "HGB",
+          "Hemoglobin",
+          13.4m,
+          null,
+          "g/dL",
+          "12-16",
+          false)
+      ],
+      SourceSystem: "api-v1");
   }
 
   private static FormFile CreateFormFile(string contentType, string fileName)

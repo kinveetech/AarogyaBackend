@@ -67,8 +67,26 @@ public sealed class ReportsController : ControllerBase
       return Unauthorized();
     }
 
-    var created = await _reportService.AddForUserAsync(userSub, request, cancellationToken);
-    return Created(new Uri($"/api/v1/reports/{created.ReportId}", UriKind.Relative), created);
+    var canUpload = User.IsInRole(AarogyaRoles.Patient) || User.IsInRole(AarogyaRoles.LabTechnician);
+    if (!canUpload)
+    {
+      return Forbid();
+    }
+
+    try
+    {
+      var created = await _reportService.AddForUserAsync(userSub, request, cancellationToken);
+      return Created(new Uri($"/api/v1/reports/{created.ReportId}", UriKind.Relative), created);
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["report"] = [ex.Message]
+        }));
+    }
   }
 
   [HttpPost("upload-url")]
