@@ -215,6 +215,59 @@ public sealed class ReportsControllerTests
   }
 
   [Fact]
+  public async Task DeleteReportAsync_ShouldReturnUnauthorized_WhenSubjectMissingAsync()
+  {
+    var controller = CreateController(
+      user: new ClaimsPrincipal(new ClaimsIdentity()),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.DeleteReportAsync(Guid.NewGuid(), CancellationToken.None);
+
+    result.Should().BeOfType<UnauthorizedResult>();
+  }
+
+  [Fact]
+  public async Task DeleteReportAsync_ShouldReturnNoContent_WhenDeleteSucceedsAsync()
+  {
+    var reportId = Guid.NewGuid();
+    var reportService = new Mock<IReportService>();
+    reportService
+      .Setup(x => x.SoftDeleteForUserAsync("seed-PATIENT-1", reportId, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(true);
+
+    var controller = CreateController(
+      user: CreateUser("seed-PATIENT-1"),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: reportService.Object,
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.DeleteReportAsync(reportId, CancellationToken.None);
+
+    result.Should().BeOfType<NoContentResult>();
+  }
+
+  [Fact]
+  public async Task DeleteReportAsync_ShouldReturnNotFound_WhenReportMissingAsync()
+  {
+    var reportService = new Mock<IReportService>();
+    reportService
+      .Setup(x => x.SoftDeleteForUserAsync("seed-PATIENT-1", It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(false);
+
+    var controller = CreateController(
+      user: CreateUser("seed-PATIENT-1"),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: reportService.Object,
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.DeleteReportAsync(Guid.NewGuid(), CancellationToken.None);
+
+    result.Should().BeOfType<NotFoundResult>();
+  }
+
+  [Fact]
   public async Task CreateVerifiedDownloadUrlAsync_ShouldReturnUnauthorized_WhenSubjectMissingAsync()
   {
     var controller = CreateController(

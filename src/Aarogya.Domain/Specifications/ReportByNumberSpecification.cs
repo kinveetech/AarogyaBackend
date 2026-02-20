@@ -5,7 +5,7 @@ namespace Aarogya.Domain.Specifications;
 public sealed class ReportByNumberSpecification : BaseSpecification<Report>
 {
   public ReportByNumberSpecification(string reportNumber)
-    : base(report => report.ReportNumber == reportNumber)
+    : base(report => report.ReportNumber == reportNumber && !report.IsDeleted)
   {
     AddInclude(report => report.Parameters);
     ApplyAsNoTracking();

@@ -29,4 +29,9 @@ public interface IReportService
     string userSub,
     CreateReportDownloadUrlRequest request,
     CancellationToken cancellationToken = default);
+
+  public Task<bool> SoftDeleteForUserAsync(
+    string userSub,
+    Guid reportId,
+    CancellationToken cancellationToken = default);
 }

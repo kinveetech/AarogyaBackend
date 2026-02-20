@@ -42,6 +42,9 @@ internal sealed class ReportConfiguration : IEntityTypeConfiguration<Report>
 
     builder.Property(x => x.FileStorageKey).HasColumnName("file_storage_key");
     builder.Property(x => x.ChecksumSha256).HasColumnName("checksum_sha256");
+    builder.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
+    builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
+    builder.Property(x => x.HardDeletedAt).HasColumnName("hard_deleted_at");
 
     builder.Property(x => x.Results)
       .HasColumnName("results")
@@ -78,6 +81,7 @@ internal sealed class ReportConfiguration : IEntityTypeConfiguration<Report>
 
     builder.HasIndex(x => new { x.PatientId, x.UploadedAt }).HasDatabaseName("ix_reports_patient_uploaded_at");
     builder.HasIndex(x => new { x.Status, x.UploadedAt }).HasDatabaseName("ix_reports_status_uploaded_at");
+    builder.HasIndex(x => new { x.IsDeleted, x.DeletedAt }).HasDatabaseName("ix_reports_deleted_at");
     builder.HasIndex(x => new { x.ReportType, x.ReportedAt }).HasDatabaseName("ix_reports_type_reported_at");
 
     builder.HasIndex(x => x.Results)

@@ -135,6 +135,7 @@ GET    /api/v1/users/me                      Get current user profile
 PUT    /api/v1/users/me                      Update current user profile
 GET    /api/v1/reports                       List reports for current user
 POST   /api/v1/reports                       Create report for current user
+DELETE /api/v1/reports/{id}                  Soft delete report file
 GET    /api/v1/access-grants                 List grants for current patient
 POST   /api/v1/access-grants                 Create access grant (Patient policy)
 DELETE /api/v1/access-grants/{grantId}       Revoke access grant
@@ -291,6 +292,26 @@ Configuration (`appsettings*.json`):
     "QuarantineBucketName": "aarogya-dev-quarantine",
     "QuarantinePrefix": "quarantine",
     "DefinitionsRefreshIntervalMinutes": 60
+  }
+}
+```
+
+### Report File Deletion and Retention
+Issue #57 adds soft-delete and retention-based hard delete for report files:
+
+- `DELETE /api/v1/reports/{id}` marks report as soft-deleted
+- soft-deleted reports are excluded from report list/detail/query APIs
+- soft-deleted files become unavailable for download/checksum verification APIs
+- a background worker hard-deletes the backing S3 object after retention, then clears object key/checksum in DB
+- soft-delete actions are written to audit logs (`report.deleted`)
+
+Configuration (`appsettings*.json`):
+```json
+{
+  "FileDeletion": {
+    "EnableHardDeleteWorker": true,
+    "RetentionDays": 2555,
+    "WorkerIntervalMinutes": 60
   }
 }
 ```
