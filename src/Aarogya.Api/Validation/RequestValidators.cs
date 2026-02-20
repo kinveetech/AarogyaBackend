@@ -273,9 +273,15 @@ internal sealed class CreateAccessGrantRequestValidator : AbstractValidator<Crea
   public CreateAccessGrantRequestValidator()
   {
     RuleFor(x => x.DoctorSub).NotEmpty();
-    RuleFor(x => x.ReportIds).NotNull().Must(ids => ids?.Count > 0).WithMessage("At least one report ID is required.");
-    RuleFor(x => x.ExpiresAt).GreaterThan(DateTimeOffset.UtcNow);
+    RuleFor(x => x.Purpose).NotEmpty().MaximumLength(300);
+    RuleFor(x => x.ExpiresAt).GreaterThan(DateTimeOffset.UtcNow).When(x => x.ExpiresAt.HasValue);
+    RuleFor(x => x)
+      .Must(HaveValidScope)
+      .WithMessage("Set AllReports=true or provide at least one ReportId.");
   }
+
+  private static bool HaveValidScope(CreateAccessGrantRequest request)
+    => request.AllReports || (request.ReportIds is { Count: > 0 });
 }
 
 internal sealed class CreateEmergencyContactRequestValidator : AbstractValidator<CreateEmergencyContactRequest>

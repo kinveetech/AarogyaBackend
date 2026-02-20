@@ -71,6 +71,11 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptionsWithValidateOnStart<AccessGrantOptions>()
+  .BindConfiguration(AccessGrantOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<RateLimitingOptions>()
   .BindConfiguration(RateLimitingOptions.SectionName)
   .ValidateDataAnnotations();
