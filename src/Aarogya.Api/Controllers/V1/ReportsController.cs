@@ -116,7 +116,7 @@ public sealed class ReportsController : ControllerBase
   }
 
   [HttpPost("upload")]
-  [RequestFormLimits(MultipartBodyLengthLimit = 50 * 1024 * 1024)]
+  [Consumes("multipart/form-data")]
   [ProducesResponseType(typeof(ReportUploadResponse), StatusCodes.Status201Created)]
   [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
