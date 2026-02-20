@@ -31,12 +31,25 @@ public sealed class S3Options
   public string BucketName { get; set; } = string.Empty;
 
   [Range(1, 10080)]
-  public int PresignedUrlExpiryMinutes { get; set; } = 60;
+  public int PresignedUrlExpiryMinutes { get; set; } = 15;
 
   /// <summary>
   /// Default object access: "private" or "public-read".
   /// </summary>
   public string DefaultAcl { get; set; } = "private";
+
+  public CloudFrontOptions CloudFront { get; set; } = new();
+}
+
+public sealed class CloudFrontOptions
+{
+  public bool Enabled { get; set; }
+
+  public string? DistributionDomain { get; set; }
+
+  public string? KeyPairId { get; set; }
+
+  public string? PrivateKeyPem { get; set; }
 }
 
 public sealed class SesOptions
