@@ -423,6 +423,105 @@ public sealed class ReportServiceTests
     await action.Should().ThrowAsync<UnauthorizedAccessException>();
   }
 
+  [Fact]
+  public async Task SoftDeleteForUserAsync_ShouldMarkReportDeleted_AndWriteAuditLogAsync()
+  {
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient
+    };
+
+    var report = new Report
+    {
+      Id = Guid.NewGuid(),
+      PatientId = patient.Id,
+      UploadedByUserId = Guid.NewGuid(),
+      ReportType = ReportType.BloodTest,
+      ReportNumber = "RPT-DEL001",
+      Status = ReportStatus.Clean
+    };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.GetByIdAsync(report.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(report);
+
+    var unitOfWork = new Mock<IUnitOfWork>();
+    var auditLoggingService = new Mock<IAuditLoggingService>();
+    var now = new DateTimeOffset(2026, 2, 20, 12, 30, 0, TimeSpan.Zero);
+
+    var service = new ReportService(
+      Mock.Of<IAmazonS3>(),
+      userRepository.Object,
+      Mock.Of<IAccessGrantRepository>(),
+      reportRepository.Object,
+      auditLoggingService.Object,
+      Mock.Of<IPatientNotificationService>(),
+      unitOfWork.Object,
+      Options.Create(CreateAwsOptions()),
+      new FixedUtcClock(now));
+
+    var deleted = await service.SoftDeleteForUserAsync("seed-PATIENT-1", report.Id, CancellationToken.None);
+
+    deleted.Should().BeTrue();
+    report.IsDeleted.Should().BeTrue();
+    report.DeletedAt.Should().Be(now);
+    unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    auditLoggingService.Verify(
+      x => x.LogDataAccessAsync(
+        It.IsAny<User>(),
+        "report.deleted",
+        "report",
+        report.Id,
+        200,
+        It.IsAny<IReadOnlyDictionary<string, string>>(),
+        It.IsAny<CancellationToken>()),
+      Times.Once);
+  }
+
+  [Fact]
+  public async Task SoftDeleteForUserAsync_ShouldReturnFalse_WhenReportMissingAsync()
+  {
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient
+    };
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync((Report?)null);
+
+    var service = new ReportService(
+      Mock.Of<IAmazonS3>(),
+      userRepository.Object,
+      Mock.Of<IAccessGrantRepository>(),
+      reportRepository.Object,
+      Mock.Of<IAuditLoggingService>(),
+      Mock.Of<IPatientNotificationService>(),
+      Mock.Of<IUnitOfWork>(),
+      Options.Create(CreateAwsOptions()),
+      new FixedUtcClock(DateTimeOffset.UtcNow));
+
+    var deleted = await service.SoftDeleteForUserAsync("seed-PATIENT-1", Guid.NewGuid(), CancellationToken.None);
+
+    deleted.Should().BeFalse();
+  }
+
   private static CreateReportRequest CreateRequest()
   {
     return new CreateReportRequest(

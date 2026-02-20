@@ -300,7 +300,54 @@ internal sealed class ReportService(
       throw new InvalidOperationException("Object key does not belong to the authenticated user.");
     }
 
+    var report = await reportRepository.GetByFileStorageKeyAsync(request.ObjectKey.Trim(), cancellationToken);
+    if (report is null || report.IsDeleted)
+    {
+      throw new InvalidOperationException("Report file is not available.");
+    }
+
     return await CreateSignedDownloadUrlAsync(request.ObjectKey, request.ExpiryMinutes, cancellationToken);
+  }
+
+  public async Task<bool> SoftDeleteForUserAsync(
+    string userSub,
+    Guid reportId,
+    CancellationToken cancellationToken = default)
+  {
+    var user = await userRepository.GetByExternalAuthIdAsync(userSub, cancellationToken)
+      ?? throw new InvalidOperationException("Authenticated user is not provisioned in the database.");
+
+    var report = await reportRepository.GetByIdAsync(reportId, cancellationToken);
+    if (report is null || report.IsDeleted)
+    {
+      return false;
+    }
+
+    if (!CanDeleteReport(user, report))
+    {
+      throw new UnauthorizedAccessException("You do not have access to delete this report.");
+    }
+
+    var now = clock.UtcNow;
+    report.IsDeleted = true;
+    report.DeletedAt = now;
+    report.HardDeletedAt = null;
+
+    reportRepository.Update(report);
+    await unitOfWork.SaveChangesAsync(cancellationToken);
+    await auditLoggingService.LogDataAccessAsync(
+      user,
+      "report.deleted",
+      "report",
+      report.Id,
+      200,
+      new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+      {
+        ["reportType"] = ToReportTypeCode(report.ReportType)
+      },
+      cancellationToken);
+
+    return true;
   }
 
   private static string BuildSummaryTitle(Report report)
@@ -386,6 +433,26 @@ internal sealed class ReportService(
 
       return true;
     });
+  }
+
+  private static bool CanDeleteReport(User user, Report report)
+  {
+    if (user.Role == UserRole.Admin)
+    {
+      return true;
+    }
+
+    if (user.Role == UserRole.Patient)
+    {
+      return report.PatientId == user.Id;
+    }
+
+    if (user.Role == UserRole.LabTechnician)
+    {
+      return report.UploadedByUserId == user.Id;
+    }
+
+    return false;
   }
 
   private async Task<ReportSignedDownloadUrlResponse> CreateSignedDownloadUrlAsync(

@@ -98,6 +98,11 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptionsWithValidateOnStart<FileDeletionOptions>()
+  .BindConfiguration(FileDeletionOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<DataEncryptionRotationOptions>()
   .BindConfiguration(DataEncryptionRotationOptions.SectionName)
   .ValidateDataAnnotations();

@@ -21,4 +21,21 @@ internal sealed class ReportRepository(AarogyaDbContext dbContext)
     return dbContext.Reports
       .FirstOrDefaultAsync(x => x.FileStorageKey == fileStorageKey, cancellationToken);
   }
+
+  public async Task<IReadOnlyList<Report>> ListDueForHardDeleteAsync(
+    DateTimeOffset threshold,
+    int maxItems = IReportRepository.HardDeleteBatchSize,
+    CancellationToken cancellationToken = default)
+  {
+    var normalizedMaxItems = Math.Clamp(maxItems, 1, IReportRepository.HardDeleteBatchSize);
+    return await dbContext.Reports
+      .Where(report =>
+        report.IsDeleted
+        && report.HardDeletedAt == null
+        && report.DeletedAt != null
+        && report.DeletedAt <= threshold)
+      .OrderBy(report => report.DeletedAt)
+      .Take(normalizedMaxItems)
+      .ToListAsync(cancellationToken);
+  }
 }

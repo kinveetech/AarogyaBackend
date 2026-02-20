@@ -230,6 +230,35 @@ public sealed class ReportsController : ControllerBase
     }
   }
 
+  [HttpDelete("{id:guid}")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> DeleteReportAsync(Guid id, CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    try
+    {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
+      var deleted = await _reportService.SoftDeleteForUserAsync(userSub, id, cancellationToken);
+      return deleted ? NoContent() : NotFound();
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
+    }
+    catch (UnauthorizedAccessException)
+    {
+      return Forbid();
+    }
+  }
+
   [HttpPost("upload")]
   [Consumes("multipart/form-data")]
   [ProducesResponseType(typeof(ReportUploadResponse), StatusCodes.Status201Created)]

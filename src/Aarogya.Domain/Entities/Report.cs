@@ -31,6 +31,12 @@ public sealed class Report : IAuditableEntity
 
   public string? ChecksumSha256 { get; set; }
 
+  public bool IsDeleted { get; set; }
+
+  public DateTimeOffset? DeletedAt { get; set; }
+
+  public DateTimeOffset? HardDeletedAt { get; set; }
+
   public ReportResults Results { get; set; } = new();
 
   public ReportMetadata Metadata { get; set; } = new();

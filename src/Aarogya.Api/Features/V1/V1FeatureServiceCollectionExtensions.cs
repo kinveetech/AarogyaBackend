@@ -20,6 +20,7 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddHostedService<S3UploadNotificationConfiguratorHostedService>();
     services.AddHostedService<S3UploadEventConsumerHostedService>();
     services.AddHostedService<ClamAvDefinitionsUpdaterHostedService>();
+    services.AddHostedService<ReportHardDeleteHostedService>();
     services.AddScoped<IAccessGrantService, AccessGrantService>();
     services.AddScoped<IEmergencyContactService, EmergencyContactService>();
     services.AddScoped<IConsentService, ConsentService>();

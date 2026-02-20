@@ -3,6 +3,7 @@ using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
+using Aarogya.Domain.Specifications;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
@@ -34,7 +35,9 @@ internal sealed class S3ReportChecksumVerificationService(
       throw new InvalidOperationException("Authenticated user is not provisioned in the database.");
     }
 
-    var report = await reportRepository.GetByIdAsync(request.ReportId, cancellationToken);
+    var report = await reportRepository.FirstOrDefaultAsync(
+      new ReportByIdSpecification(request.ReportId),
+      cancellationToken);
     if (report is null)
     {
       throw new KeyNotFoundException("Report not found.");
