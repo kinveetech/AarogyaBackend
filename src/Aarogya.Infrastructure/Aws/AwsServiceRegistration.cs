@@ -1,4 +1,5 @@
 using Amazon;
+using Amazon.CognitoIdentityProvider;
 using Amazon.Extensions.NETCore.Setup;
 using Amazon.KeyManagementService;
 using Amazon.Runtime;
@@ -84,6 +85,22 @@ public static class AwsServiceRegistration
     else
     {
       services.AddAWSService<IAmazonKeyManagementService>();
+    }
+
+    // Register Cognito Identity Provider client
+    if (useLocalStack && !string.IsNullOrWhiteSpace(serviceUrl))
+    {
+      services.AddSingleton<IAmazonCognitoIdentityProvider>(_ => new AmazonCognitoIdentityProviderClient(
+        awsOptions.Credentials ?? new BasicAWSCredentials("test", "test"),
+        new AmazonCognitoIdentityProviderConfig
+        {
+          RegionEndpoint = awsOptions.Region,
+          ServiceURL = serviceUrl
+        }));
+    }
+    else
+    {
+      services.AddAWSService<IAmazonCognitoIdentityProvider>();
     }
 
     return services;

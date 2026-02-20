@@ -184,7 +184,7 @@ app.MapControllers();
 // Health check endpoints
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
-  Predicate = _ => true,
+  Predicate = check => check.Tags.Contains("live"),
   ResponseWriter = HealthCheckResponseWriter.WriteResponse
 });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions

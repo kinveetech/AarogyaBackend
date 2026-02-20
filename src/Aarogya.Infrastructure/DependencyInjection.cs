@@ -117,6 +117,7 @@ public static class DependencyInjection
 
     // Register a health check for PostgreSQL
     var healthChecks = services.AddHealthChecks()
+      .AddCheck("self", () => HealthCheckResult.Healthy("Application is running."), tags: ["live"])
       .AddCheck<PostgreSqlConnectionHealthCheck>(
         "postgresql",
         failureStatus: HealthStatus.Unhealthy,
@@ -127,6 +128,18 @@ public static class DependencyInjection
     {
       healthChecks.AddCheck<RedisDistributedCacheHealthCheck>("redis", tags: ["cache", "ready"]);
     }
+
+    healthChecks
+      .AddCheck<S3BucketHealthCheck>(
+        "s3",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["aws", "ready"],
+        timeout: TimeSpan.FromSeconds(healthCheckTimeoutSeconds))
+      .AddCheck<CognitoUserPoolHealthCheck>(
+        "cognito",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["aws", "ready"],
+        timeout: TimeSpan.FromSeconds(healthCheckTimeoutSeconds));
 
     // Register AWS services (S3, SES)
     services.AddAwsServices(configuration);
