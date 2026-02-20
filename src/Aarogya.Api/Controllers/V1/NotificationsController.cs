@@ -20,6 +20,39 @@ namespace Aarogya.Api.Controllers.V1;
   Justification = "ASP.NET Core controllers must be public to be discovered by the framework.")]
 public sealed class NotificationsController(IPushNotificationService pushNotificationService) : ControllerBase
 {
+  [HttpGet("preferences")]
+  [ProducesResponseType(typeof(NotificationPreferencesResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> GetPreferencesAsync(CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    var preferences = await pushNotificationService.GetPreferencesAsync(userSub, cancellationToken);
+    return Ok(preferences);
+  }
+
+  [HttpPut("preferences")]
+  [ProducesResponseType(typeof(NotificationPreferencesResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> UpdatePreferencesAsync(
+    [FromBody] UpdateNotificationPreferencesRequest request,
+    CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    var updated = await pushNotificationService.UpdatePreferencesAsync(userSub, request, cancellationToken);
+    return Ok(updated);
+  }
+
   [HttpGet("devices")]
   [ProducesResponseType(typeof(IReadOnlyList<DeviceTokenRegistrationResponse>), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -81,7 +114,8 @@ public sealed class NotificationsController(IPushNotificationService pushNotific
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   public async Task<IActionResult> SendTestNotificationAsync(
     [FromBody] SendPushNotificationRequest request,
-    CancellationToken cancellationToken)
+    [FromQuery] string eventType = NotificationEventTypes.ReportUploaded,
+    CancellationToken cancellationToken = default)
   {
     var userSub = User.GetSubjectOrNull();
     if (userSub is null)
@@ -89,7 +123,31 @@ public sealed class NotificationsController(IPushNotificationService pushNotific
       return Unauthorized();
     }
 
-    var result = await pushNotificationService.SendToCurrentUserAsync(userSub, request, cancellationToken);
+    if (!IsSupportedEventType(eventType))
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["eventType"] =
+          [
+            "eventType must be one of: report_uploaded, access_granted, emergency_access."
+          ]
+        }));
+    }
+
+    var result = await pushNotificationService.SendToCurrentUserAsync(
+      userSub,
+      eventType,
+      request,
+      cancellationToken);
     return Ok(result);
+  }
+
+  private static bool IsSupportedEventType(string eventType)
+  {
+    return string.Equals(eventType, NotificationEventTypes.ReportUploaded, StringComparison.Ordinal)
+      || string.Equals(eventType, NotificationEventTypes.AccessGranted, StringComparison.Ordinal)
+      || string.Equals(eventType, NotificationEventTypes.EmergencyAccess, StringComparison.Ordinal);
   }
 }

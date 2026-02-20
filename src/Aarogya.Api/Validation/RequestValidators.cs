@@ -439,3 +439,13 @@ internal sealed class SendPushNotificationRequestValidator : AbstractValidator<S
       && pair.Value.Length <= 2000);
   }
 }
+
+internal sealed class UpdateNotificationPreferencesRequestValidator : AbstractValidator<UpdateNotificationPreferencesRequest>
+{
+  public UpdateNotificationPreferencesRequestValidator()
+  {
+    RuleFor(x => x.ReportUploaded).NotNull();
+    RuleFor(x => x.AccessGranted).NotNull();
+    RuleFor(x => x.EmergencyAccess).NotNull();
+  }
+}

@@ -22,8 +22,18 @@ public interface IPushNotificationService
     string deviceToken,
     CancellationToken cancellationToken = default);
 
+  public Task<NotificationPreferencesResponse> GetPreferencesAsync(
+    string userSub,
+    CancellationToken cancellationToken = default);
+
+  public Task<NotificationPreferencesResponse> UpdatePreferencesAsync(
+    string userSub,
+    UpdateNotificationPreferencesRequest request,
+    CancellationToken cancellationToken = default);
+
   public Task<PushNotificationDeliveryResponse> SendToCurrentUserAsync(
     string userSub,
+    string eventType,
     SendPushNotificationRequest request,
     CancellationToken cancellationToken = default);
 }

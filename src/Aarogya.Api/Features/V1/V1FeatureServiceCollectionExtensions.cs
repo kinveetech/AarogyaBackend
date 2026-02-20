@@ -18,6 +18,7 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddScoped<IReportChecksumVerificationService, S3ReportChecksumVerificationService>();
     services.AddScoped<IReportVirusScanProcessor, ReportVirusScanProcessor>();
     services.AddSingleton<IReportVirusScanner, ClamAvReportVirusScanner>();
+    services.AddSingleton<INotificationPreferenceService, InMemoryNotificationPreferenceService>();
     services.AddScoped<ITransactionalEmailNotificationService, TransactionalEmailNotificationService>();
     services.AddScoped<ITransactionalEmailSender, SesTransactionalEmailSender>();
     services.AddScoped<ICriticalSmsNotificationService, CriticalSmsNotificationService>();

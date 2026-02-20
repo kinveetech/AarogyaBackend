@@ -146,6 +146,8 @@ POST   /api/v1/emergency-contacts            Create emergency contact
 DELETE /api/v1/emergency-contacts/{contactId} Delete emergency contact
 GET    /api/v1/consents                      List current user consent states
 PUT    /api/v1/consents/{purpose}            Grant/withdraw consent for a purpose
+GET    /api/v1/notifications/preferences     Get notification preferences
+PUT    /api/v1/notifications/preferences     Update notification preferences
 ```
 
 ## 🔐 Authentication
@@ -339,6 +341,27 @@ Configuration (`appsettings*.json`):
   }
 }
 ```
+
+### Notification Preferences
+Issue #64 adds per-user notification preferences by event and channel.
+
+Supported events:
+- `report_uploaded`
+- `access_granted`
+- `emergency_access`
+
+Supported channels:
+- `push`
+- `email`
+- `sms`
+
+API:
+- `GET /api/v1/notifications/preferences`
+- `PUT /api/v1/notifications/preferences`
+
+Behavior:
+- default preferences are all-enabled on first user interaction
+- push/email/sms notification services evaluate preferences before sending
 
 ### CloudFront Report CDN
 Issue #58 adds CloudFront CDN infrastructure and runtime integration for report downloads:

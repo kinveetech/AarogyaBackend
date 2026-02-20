@@ -24,6 +24,60 @@ public sealed class NotificationsControllerTests
   }
 
   [Fact]
+  public async Task GetPreferencesAsync_ShouldReturnUnauthorized_WhenSubjectMissingAsync()
+  {
+    var controller = CreateController(Mock.Of<IPushNotificationService>(), new ClaimsPrincipal(new ClaimsIdentity()));
+
+    var result = await controller.GetPreferencesAsync(CancellationToken.None);
+
+    result.Should().BeOfType<UnauthorizedResult>();
+  }
+
+  [Fact]
+  public async Task GetPreferencesAsync_ShouldReturnOk_WhenAuthenticatedAsync()
+  {
+    var service = new Mock<IPushNotificationService>();
+    var response = new NotificationPreferencesResponse(
+      new NotificationChannelPreferences(true, true, true),
+      new NotificationChannelPreferences(true, false, false),
+      new NotificationChannelPreferences(true, true, false));
+    service
+      .Setup(x => x.GetPreferencesAsync("seed-PATIENT-IT", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(response);
+
+    var controller = CreateController(service.Object, CreateUser("seed-PATIENT-IT"));
+
+    var result = await controller.GetPreferencesAsync(CancellationToken.None);
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    ok.Value.Should().BeEquivalentTo(response);
+  }
+
+  [Fact]
+  public async Task UpdatePreferencesAsync_ShouldReturnOk_WhenAuthenticatedAsync()
+  {
+    var service = new Mock<IPushNotificationService>();
+    var request = new UpdateNotificationPreferencesRequest(
+      new NotificationChannelPreferences(true, true, true),
+      new NotificationChannelPreferences(true, false, false),
+      new NotificationChannelPreferences(true, true, false));
+    var response = new NotificationPreferencesResponse(
+      new NotificationChannelPreferences(true, true, true),
+      new NotificationChannelPreferences(true, false, false),
+      new NotificationChannelPreferences(true, true, false));
+    service
+      .Setup(x => x.UpdatePreferencesAsync("seed-PATIENT-IT", request, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(response);
+
+    var controller = CreateController(service.Object, CreateUser("seed-PATIENT-IT"));
+
+    var result = await controller.UpdatePreferencesAsync(request, CancellationToken.None);
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    ok.Value.Should().BeEquivalentTo(response);
+  }
+
+  [Fact]
   public async Task RegisterDeviceAsync_ShouldReturnCreated_WhenValidAsync()
   {
     var service = new Mock<IPushNotificationService>();
@@ -55,13 +109,18 @@ public sealed class NotificationsControllerTests
     var service = new Mock<IPushNotificationService>();
     var response = new PushNotificationDeliveryResponse(1, 1, 0, true);
     service
-      .Setup(x => x.SendToCurrentUserAsync("seed-PATIENT-IT", It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.SendToCurrentUserAsync(
+        "seed-PATIENT-IT",
+        NotificationEventTypes.ReportUploaded,
+        It.IsAny<SendPushNotificationRequest>(),
+        It.IsAny<CancellationToken>()))
       .ReturnsAsync(response);
 
     var controller = CreateController(service.Object, CreateUser("seed-PATIENT-IT"));
 
     var result = await controller.SendTestNotificationAsync(
       new SendPushNotificationRequest("Test", "Body"),
+      NotificationEventTypes.ReportUploaded,
       CancellationToken.None);
 
     var ok = result.Should().BeOfType<OkObjectResult>().Subject;
