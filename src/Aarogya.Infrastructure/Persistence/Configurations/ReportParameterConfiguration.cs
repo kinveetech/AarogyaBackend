@@ -25,6 +25,9 @@ internal sealed class ReportParameterConfiguration : IEntityTypeConfiguration<Re
     builder.Property(x => x.IsAbnormal).HasColumnName("is_abnormal");
     builder.Property(x => x.CreatedAt).HasColumnName("created_at");
 
+    builder.Property(x => x.Source).HasColumnName("source");
+    builder.Property(x => x.Confidence).HasColumnName("confidence");
+
     builder.Property(x => x.RawParameter)
       .HasColumnName("raw_parameter")
       .HasColumnType("jsonb")
@@ -48,5 +51,9 @@ internal sealed class ReportParameterConfiguration : IEntityTypeConfiguration<Re
       .HasDatabaseName("ix_report_parameters_raw_parameter_gin");
 
     builder.HasIndex(x => new { x.ReportId, x.ParameterCode }).IsUnique();
+
+    builder.HasIndex(x => x.Source)
+      .HasDatabaseName("ix_report_parameters_source")
+      .HasFilter("source IS NOT NULL");
   }
 }

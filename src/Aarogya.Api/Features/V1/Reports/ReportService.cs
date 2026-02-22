@@ -917,6 +917,21 @@ internal sealed class ReportService(
       return ReportStatus.Archived;
     }
 
+    if (normalized.Equals("extracting", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Extracting;
+    }
+
+    if (normalized.Equals("extracted", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.Extracted;
+    }
+
+    if (normalized.Equals("extraction_failed", StringComparison.OrdinalIgnoreCase))
+    {
+      return ReportStatus.ExtractionFailed;
+    }
+
     throw new InvalidOperationException("Unsupported report status.");
   }
 
@@ -932,6 +947,9 @@ internal sealed class ReportService(
       ReportStatus.Validated => "validated",
       ReportStatus.Published => "published",
       ReportStatus.Archived => "archived",
+      ReportStatus.Extracting => "extracting",
+      ReportStatus.Extracted => "extracted",
+      ReportStatus.ExtractionFailed => "extraction_failed",
       _ => "uploaded"
     };
   }

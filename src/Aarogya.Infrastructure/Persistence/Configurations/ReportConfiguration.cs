@@ -56,6 +56,12 @@ internal sealed class ReportConfiguration : IEntityTypeConfiguration<Report>
       .HasColumnType("jsonb")
       .HasConversion(JsonbValueConverter.CreateConverter<ReportMetadata>(), JsonbValueConverter.CreateComparer<ReportMetadata>());
 
+    builder.Property(x => x.Extraction)
+      .HasColumnName("extraction")
+      .HasColumnType("jsonb")
+      .HasConversion(JsonbValueConverter.CreateNullableConverter<ExtractionMetadata>(), JsonbValueConverter.CreateComparer<ExtractionMetadata>())
+      .IsRequired(false);
+
     builder.Property(x => x.CreatedAt).HasColumnName("created_at");
     builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 
@@ -93,6 +99,12 @@ internal sealed class ReportConfiguration : IEntityTypeConfiguration<Report>
       .HasMethod("gin")
       .HasOperators("jsonb_path_ops")
       .HasDatabaseName("ix_reports_metadata_gin");
+
+    builder.HasIndex(x => x.Extraction)
+      .HasMethod("gin")
+      .HasOperators("jsonb_path_ops")
+      .HasDatabaseName("ix_reports_extraction_gin")
+      .HasFilter("extraction IS NOT NULL");
 
   }
 }

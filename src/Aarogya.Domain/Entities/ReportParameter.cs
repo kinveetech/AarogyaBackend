@@ -24,6 +24,10 @@ public sealed class ReportParameter
 
   public ReportParameterRaw RawParameter { get; set; } = new();
 
+  public string? Source { get; set; }
+
+  public double? Confidence { get; set; }
+
   public DateTimeOffset CreatedAt { get; set; }
 
   public Report Report { get; set; } = null!;

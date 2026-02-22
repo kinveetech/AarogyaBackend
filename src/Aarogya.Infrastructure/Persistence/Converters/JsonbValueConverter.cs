@@ -16,6 +16,14 @@ internal static class JsonbValueConverter
         ? new TValue()
         : JsonSerializer.Deserialize<TValue>(v, SerializerOptions) ?? new TValue());
 
+  public static ValueConverter<TValue?, string?> CreateNullableConverter<TValue>()
+    where TValue : class, new()
+    => new(
+      v => v == null ? null : JsonSerializer.Serialize(v, SerializerOptions),
+      v => string.IsNullOrWhiteSpace(v)
+        ? null
+        : JsonSerializer.Deserialize<TValue>(v, SerializerOptions));
+
   public static ValueComparer<TValue> CreateComparer<TValue>()
     where TValue : class, new()
     => new(
