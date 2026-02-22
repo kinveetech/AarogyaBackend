@@ -11,5 +11,8 @@ public enum ReportStatus
   [Description("infected")] Infected,
   [Description("validated")] Validated,
   [Description("published")] Published,
-  [Description("archived")] Archived
+  [Description("archived")] Archived,
+  [Description("extracting")] Extracting,
+  [Description("extracted")] Extracted,
+  [Description("extraction_failed")] ExtractionFailed
 }

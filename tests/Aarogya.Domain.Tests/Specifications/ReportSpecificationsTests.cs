@@ -1,4 +1,5 @@
 using Aarogya.Domain.Entities;
+using Aarogya.Domain.Enums;
 using Aarogya.Domain.Specifications;
 using FluentAssertions;
 using Xunit;
@@ -166,6 +167,61 @@ public sealed class ReportSpecificationsTests
     specification.AsNoTracking.Should().BeFalse();
   }
 
+  [Fact]
+  public void CleanReportsAwaitingExtractionSpecification_ShouldMatchCleanNotDeletedWithFileStorageKey()
+  {
+    var specification = new CleanReportsAwaitingExtractionSpecification(10);
+    var predicate = specification.Criteria!.Compile();
+
+    var match = CreateReportWithStatus(ReportStatus.Clean, isDeleted: false, fileStorageKey: "reports/test.pdf");
+    var deleted = CreateReportWithStatus(ReportStatus.Clean, isDeleted: true, fileStorageKey: "reports/test.pdf");
+    var noFile = CreateReportWithStatus(ReportStatus.Clean, isDeleted: false, fileStorageKey: null);
+    var wrongStatus = CreateReportWithStatus(ReportStatus.Uploaded, isDeleted: false, fileStorageKey: "reports/test.pdf");
+    var extracting = CreateReportWithStatus(ReportStatus.Extracting, isDeleted: false, fileStorageKey: "reports/test.pdf");
+
+    predicate(match).Should().BeTrue();
+    predicate(deleted).Should().BeFalse();
+    predicate(noFile).Should().BeFalse();
+    predicate(wrongStatus).Should().BeFalse();
+    predicate(extracting).Should().BeFalse();
+  }
+
+  [Fact]
+  public void CleanReportsAwaitingExtractionSpecification_ShouldHaveOrderByAndPaging()
+  {
+    var specification = new CleanReportsAwaitingExtractionSpecification(5);
+
+    specification.OrderBy.Should().NotBeNull();
+    specification.Take.Should().Be(5);
+    specification.Skip.Should().Be(0);
+  }
+
+  [Fact]
+  public void ReportByIdForUpdateSpecification_ShouldMatchByIdAndNotDeleted()
+  {
+    var reportId = Guid.NewGuid();
+
+    var specification = new ReportByIdForUpdateSpecification(reportId);
+    var predicate = specification.Criteria!.Compile();
+
+    var match = CreateReport(reportId, "RPT-001", Guid.NewGuid(), Guid.NewGuid(), null, false);
+    var deleted = CreateReport(reportId, "RPT-001", Guid.NewGuid(), Guid.NewGuid(), null, true);
+    var wrongId = CreateReport(Guid.NewGuid(), "RPT-002", Guid.NewGuid(), Guid.NewGuid(), null, false);
+
+    predicate(match).Should().BeTrue();
+    predicate(deleted).Should().BeFalse();
+    predicate(wrongId).Should().BeFalse();
+  }
+
+  [Fact]
+  public void ReportByIdForUpdateSpecification_ShouldHaveOneIncludeAndNotAsNoTracking()
+  {
+    var specification = new ReportByIdForUpdateSpecification(Guid.NewGuid());
+
+    specification.Includes.Count.Should().Be(1);
+    specification.AsNoTracking.Should().BeFalse();
+  }
+
   private static Report CreateReport(
     Guid id,
     string reportNumber,
@@ -182,6 +238,24 @@ public sealed class ReportSpecificationsTests
       UploadedByUserId = uploadedByUserId,
       DoctorId = doctorId,
       IsDeleted = isDeleted,
+      Parameters = []
+    };
+  }
+
+  private static Report CreateReportWithStatus(
+    ReportStatus status,
+    bool isDeleted,
+    string? fileStorageKey)
+  {
+    return new Report
+    {
+      Id = Guid.NewGuid(),
+      ReportNumber = $"RPT-{Guid.NewGuid():N}"[..10],
+      PatientId = Guid.NewGuid(),
+      UploadedByUserId = Guid.NewGuid(),
+      Status = status,
+      IsDeleted = isDeleted,
+      FileStorageKey = fileStorageKey,
       Parameters = []
     };
   }

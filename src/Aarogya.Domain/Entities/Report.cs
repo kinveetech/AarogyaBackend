@@ -41,6 +41,8 @@ public sealed class Report : IAuditableEntity
 
   public ReportMetadata Metadata { get; set; } = new();
 
+  public ExtractionMetadata? Extraction { get; set; }
+
   public DateTimeOffset CreatedAt { get; set; }
 
   public DateTimeOffset UpdatedAt { get; set; }

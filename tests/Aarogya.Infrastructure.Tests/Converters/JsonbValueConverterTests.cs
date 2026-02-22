@@ -141,4 +141,51 @@ public sealed class JsonbValueConverterTests
 
     json1.Should().NotBe(json2);
   }
+
+  [Fact]
+  public void Serialize_ShouldRoundTrip_ExtractionMetadata()
+  {
+    var metadata = new ExtractionMetadata
+    {
+      ExtractionMethod = "pdfpig",
+      StructuringModel = "qwen2.5:14b-instruct",
+      ExtractedParameterCount = 12,
+      OverallConfidence = 0.85,
+      RawExtractedText = "Hemoglobin: 14.5 g/dL",
+      PageCount = 2,
+      ExtractedAt = new DateTimeOffset(2026, 2, 22, 10, 0, 0, TimeSpan.Zero),
+      StructuredAt = new DateTimeOffset(2026, 2, 22, 10, 0, 5, TimeSpan.Zero),
+      ErrorMessage = null,
+      AttemptCount = 1,
+      ProviderMetadata = new Dictionary<string, string>
+      {
+        ["pdf_version"] = "1.7",
+        ["producer"] = "TestLab"
+      }
+    };
+
+    var json = JsonSerializer.Serialize(metadata, Options);
+    var deserialized = JsonSerializer.Deserialize<ExtractionMetadata>(json, Options);
+
+    deserialized.Should().BeEquivalentTo(metadata);
+  }
+
+  [Fact]
+  public void Deserialize_ShouldReturnDefaults_WhenEmptyJson_ExtractionMetadata()
+  {
+    var metadata = JsonSerializer.Deserialize<ExtractionMetadata>("{}", Options);
+
+    metadata.Should().NotBeNull();
+    metadata!.ExtractionMethod.Should().BeNull();
+    metadata.StructuringModel.Should().BeNull();
+    metadata.ExtractedParameterCount.Should().Be(0);
+    metadata.OverallConfidence.Should().BeNull();
+    metadata.RawExtractedText.Should().BeNull();
+    metadata.PageCount.Should().BeNull();
+    metadata.ExtractedAt.Should().BeNull();
+    metadata.StructuredAt.Should().BeNull();
+    metadata.ErrorMessage.Should().BeNull();
+    metadata.AttemptCount.Should().Be(0);
+    metadata.ProviderMetadata.Should().BeEmpty();
+  }
 }
