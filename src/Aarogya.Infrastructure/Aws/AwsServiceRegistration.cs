@@ -8,6 +8,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.SimpleEmailV2;
 using Amazon.SQS;
+using Amazon.Textract;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -141,6 +142,24 @@ public static class AwsServiceRegistration
     else
     {
       services.AddAWSService<IAmazonKeyManagementService>();
+    }
+
+    // Register Textract client
+    if (useLocalStack && hasServiceUrl)
+    {
+      var useHttp = serviceUrl!.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+      services.AddSingleton<IAmazonTextract>(_ => new AmazonTextractClient(
+        awsOptions.Credentials ?? new BasicAWSCredentials("test", "test"),
+        new AmazonTextractConfig
+        {
+          RegionEndpoint = awsOptions.Region,
+          ServiceURL = serviceUrl,
+          UseHttp = useHttp
+        }));
+    }
+    else
+    {
+      services.AddAWSService<IAmazonTextract>();
     }
 
     // Register Cognito Identity Provider client
