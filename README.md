@@ -1,4 +1,5 @@
 # Aarogya Backend API
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kinveetech_AarogyaBackend&metric=alert_status&token=3a64600123347547caaf340de919c549f8a20131)](https://sonarcloud.io/summary/new_code?id=kinveetech_AarogyaBackend)
 
 ASP.NET Core 9.0 REST API following Clean Architecture principles.
 
