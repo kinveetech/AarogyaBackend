@@ -36,6 +36,8 @@ internal sealed class S3UploadNotificationConfiguratorHostedService(
       return;
     }
 
+    await EnsureBucketAsync(options.S3.BucketName, cancellationToken);
+
     var queueUrl = await GetOrCreateQueueUrlAsync(options.Sqs.QueueName, cancellationToken);
     var queueArn = await GetQueueArnAsync(queueUrl, cancellationToken);
     await EnsureQuarantineBucketAsync(virusScanningOptions.Value, cancellationToken);
@@ -157,6 +159,22 @@ internal sealed class S3UploadNotificationConfiguratorHostedService(
     };
 
     await s3Client.PutBucketNotificationAsync(updated, cancellationToken);
+  }
+
+  private async Task EnsureBucketAsync(string bucketName, CancellationToken cancellationToken)
+  {
+    try
+    {
+      await s3Client.GetBucketAclAsync(new GetBucketAclRequest
+      {
+        BucketName = bucketName
+      }, cancellationToken);
+    }
+    catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+    {
+      await s3Client.PutBucketAsync(bucketName, cancellationToken);
+      logger.LogInformation("Created S3 bucket '{BucketName}'.", bucketName);
+    }
   }
 
   private async Task EnsureQuarantineBucketAsync(
