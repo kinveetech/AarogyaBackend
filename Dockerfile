@@ -19,6 +19,7 @@ RUN dotnet publish "src/Aarogya.Api/Aarogya.Api.csproj" \
   /p:DebugSymbols=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS final
+RUN apk add --no-cache icu-data-full tzdata
 WORKDIR /app
 
 ENV ASPNETCORE_URLS=http://+:8080
