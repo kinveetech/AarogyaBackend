@@ -131,7 +131,7 @@ public sealed class DevelopmentDataSeeder(
     {
       for (var i = 0; i < Math.Max(reportsPerPatient, 1); i++)
       {
-        var collectedAt = faker.Date.RecentOffset(60);
+        var collectedAt = faker.Date.RecentOffset(60).ToUniversalTime();
         var reportedAt = collectedAt.AddHours(faker.Random.Int(1, 48));
         var reportType = faker.PickRandom<ReportType>();
         var doctor = doctors[faker.Random.Int(0, doctors.Count - 1)];
@@ -220,7 +220,7 @@ public sealed class DevelopmentDataSeeder(
     return patients.Select(patient =>
     {
       var doctor = doctors[faker.Random.Int(0, doctors.Count - 1)];
-      var startsAt = faker.Date.RecentOffset(10);
+      var startsAt = faker.Date.RecentOffset(10).ToUniversalTime();
 
       return new AccessGrant
       {
@@ -255,7 +255,7 @@ public sealed class DevelopmentDataSeeder(
       return new AuditLog
       {
         Id = Guid.NewGuid(),
-        OccurredAt = faker.Date.RecentOffset(15),
+        OccurredAt = faker.Date.RecentOffset(15).ToUniversalTime(),
         ActorUserId = actor.Id,
         ActorRole = actor.Role,
         Action = faker.PickRandom("report.viewed", "report.downloaded", "report.shared"),

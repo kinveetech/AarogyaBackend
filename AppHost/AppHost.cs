@@ -1,17 +1,12 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-#pragma warning disable S2068 // Dev-only container bootstrap value, not a production credential.
-var postgres = builder.AddContainer("postgres", "postgres")
-  .WithImageTag("16")
-  .WithEnvironment("POSTGRES_DB", "aarogya")
-  .WithEnvironment("POSTGRES_USER", "aarogya")
-  .WithEnvironment("POSTGRES_PASSWORD", "aarogya_dev_password")
-  .WithEndpoint(name: "tcp", port: 5432, targetPort: 5432);
+var postgres = builder.AddPostgres("postgres")
+  .WithImageTag("16");
 
-var redis = builder.AddContainer("redis", "redis")
-  .WithImageTag("7")
-  .WithArgs("--appendonly", "yes")
-  .WithEndpoint(name: "tcp", port: 6379, targetPort: 6379);
+var db = postgres.AddDatabase("DefaultConnection", "aarogya");
+
+var redis = builder.AddRedis("Redis")
+  .WithImageTag("7");
 
 var localStack = builder.AddContainer("localstack", "localstack/localstack")
   .WithImageTag("3")
@@ -31,17 +26,16 @@ var localStack = builder.AddContainer("localstack", "localstack/localstack")
   .WithEnvironment("LOCALSTACK_COGNITO_PASSWORD_REQUIRE_SYMBOLS", "true")
   .WithEndpoint(name: "http", port: 4566, targetPort: 4566);
 
+var localStackEndpoint = localStack.GetEndpoint("http");
+
 #pragma warning disable S5332 // LocalStack edge endpoint uses HTTP for local emulation.
 builder.AddProject("api", "../src/Aarogya.Api/Aarogya.Api.csproj")
   .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-  .WithEnvironment(
-    "ConnectionStrings__DefaultConnection",
-    "Host=postgres;Port=5432;Database=aarogya;Username=aarogya;Password=aarogya_dev_password")
-  .WithEnvironment(
-    "ConnectionStrings__Redis",
-    "redis:6379,abortConnect=false,connectTimeout=5000")
+  .WithReference(db)
+  .WithReference(redis)
   .WithEnvironment("Aws__UseLocalStack", "true")
-  .WithEnvironment("Aws__ServiceUrl", "http://localstack:4566")
+  .WithEnvironment("Aws__ServiceUrl",
+    ReferenceExpression.Create($"http://{localStackEndpoint.Property(EndpointProperty.Host)}:{localStackEndpoint.Property(EndpointProperty.Port)}"))
   .WithEnvironment("Aws__AccessKey", "test")
   .WithEnvironment("Aws__SecretKey", "test")
   .WithEnvironment("Aws__S3__BucketName", "aarogya-dev")
@@ -51,7 +45,8 @@ builder.AddProject("api", "../src/Aarogya.Api/Aarogya.Api.csproj")
   .WithEnvironment("Aws__Cognito__UserPoolName", "aarogya-dev-users")
   .WithEnvironment("Aws__Cognito__UserPoolId", "SET_VIA_USER_SECRETS_OR_ENV_VAR")
   .WithEnvironment("Aws__Cognito__AppClientId", "SET_VIA_USER_SECRETS_OR_ENV_VAR")
-  .WithEnvironment("Aws__Cognito__Issuer", "http://localstack:4566/SET_VIA_USER_SECRETS_OR_ENV_VAR")
+  .WithEnvironment("Aws__Cognito__Issuer",
+    ReferenceExpression.Create($"http://{localStackEndpoint.Property(EndpointProperty.Host)}:{localStackEndpoint.Property(EndpointProperty.Port)}/SET_VIA_USER_SECRETS_OR_ENV_VAR"))
   .WithEnvironment("Aws__Cognito__MfaConfiguration", "OPTIONAL")
   .WithEnvironment("Aws__Cognito__PasswordPolicy__MinimumLength", "8")
   .WithEnvironment("Aws__Cognito__PasswordPolicy__RequireLowercase", "true")
@@ -62,6 +57,5 @@ builder.AddProject("api", "../src/Aarogya.Api/Aarogya.Api.csproj")
   .WaitFor(redis)
   .WaitFor(localStack);
 #pragma warning restore S5332
-#pragma warning restore S2068
 
 builder.Build().Run();
