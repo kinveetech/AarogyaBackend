@@ -6,6 +6,7 @@ using Aarogya.Domain.Repositories;
 using Amazon.S3;
 using Amazon.S3.Model;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -100,10 +101,15 @@ public sealed class ReportHardDeleteHostedServiceTests
       }
     });
 
+    var services = new ServiceCollection();
+    services.AddScoped(_ => reportRepository);
+    services.AddScoped(_ => unitOfWork);
+    services.AddScoped(_ => s3Client);
+    var provider = services.BuildServiceProvider();
+    var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+
     return new ReportHardDeleteHostedService(
-      reportRepository,
-      unitOfWork,
-      s3Client,
+      scopeFactory,
       awsOptions,
       Options.Create(fileDeletionOptions),
       new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 12, 0, 0, TimeSpan.Zero)),

@@ -9,9 +9,7 @@ using Microsoft.Extensions.Options;
 namespace Aarogya.Api.Features.V1.Reports;
 
 internal sealed class ReportHardDeleteHostedService(
-  IReportRepository reportRepository,
-  IUnitOfWork unitOfWork,
-  IAmazonS3 s3Client,
+  IServiceScopeFactory scopeFactory,
   IOptions<AwsOptions> awsOptions,
   IOptions<FileDeletionOptions> fileDeletionOptions,
   IUtcClock clock,
@@ -51,6 +49,11 @@ internal sealed class ReportHardDeleteHostedService(
     FileDeletionOptions options,
     CancellationToken cancellationToken)
   {
+    await using var scope = scopeFactory.CreateAsyncScope();
+    var reportRepository = scope.ServiceProvider.GetRequiredService<IReportRepository>();
+    var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+    var s3Client = scope.ServiceProvider.GetRequiredService<IAmazonS3>();
+
     var threshold = clock.UtcNow.AddDays(-options.RetentionDays);
     var dueReports = await reportRepository.ListDueForHardDeleteAsync(
       threshold,
@@ -68,7 +71,7 @@ internal sealed class ReportHardDeleteHostedService(
     foreach (var report in dueReports)
     {
       cancellationToken.ThrowIfCancellationRequested();
-      if (!await TryDeleteObjectFromStorageAsync(report.FileStorageKey, cancellationToken))
+      if (!await TryDeleteObjectFromStorageAsync(s3Client, report.FileStorageKey, cancellationToken))
       {
         continue;
       }
@@ -90,7 +93,10 @@ internal sealed class ReportHardDeleteHostedService(
     }
   }
 
-  private async Task<bool> TryDeleteObjectFromStorageAsync(string? fileStorageKey, CancellationToken cancellationToken)
+  private async Task<bool> TryDeleteObjectFromStorageAsync(
+    IAmazonS3 s3Client,
+    string? fileStorageKey,
+    CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(fileStorageKey))
     {

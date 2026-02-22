@@ -1,8 +1,10 @@
+using System.ComponentModel;
+
 namespace Aarogya.Domain.Enums;
 
 public enum AccessGrantStatus
 {
-  Active,
-  Revoked,
-  Expired
+  [Description("active")] Active,
+  [Description("revoked")] Revoked,
+  [Description("expired")] Expired
 }

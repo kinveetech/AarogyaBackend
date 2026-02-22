@@ -1,0 +1,555 @@
+﻿using System;
+using System.Net;
+using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace Aarogya.Infrastructure.Persistence.Migrations
+{
+    /// <inheritdoc />
+    public partial class InitialCreate : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.EnsureSchema(
+                name: "aadhaar_vault");
+
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:PostgresExtension:pgcrypto", ",,");
+
+            migrationBuilder.CreateTable(
+                name: "aadhaar_records",
+                schema: "aadhaar_vault",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    reference_token = table.Column<Guid>(type: "uuid", nullable: false),
+                    aadhaar_encrypted = table.Column<byte[]>(type: "bytea", nullable: false),
+                    aadhaar_sha256 = table.Column<byte[]>(type: "bytea", nullable: false),
+                    provider_request_id = table.Column<string>(type: "text", nullable: true),
+                    verification_provider = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: true),
+                    demographics_encrypted = table.Column<byte[]>(type: "bytea", nullable: true),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_aadhaar_records", x => x.id);
+                    table.UniqueConstraint("AK_aadhaar_records_reference_token", x => x.reference_token);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "access_audit_logs",
+                schema: "aadhaar_vault",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    reference_token = table.Column<Guid>(type: "uuid", nullable: false),
+                    occurred_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    actor_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    action = table.Column<string>(type: "text", nullable: false),
+                    request_path = table.Column<string>(type: "text", nullable: true),
+                    request_method = table.Column<string>(type: "text", nullable: true),
+                    client_ip = table.Column<IPAddress>(type: "inet", nullable: true),
+                    result_status = table.Column<int>(type: "integer", nullable: true),
+                    details = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_access_audit_logs", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_access_audit_logs_aadhaar_records_reference_token",
+                        column: x => x.reference_token,
+                        principalSchema: "aadhaar_vault",
+                        principalTable: "aadhaar_records",
+                        principalColumn: "reference_token",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "users",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    external_auth_id = table.Column<string>(type: "text", nullable: true),
+                    role = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    first_name_encrypted = table.Column<byte[]>(type: "bytea", nullable: false),
+                    last_name_encrypted = table.Column<byte[]>(type: "bytea", nullable: false),
+                    email_encrypted = table.Column<byte[]>(type: "bytea", nullable: false),
+                    phone_encrypted = table.Column<byte[]>(type: "bytea", nullable: true),
+                    address_encrypted = table.Column<byte[]>(type: "bytea", nullable: true),
+                    blood_group_encrypted = table.Column<byte[]>(type: "bytea", nullable: true),
+                    date_of_birth = table.Column<DateOnly>(type: "date", nullable: true),
+                    gender = table.Column<string>(type: "text", nullable: true),
+                    email_hash = table.Column<byte[]>(type: "bytea", nullable: true),
+                    phone_hash = table.Column<byte[]>(type: "bytea", nullable: true),
+                    aadhaar_ref_token = table.Column<Guid>(type: "uuid", nullable: true),
+                    aadhaar_sha256 = table.Column<byte[]>(type: "bytea", nullable: true),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_users", x => x.id);
+                    table.CheckConstraint("users_gender_chk", "gender IS NULL OR gender IN ('male', 'female', 'other', 'unknown')");
+                    table.ForeignKey(
+                        name: "FK_users_aadhaar_records_aadhaar_ref_token",
+                        column: x => x.aadhaar_ref_token,
+                        principalSchema: "aadhaar_vault",
+                        principalTable: "aadhaar_records",
+                        principalColumn: "reference_token",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "access_grants",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    granted_to_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    granted_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    grant_reason = table.Column<string>(type: "text", nullable: true),
+                    scope = table.Column<string>(type: "jsonb", nullable: false),
+                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "active"),
+                    starts_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    revoked_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_access_grants", x => x.id);
+                    table.CheckConstraint("access_grants_not_self_chk", "patient_id <> granted_to_user_id");
+                    table.CheckConstraint("access_grants_revoked_time_chk", "revoked_at IS NULL OR revoked_at >= starts_at");
+                    table.CheckConstraint("access_grants_time_window_chk", "expires_at IS NULL OR expires_at > starts_at");
+                    table.ForeignKey(
+                        name: "FK_access_grants_users_granted_by_user_id",
+                        column: x => x.granted_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_access_grants_users_granted_to_user_id",
+                        column: x => x.granted_to_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_access_grants_users_patient_id",
+                        column: x => x.patient_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "audit_logs",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    occurred_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    actor_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    actor_role = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    action = table.Column<string>(type: "text", nullable: false),
+                    entity_type = table.Column<string>(type: "text", nullable: false),
+                    entity_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    correlation_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    request_path = table.Column<string>(type: "text", nullable: true),
+                    request_method = table.Column<string>(type: "text", nullable: true),
+                    client_ip = table.Column<IPAddress>(type: "inet", nullable: true),
+                    user_agent = table.Column<string>(type: "text", nullable: true),
+                    result_status = table.Column<int>(type: "integer", nullable: true),
+                    details = table.Column<string>(type: "jsonb", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_audit_logs", x => x.id);
+                    table.CheckConstraint("audit_logs_result_status_chk", "result_status IS NULL OR (result_status BETWEEN 100 AND 599)");
+                    table.ForeignKey(
+                        name: "FK_audit_logs_users_actor_user_id",
+                        column: x => x.actor_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "consent_records",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    purpose = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    is_granted = table.Column<bool>(type: "boolean", nullable: false),
+                    source = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
+                    occurred_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_consent_records", x => x.id);
+                    table.CheckConstraint("consent_records_purpose_chk", "char_length(trim(purpose)) > 0");
+                    table.ForeignKey(
+                        name: "FK_consent_records_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "emergency_contacts",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name_encrypted = table.Column<byte[]>(type: "bytea", nullable: false),
+                    relationship = table.Column<string>(type: "text", nullable: false),
+                    phone_encrypted = table.Column<byte[]>(type: "bytea", nullable: false),
+                    phone_hash = table.Column<byte[]>(type: "bytea", nullable: true),
+                    email_encrypted = table.Column<byte[]>(type: "bytea", nullable: true),
+                    is_primary = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_emergency_contacts", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_emergency_contacts_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "reports",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    report_number = table.Column<string>(type: "text", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    doctor_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    uploaded_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    report_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "uploaded"),
+                    source_system = table.Column<string>(type: "text", nullable: true),
+                    collected_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    reported_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    uploaded_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    file_storage_key = table.Column<string>(type: "text", nullable: true),
+                    checksum_sha256 = table.Column<string>(type: "text", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    hard_deleted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    results = table.Column<string>(type: "jsonb", nullable: false),
+                    metadata = table.Column<string>(type: "jsonb", nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_reports", x => x.id);
+                    table.CheckConstraint("reports_time_order_chk", "reported_at IS NULL OR collected_at IS NULL OR reported_at >= collected_at");
+                    table.ForeignKey(
+                        name: "FK_reports_users_doctor_id",
+                        column: x => x.doctor_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_reports_users_patient_id",
+                        column: x => x.patient_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_reports_users_uploaded_by_user_id",
+                        column: x => x.uploaded_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "report_parameters",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    report_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    parameter_code = table.Column<string>(type: "text", nullable: false),
+                    parameter_name = table.Column<string>(type: "text", nullable: false),
+                    measured_value_text = table.Column<string>(type: "text", nullable: true),
+                    measured_value_numeric = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: true),
+                    unit = table.Column<string>(type: "text", nullable: true),
+                    reference_range_text = table.Column<string>(type: "text", nullable: true),
+                    is_abnormal = table.Column<bool>(type: "boolean", nullable: true),
+                    raw_parameter = table.Column<string>(type: "jsonb", nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_report_parameters", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_report_parameters_reports_report_id",
+                        column: x => x.report_id,
+                        principalTable: "reports",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "ux_aadhaar_records_reference_token",
+                schema: "aadhaar_vault",
+                table: "aadhaar_records",
+                column: "reference_token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ux_aadhaar_records_sha256",
+                schema: "aadhaar_vault",
+                table: "aadhaar_records",
+                column: "aadhaar_sha256",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_aadhaar_access_logs_occurred_at",
+                schema: "aadhaar_vault",
+                table: "access_audit_logs",
+                column: "occurred_at");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_aadhaar_access_logs_reference_token",
+                schema: "aadhaar_vault",
+                table: "access_audit_logs",
+                column: "reference_token");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_aadhaar_access_logs_reference_token_time",
+                schema: "aadhaar_vault",
+                table: "access_audit_logs",
+                columns: new[] { "reference_token", "occurred_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_access_grants_granted_by_user_id",
+                table: "access_grants",
+                column: "granted_by_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_access_grants_granted_to_status",
+                table: "access_grants",
+                columns: new[] { "granted_to_user_id", "status" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_access_grants_patient_status",
+                table: "access_grants",
+                columns: new[] { "patient_id", "status" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_access_grants_scope_gin",
+                table: "access_grants",
+                column: "scope")
+                .Annotation("Npgsql:IndexMethod", "gin")
+                .Annotation("Npgsql:IndexOperators", new[] { "jsonb_path_ops" });
+
+            migrationBuilder.CreateIndex(
+                name: "ux_access_grants_active",
+                table: "access_grants",
+                columns: new[] { "patient_id", "granted_to_user_id" },
+                unique: true,
+                filter: "status = 'active'");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_audit_logs_actor_time",
+                table: "audit_logs",
+                columns: new[] { "actor_user_id", "occurred_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_audit_logs_details_gin",
+                table: "audit_logs",
+                column: "details")
+                .Annotation("Npgsql:IndexMethod", "gin")
+                .Annotation("Npgsql:IndexOperators", new[] { "jsonb_path_ops" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_audit_logs_entity_time",
+                table: "audit_logs",
+                columns: new[] { "entity_type", "entity_id", "occurred_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_audit_logs_occurred_at",
+                table: "audit_logs",
+                column: "occurred_at");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_consent_records_user_purpose_time",
+                table: "consent_records",
+                columns: new[] { "user_id", "purpose", "occurred_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_consent_records_user_time",
+                table: "consent_records",
+                columns: new[] { "user_id", "occurred_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_emergency_contacts_phone_hash",
+                table: "emergency_contacts",
+                column: "phone_hash");
+
+            migrationBuilder.CreateIndex(
+                name: "ux_emergency_contacts_primary_per_user",
+                table: "emergency_contacts",
+                column: "user_id",
+                unique: true,
+                filter: "is_primary");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_report_parameters_name",
+                table: "report_parameters",
+                column: "parameter_name");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_report_parameters_raw_parameter_gin",
+                table: "report_parameters",
+                column: "raw_parameter")
+                .Annotation("Npgsql:IndexMethod", "gin")
+                .Annotation("Npgsql:IndexOperators", new[] { "jsonb_path_ops" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_report_parameters_report_id",
+                table: "report_parameters",
+                column: "report_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_report_parameters_report_id_parameter_code",
+                table: "report_parameters",
+                columns: new[] { "report_id", "parameter_code" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_report_parameters_value_numeric",
+                table: "report_parameters",
+                column: "measured_value_numeric",
+                filter: "measured_value_numeric IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_reports_deleted_at",
+                table: "reports",
+                columns: new[] { "is_deleted", "deleted_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_reports_doctor_id",
+                table: "reports",
+                column: "doctor_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_reports_metadata_gin",
+                table: "reports",
+                column: "metadata")
+                .Annotation("Npgsql:IndexMethod", "gin")
+                .Annotation("Npgsql:IndexOperators", new[] { "jsonb_path_ops" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_reports_patient_uploaded_at",
+                table: "reports",
+                columns: new[] { "patient_id", "uploaded_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_reports_report_number",
+                table: "reports",
+                column: "report_number",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_reports_results_gin",
+                table: "reports",
+                column: "results")
+                .Annotation("Npgsql:IndexMethod", "gin")
+                .Annotation("Npgsql:IndexOperators", new[] { "jsonb_path_ops" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_reports_status_uploaded_at",
+                table: "reports",
+                columns: new[] { "status", "uploaded_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_reports_type_reported_at",
+                table: "reports",
+                columns: new[] { "report_type", "reported_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_reports_uploaded_by_user_id",
+                table: "reports",
+                column: "uploaded_by_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_users_aadhaar_ref_token",
+                table: "users",
+                column: "aadhaar_ref_token");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_users_aadhaar_sha256",
+                table: "users",
+                column: "aadhaar_sha256");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_users_email_hash",
+                table: "users",
+                column: "email_hash");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_users_external_auth_id",
+                table: "users",
+                column: "external_auth_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_users_phone_hash",
+                table: "users",
+                column: "phone_hash");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_users_role_active",
+                table: "users",
+                columns: new[] { "role", "is_active" });
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "access_audit_logs",
+                schema: "aadhaar_vault");
+
+            migrationBuilder.DropTable(
+                name: "access_grants");
+
+            migrationBuilder.DropTable(
+                name: "audit_logs");
+
+            migrationBuilder.DropTable(
+                name: "consent_records");
+
+            migrationBuilder.DropTable(
+                name: "emergency_contacts");
+
+            migrationBuilder.DropTable(
+                name: "report_parameters");
+
+            migrationBuilder.DropTable(
+                name: "reports");
+
+            migrationBuilder.DropTable(
+                name: "users");
+
+            migrationBuilder.DropTable(
+                name: "aadhaar_records",
+                schema: "aadhaar_vault");
+        }
+    }
+}

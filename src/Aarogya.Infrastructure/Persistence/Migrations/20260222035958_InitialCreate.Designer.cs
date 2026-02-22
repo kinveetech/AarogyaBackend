@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aarogya.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AarogyaDbContext))]
-    [Migration("20260220184709_AddReportSoftDelete")]
-    partial class AddReportSoftDelete
+    [Migration("20260222035958_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -187,7 +187,8 @@ namespace Aarogya.Infrastructure.Persistence.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("access_grant_status")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
                         .HasDefaultValue("active")
                         .HasColumnName("status");
 
@@ -235,7 +236,8 @@ namespace Aarogya.Infrastructure.Persistence.Migrations
                         .HasColumnName("action");
 
                     b.Property<string>("ActorRole")
-                        .HasColumnType("user_role")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("actor_role");
 
                     b.Property<Guid?>("ActorUserId")
@@ -478,7 +480,8 @@ namespace Aarogya.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("ReportType")
                         .IsRequired()
-                        .HasColumnType("report_type")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("report_type");
 
                     b.Property<DateTimeOffset?>("ReportedAt")
@@ -497,7 +500,8 @@ namespace Aarogya.Infrastructure.Persistence.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("report_status")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
                         .HasDefaultValue("uploaded")
                         .HasColumnName("status");
 
@@ -701,7 +705,8 @@ namespace Aarogya.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Role")
                         .IsRequired()
-                        .HasColumnType("user_role")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("role");
 
                     b.Property<DateTimeOffset>("UpdatedAt")

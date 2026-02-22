@@ -8,9 +8,9 @@ using Microsoft.Extensions.Options;
 namespace Aarogya.Api.Features.V1.Reports;
 
 internal sealed class S3UploadEventConsumerHostedService(
+  IServiceScopeFactory scopeFactory,
   IAmazonSQS sqsClient,
   IAmazonS3 s3Client,
-  IReportVirusScanProcessor virusScanProcessor,
   IOptions<AwsOptions> awsOptions,
   ILogger<S3UploadEventConsumerHostedService> logger)
   : BackgroundService
@@ -121,6 +121,8 @@ internal sealed class S3UploadEventConsumerHostedService(
         record.EventName,
         record.EventTime);
 
+      await using var scope = scopeFactory.CreateAsyncScope();
+      var virusScanProcessor = scope.ServiceProvider.GetRequiredService<IReportVirusScanProcessor>();
       await virusScanProcessor.ProcessUploadAsync(record, cancellationToken);
     }
   }

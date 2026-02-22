@@ -26,13 +26,13 @@ internal sealed class ReportConfiguration : IEntityTypeConfiguration<Report>
 
     builder.Property(x => x.ReportType)
       .HasColumnName("report_type")
-      .HasColumnType("report_type")
-      .HasConversion(EnumSnakeCaseConverter.Create<ReportType>());
+      .HasConversion(DescriptionEnumConverter.Create<ReportType>())
+      .HasMaxLength(20);
 
     builder.Property(x => x.Status)
       .HasColumnName("status")
-      .HasColumnType("report_status")
-      .HasConversion(EnumSnakeCaseConverter.Create<ReportStatus>())
+      .HasConversion(DescriptionEnumConverter.Create<ReportStatus>())
+      .HasMaxLength(20)
       .HasDefaultValue(ReportStatus.Uploaded);
 
     builder.Property(x => x.SourceSystem).HasColumnName("source_system");

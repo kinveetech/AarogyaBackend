@@ -8,6 +8,7 @@ using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -89,13 +90,16 @@ public sealed class EmergencyAccessExpiryHostedServiceTests
     var push = new Mock<IPushNotificationService>();
     var audit = new Mock<IAuditLoggingService>();
 
-    var service = new EmergencyAccessExpiryHostedService(
+    var scopeFactory = CreateScopeFactory(
       accessGrantRepository.Object,
       unitOfWork.Object,
       audit.Object,
       email.Object,
       sms.Object,
-      push.Object,
+      push.Object);
+
+    var service = new EmergencyAccessExpiryHostedService(
+      scopeFactory,
       Options.Create(new EmergencyAccessOptions
       {
         EnableAutoExpiryWorker = true,
@@ -121,6 +125,25 @@ public sealed class EmergencyAccessExpiryHostedServiceTests
         It.IsAny<CancellationToken>()),
       Times.Once);
     unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+  }
+
+  private static IServiceScopeFactory CreateScopeFactory(
+    IAccessGrantRepository accessGrantRepository,
+    IUnitOfWork unitOfWork,
+    IAuditLoggingService auditLoggingService,
+    ITransactionalEmailNotificationService emailNotificationService,
+    ICriticalSmsNotificationService smsNotificationService,
+    IPushNotificationService pushNotificationService)
+  {
+    var services = new ServiceCollection();
+    services.AddScoped(_ => accessGrantRepository);
+    services.AddScoped(_ => unitOfWork);
+    services.AddScoped(_ => auditLoggingService);
+    services.AddScoped(_ => emailNotificationService);
+    services.AddScoped(_ => smsNotificationService);
+    services.AddScoped(_ => pushNotificationService);
+    var provider = services.BuildServiceProvider();
+    return provider.GetRequiredService<IServiceScopeFactory>();
   }
 
   private sealed class FixedUtcClock(DateTimeOffset utcNow) : IUtcClock

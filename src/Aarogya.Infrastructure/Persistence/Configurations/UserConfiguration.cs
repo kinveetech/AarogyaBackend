@@ -26,8 +26,8 @@ internal sealed class UserConfiguration(IPiiFieldEncryptionService encryptionSer
 
     builder.Property(x => x.Role)
       .HasColumnName("role")
-      .HasColumnType("user_role")
-      .HasConversion(EnumSnakeCaseConverter.Create<UserRole>());
+      .HasConversion(DescriptionEnumConverter.Create<UserRole>())
+      .HasMaxLength(20);
 
     builder.Property(x => x.FirstName).HasColumnName("first_name_encrypted").HasColumnType(ByteaType).HasConversion(_encryptedRequiredStringConverter).IsRequired();
     builder.Property(x => x.LastName).HasColumnName("last_name_encrypted").HasColumnType(ByteaType).HasConversion(_encryptedRequiredStringConverter).IsRequired();
