@@ -24,7 +24,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   private const string TestStorageKey = "reports/test-user-sub-001/2026/02/21/abc123.pdf";
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenReportIdIsEmpty()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenReportIdIsEmptyAsync()
   {
     var userRepo = new Mock<IUserRepository>();
     userRepo
@@ -41,7 +41,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenUserIsNotProvisioned()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenUserIsNotProvisionedAsync()
   {
     var userRepo = new Mock<IUserRepository>();
     userRepo
@@ -58,7 +58,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrowKeyNotFound_WhenReportDoesNotExist()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrowKeyNotFound_WhenReportDoesNotExistAsync()
   {
     var userId = Guid.NewGuid();
     var userRepo = new Mock<IUserRepository>();
@@ -81,7 +81,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrowUnauthorized_WhenUserCannotAccessReport()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrowUnauthorized_WhenUserCannotAccessReportAsync()
   {
     var requesterId = Guid.NewGuid();
     var ownerId = Guid.NewGuid();
@@ -109,7 +109,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldAllowAccess_WhenUserIsPatient()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldAllowAccess_WhenUserIsPatientAsync()
   {
     var userId = Guid.NewGuid();
     var reportId = Guid.NewGuid();
@@ -142,7 +142,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldAllowAccess_WhenUserIsAdmin()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldAllowAccess_WhenUserIsAdminAsync()
   {
     var adminId = Guid.NewGuid();
     var ownerId = Guid.NewGuid();
@@ -174,7 +174,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldAllowAccess_WhenUserIsDoctor()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldAllowAccess_WhenUserIsDoctorAsync()
   {
     var doctorId = Guid.NewGuid();
     var ownerId = Guid.NewGuid();
@@ -206,7 +206,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenChecksumMismatch()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenChecksumMismatchAsync()
   {
     var userId = Guid.NewGuid();
     var reportId = Guid.NewGuid();
@@ -240,7 +240,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldReturnPresignedUrl_WhenChecksumMatches()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldReturnPresignedUrl_WhenChecksumMatchesAsync()
   {
     var userId = Guid.NewGuid();
     var reportId = Guid.NewGuid();
@@ -277,7 +277,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenFileStorageKeyIsMissing()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenFileStorageKeyIsMissingAsync()
   {
     var userId = Guid.NewGuid();
     var reportId = Guid.NewGuid();
@@ -311,7 +311,7 @@ public sealed class S3ReportChecksumVerificationServiceTests
   }
 
   [Fact]
-  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenChecksumIsMissing()
+  public async Task CreateVerifiedDownloadUrlAsync_ShouldThrow_WhenChecksumIsMissingAsync()
   {
     var userId = Guid.NewGuid();
     var reportId = Guid.NewGuid();

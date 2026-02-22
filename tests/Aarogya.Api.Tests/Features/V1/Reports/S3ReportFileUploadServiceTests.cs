@@ -21,7 +21,7 @@ public sealed class S3ReportFileUploadServiceTests
   private const string TestBucketName = "aarogya-test-bucket";
 
   [Fact]
-  public async Task UploadAsync_ShouldThrow_WhenFileIsNull()
+  public async Task UploadAsync_ShouldThrow_WhenFileIsNullAsync()
   {
     var (sut, _) = CreateService();
 
@@ -32,7 +32,7 @@ public sealed class S3ReportFileUploadServiceTests
   }
 
   [Fact]
-  public async Task UploadAsync_ShouldThrow_WhenFileIsEmpty()
+  public async Task UploadAsync_ShouldThrow_WhenFileIsEmptyAsync()
   {
     var (sut, _) = CreateService();
     var file = CreateFormFile(content: [], fileName: "empty.pdf", contentType: "application/pdf");
@@ -44,7 +44,7 @@ public sealed class S3ReportFileUploadServiceTests
   }
 
   [Fact]
-  public async Task UploadAsync_ShouldThrow_WhenFileExceedsMaxSize()
+  public async Task UploadAsync_ShouldThrow_WhenFileExceedsMaxSizeAsync()
   {
     var (sut, _) = CreateService();
     var oversizedContent = new byte[(50 * 1024 * 1024) + 1];
@@ -61,7 +61,7 @@ public sealed class S3ReportFileUploadServiceTests
   [InlineData("text/plain")]
   [InlineData("application/octet-stream")]
   [InlineData("image/gif")]
-  public async Task UploadAsync_ShouldThrow_WhenContentTypeIsNotAllowed(string contentType)
+  public async Task UploadAsync_ShouldThrow_WhenContentTypeIsNotAllowedAsync(string contentType)
   {
     var (sut, _) = CreateService();
     var file = CreateFormFile(content: [0x01, 0x02], fileName: "file.txt", contentType: contentType);
@@ -73,7 +73,7 @@ public sealed class S3ReportFileUploadServiceTests
   }
 
   [Fact]
-  public async Task UploadAsync_ShouldThrow_WhenUserIsNotProvisioned()
+  public async Task UploadAsync_ShouldThrow_WhenUserIsNotProvisionedAsync()
   {
     var userRepo = new Mock<IUserRepository>();
     userRepo
@@ -90,7 +90,7 @@ public sealed class S3ReportFileUploadServiceTests
   }
 
   [Fact]
-  public async Task UploadAsync_ShouldUploadToS3AndPersistReport_WhenFileIsValid()
+  public async Task UploadAsync_ShouldUploadToS3AndPersistReport_WhenFileIsValidAsync()
   {
     var userId = Guid.NewGuid();
     var patient = CreateUser(userId, TestUserSub, UserRole.Patient);
@@ -158,7 +158,7 @@ public sealed class S3ReportFileUploadServiceTests
   }
 
   [Fact]
-  public async Task UploadAsync_ShouldResolveRadiologyType_WhenContentTypeIsImage()
+  public async Task UploadAsync_ShouldResolveRadiologyType_WhenContentTypeIsImageAsync()
   {
     var userId = Guid.NewGuid();
     var patient = CreateUser(userId, TestUserSub, UserRole.Patient);
@@ -201,7 +201,7 @@ public sealed class S3ReportFileUploadServiceTests
   }
 
   [Fact]
-  public async Task UploadAsync_ShouldResolveOtherType_WhenContentTypeIsPdf()
+  public async Task UploadAsync_ShouldResolveOtherType_WhenContentTypeIsPdfAsync()
   {
     var userId = Guid.NewGuid();
     var patient = CreateUser(userId, TestUserSub, UserRole.Patient);
@@ -247,7 +247,7 @@ public sealed class S3ReportFileUploadServiceTests
   [InlineData("application/pdf")]
   [InlineData("image/jpeg")]
   [InlineData("image/png")]
-  public async Task UploadAsync_ShouldAcceptAllAllowedContentTypes(string contentType)
+  public async Task UploadAsync_ShouldAcceptAllAllowedContentTypesAsync(string contentType)
   {
     var userId = Guid.NewGuid();
     var patient = CreateUser(userId, TestUserSub, UserRole.Patient);
@@ -284,7 +284,7 @@ public sealed class S3ReportFileUploadServiceTests
   }
 
   [Fact]
-  public async Task UploadAsync_ShouldStoreChecksumInMetadata_WhenUploadSucceeds()
+  public async Task UploadAsync_ShouldStoreChecksumInMetadata_WhenUploadSucceedsAsync()
   {
     var userId = Guid.NewGuid();
     var patient = CreateUser(userId, TestUserSub, UserRole.Patient);

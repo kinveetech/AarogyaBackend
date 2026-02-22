@@ -219,7 +219,7 @@ public sealed class EmergencyAccessAuditTrailServiceTests
       Action = "emergency_access.granted",
       EntityType = "emergency_access_grant",
       EntityId = id,
-      OccurredAt = FixedNow.AddMinutes(-((id.GetHashCode() & 0x7FFFFFFF) % 59 + 1)),
+      OccurredAt = FixedNow.AddMinutes(-(((id.GetHashCode() & 0x7FFFFFFF) % 59) + 1)),
       ResultStatus = 200,
       Details = new AuditLogDetails
       {
