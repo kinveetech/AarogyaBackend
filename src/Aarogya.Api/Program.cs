@@ -15,6 +15,7 @@ using Aarogya.Api.Security;
 using Aarogya.Api.Validation;
 using Aarogya.Infrastructure;
 using Aarogya.Infrastructure.Security;
+using Aarogya.ServiceDefaults;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -31,6 +32,8 @@ const int MaxReportUploadSizeBytes = 50 * 1024 * 1024;
 // AAROGYA_Aws__Cognito__UserPoolId and AAROGYA_Aws__Cognito__AppClientId,
 // avoiding collisions with other applications on the same host.
 builder.Configuration.AddEnvironmentVariables(prefix: "AAROGYA_");
+
+builder.AddServiceDefaults();
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()

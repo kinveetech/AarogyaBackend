@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Aarogya.Domain\Aarogya.Domain.csproj" />
     <ProjectReference Include="..\Aarogya.Infrastructure\Aarogya.Infrastructure.csproj" />
+    <ProjectReference Include="..\Aarogya.ServiceDefaults\Aarogya.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>
