@@ -173,7 +173,7 @@ internal sealed class S3UploadNotificationConfiguratorHostedService(
     catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
     {
       await s3Client.PutBucketAsync(bucketName, cancellationToken);
-      logger.LogInformation("Created S3 bucket '{BucketName}'.", bucketName);
+      logger.LogInformation(ex, "Created S3 bucket '{BucketName}'.", bucketName);
     }
   }
 
