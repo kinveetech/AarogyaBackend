@@ -4,5 +4,6 @@ resources:
   - namespace.yaml
   - postgres.yaml
   - redis.yaml
+  - localstack.yaml
   - pgadmin.yaml
   - api.yaml

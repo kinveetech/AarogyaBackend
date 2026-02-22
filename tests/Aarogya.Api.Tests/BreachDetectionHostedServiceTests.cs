@@ -8,6 +8,7 @@ using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -61,12 +62,15 @@ public sealed class BreachDetectionHostedServiceTests
     var emailSender = new FakeTransactionalEmailSender();
     var pushService = new Mock<IPushNotificationService>();
 
-    var service = new BreachDetectionHostedService(
+    var scopeFactory = CreateScopeFactory(
       auditLogRepository.Object,
       userRepository.Object,
       emailSender,
       pushService.Object,
-      cacheService,
+      cacheService);
+
+    var service = new BreachDetectionHostedService(
+      scopeFactory,
       Options.Create(new BreachDetectionOptions
       {
         EnableWorker = true,
@@ -143,12 +147,15 @@ public sealed class BreachDetectionHostedServiceTests
     var emailSender = new FakeTransactionalEmailSender();
     var pushService = new Mock<IPushNotificationService>();
 
-    var service = new BreachDetectionHostedService(
+    var scopeFactory = CreateScopeFactory(
       auditLogRepository.Object,
       userRepository.Object,
       emailSender,
       pushService.Object,
-      cacheService,
+      cacheService);
+
+    var service = new BreachDetectionHostedService(
+      scopeFactory,
       Options.Create(new BreachDetectionOptions
       {
         EnableWorker = true,
@@ -168,6 +175,23 @@ public sealed class BreachDetectionHostedServiceTests
         It.IsAny<SendPushNotificationRequest>(),
         It.IsAny<CancellationToken>()),
       Times.Never);
+  }
+
+  private static IServiceScopeFactory CreateScopeFactory(
+    IAuditLogRepository auditLogRepository,
+    IUserRepository userRepository,
+    ITransactionalEmailSender emailSender,
+    IPushNotificationService pushNotificationService,
+    IEntityCacheService cacheService)
+  {
+    var services = new ServiceCollection();
+    services.AddScoped(_ => auditLogRepository);
+    services.AddScoped(_ => userRepository);
+    services.AddScoped(_ => emailSender);
+    services.AddScoped(_ => pushNotificationService);
+    services.AddScoped(_ => cacheService);
+    var provider = services.BuildServiceProvider();
+    return provider.GetRequiredService<IServiceScopeFactory>();
   }
 
   private sealed class FixedUtcClock(DateTimeOffset utcNow) : IUtcClock

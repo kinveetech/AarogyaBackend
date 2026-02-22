@@ -1,0 +1,296 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: localstack-init
+  namespace: aarogya
+data:
+  01-bootstrap.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    AWS_ENDPOINT_URL="http://localhost:4566"
+    AWS_REGION="${AWS_DEFAULT_REGION:-ap-south-1}"
+    S3_BUCKET_NAME="${LOCALSTACK_S3_BUCKET_NAME:-aarogya-dev}"
+    LOCALSTACK_ACCOUNT_ID="${LOCALSTACK_ACCOUNT_ID:-000000000000}"
+    SQS_QUEUE_NAME="${LOCALSTACK_SQS_QUEUE_NAME:-aarogya-dev-queue}"
+    COGNITO_USER_POOL_NAME="${LOCALSTACK_COGNITO_USER_POOL_NAME:-aarogya-dev-users}"
+    COGNITO_MFA_CONFIGURATION="${LOCALSTACK_COGNITO_MFA_CONFIGURATION:-OPTIONAL}"
+    COGNITO_PASSWORD_MIN_LENGTH="${LOCALSTACK_COGNITO_PASSWORD_MIN_LENGTH:-8}"
+    COGNITO_PASSWORD_REQUIRE_LOWERCASE="${LOCALSTACK_COGNITO_PASSWORD_REQUIRE_LOWERCASE:-true}"
+    COGNITO_PASSWORD_REQUIRE_UPPERCASE="${LOCALSTACK_COGNITO_PASSWORD_REQUIRE_UPPERCASE:-true}"
+    COGNITO_PASSWORD_REQUIRE_NUMBERS="${LOCALSTACK_COGNITO_PASSWORD_REQUIRE_NUMBERS:-true}"
+    COGNITO_PASSWORD_REQUIRE_SYMBOLS="${LOCALSTACK_COGNITO_PASSWORD_REQUIRE_SYMBOLS:-true}"
+    KMS_ALIAS_NAME="${LOCALSTACK_KMS_ALIAS:-alias/aarogya-dev}"
+
+    export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-test}"
+    export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-test}"
+    export AWS_DEFAULT_REGION="$AWS_REGION"
+
+    log() {
+      local message="$1"
+      echo "[localstack-init] ${message}"
+      return 0
+    }
+
+    is_true() {
+      local value="${1,,}"
+      [[ "$value" == "true" || "$value" == "1" || "$value" == "yes" ]]
+    }
+
+    log "Bootstrapping LocalStack resources in region ${AWS_REGION}"
+
+    existing_kms_alias="$(aws --endpoint-url "$AWS_ENDPOINT_URL" kms list-aliases --query "Aliases[?AliasName=='${KMS_ALIAS_NAME}'].AliasName | [0]" --output text 2>/dev/null || true)"
+    if [[ -n "$existing_kms_alias" ]] && [[ "$existing_kms_alias" != "None" ]]; then
+      log "KMS alias already exists: ${KMS_ALIAS_NAME}"
+    else
+      kms_key_id="$(aws --endpoint-url "$AWS_ENDPOINT_URL" kms create-key --description "Aarogya LocalStack dev key" --query 'KeyMetadata.KeyId' --output text)"
+      aws --endpoint-url "$AWS_ENDPOINT_URL" kms create-alias --alias-name "$KMS_ALIAS_NAME" --target-key-id "$kms_key_id" >/dev/null
+      log "Created KMS alias: ${KMS_ALIAS_NAME} (key: ${kms_key_id})"
+    fi
+
+    if aws --endpoint-url "$AWS_ENDPOINT_URL" s3api head-bucket --bucket "$S3_BUCKET_NAME" >/dev/null 2>&1; then
+      log "S3 bucket already exists: ${S3_BUCKET_NAME}"
+    else
+      if [[ "$AWS_REGION" == "us-east-1" ]]; then
+        aws --endpoint-url "$AWS_ENDPOINT_URL" s3api create-bucket \
+          --bucket "$S3_BUCKET_NAME" >/dev/null
+      else
+        aws --endpoint-url "$AWS_ENDPOINT_URL" s3api create-bucket \
+          --bucket "$S3_BUCKET_NAME" \
+          --create-bucket-configuration "LocationConstraint=${AWS_REGION}" >/dev/null
+      fi
+      log "Created S3 bucket: ${S3_BUCKET_NAME}"
+    fi
+
+    aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-versioning \
+      --bucket "$S3_BUCKET_NAME" \
+      --versioning-configuration Status=Enabled >/dev/null
+    log "Enabled versioning for S3 bucket: ${S3_BUCKET_NAME}"
+
+    aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-encryption \
+      --bucket "$S3_BUCKET_NAME" \
+      --server-side-encryption-configuration "{
+        \"Rules\": [
+          {
+            \"ApplyServerSideEncryptionByDefault\": {
+              \"SSEAlgorithm\": \"aws:kms\",
+              \"KMSMasterKeyID\": \"${KMS_ALIAS_NAME}\"
+            },
+            \"BucketKeyEnabled\": true
+          }
+        ]
+      }" >/dev/null
+    log "Configured SSE-KMS encryption for S3 bucket: ${S3_BUCKET_NAME}"
+
+    aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-lifecycle-configuration \
+      --bucket "$S3_BUCKET_NAME" \
+      --lifecycle-configuration "{
+        \"Rules\": [
+          {
+            \"ID\": \"archive-to-glacier-after-1-year\",
+            \"Status\": \"Enabled\",
+            \"Filter\": { \"Prefix\": \"\" },
+            \"Transitions\": [
+              {
+                \"Days\": 365,
+                \"StorageClass\": \"GLACIER\"
+              }
+            ]
+          }
+        ]
+      }" >/dev/null
+    log "Configured lifecycle policy (Glacier after 365 days) for S3 bucket: ${S3_BUCKET_NAME}"
+
+    aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-public-access-block \
+      --bucket "$S3_BUCKET_NAME" \
+      --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true >/dev/null
+    log "Enabled public access block for S3 bucket: ${S3_BUCKET_NAME}"
+
+    s3_policy_tmp="$(mktemp)"
+    cat >"$s3_policy_tmp" <<EOF
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "AllowAccountRootAccess",
+          "Effect": "Allow",
+          "Principal": { "AWS": "arn:aws:iam::${LOCALSTACK_ACCOUNT_ID}:root" },
+          "Action": "s3:*",
+          "Resource": [
+            "arn:aws:s3:::${S3_BUCKET_NAME}",
+            "arn:aws:s3:::${S3_BUCKET_NAME}/*"
+          ]
+        },
+        {
+          "Sid": "DenyNonAccountPrincipals",
+          "Effect": "Deny",
+          "NotPrincipal": { "AWS": "arn:aws:iam::${LOCALSTACK_ACCOUNT_ID}:root" },
+          "Action": "s3:*",
+          "Resource": [
+            "arn:aws:s3:::${S3_BUCKET_NAME}",
+            "arn:aws:s3:::${S3_BUCKET_NAME}/*"
+          ]
+        }
+      ]
+    }
+    EOF
+
+    aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-policy \
+      --bucket "$S3_BUCKET_NAME" \
+      --policy "file://${s3_policy_tmp}" >/dev/null
+    rm -f "$s3_policy_tmp"
+    log "Configured restrictive policy for S3 bucket: ${S3_BUCKET_NAME}"
+
+    if aws --endpoint-url "$AWS_ENDPOINT_URL" sqs get-queue-url --queue-name "$SQS_QUEUE_NAME" >/dev/null 2>&1; then
+      log "SQS queue already exists: ${SQS_QUEUE_NAME}"
+    else
+      aws --endpoint-url "$AWS_ENDPOINT_URL" sqs create-queue \
+        --queue-name "$SQS_QUEUE_NAME" >/dev/null
+      log "Created SQS queue: ${SQS_QUEUE_NAME}"
+    fi
+
+    queue_url="$(aws --endpoint-url "$AWS_ENDPOINT_URL" sqs get-queue-url --queue-name "$SQS_QUEUE_NAME" --query 'QueueUrl' --output text)"
+    queue_arn="$(aws --endpoint-url "$AWS_ENDPOINT_URL" sqs get-queue-attributes --queue-url "$queue_url" --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)"
+
+    s3_notification_tmp="$(mktemp)"
+    cat >"$s3_notification_tmp" <<EOF
+    {
+      "QueueConfigurations": [
+        {
+          "Id": "aarogya-report-upload-events",
+          "QueueArn": "${queue_arn}",
+          "Events": [
+            "s3:ObjectCreated:Put",
+            "s3:ObjectCreated:Post",
+            "s3:ObjectCreated:CompleteMultipartUpload"
+          ]
+        }
+      ]
+    }
+    EOF
+
+    aws --endpoint-url "$AWS_ENDPOINT_URL" s3api put-bucket-notification-configuration \
+      --bucket "$S3_BUCKET_NAME" \
+      --notification-configuration "file://${s3_notification_tmp}" >/dev/null
+    rm -f "$s3_notification_tmp"
+    log "Configured S3 upload event notification to SQS queue: ${SQS_QUEUE_NAME}"
+
+    password_policy="MinimumLength=${COGNITO_PASSWORD_MIN_LENGTH},RequireLowercase=${COGNITO_PASSWORD_REQUIRE_LOWERCASE},RequireUppercase=${COGNITO_PASSWORD_REQUIRE_UPPERCASE},RequireNumbers=${COGNITO_PASSWORD_REQUIRE_NUMBERS},RequireSymbols=${COGNITO_PASSWORD_REQUIRE_SYMBOLS},TemporaryPasswordValidityDays=7"
+    auto_verified_attributes=("email" "phone_number")
+    username_attributes=("email" "phone_number")
+    schema='[{"Name":"email","AttributeDataType":"String","Mutable":true,"Required":true},{"Name":"phone_number","AttributeDataType":"String","Mutable":true,"Required":true}]'
+
+    if existing_pool_id="$(aws --endpoint-url "$AWS_ENDPOINT_URL" cognito-idp list-user-pools --max-results 60 --query "UserPools[?Name=='${COGNITO_USER_POOL_NAME}'].Id | [0]" --output text 2>/tmp/localstack-cognito.err)"; then
+      if [[ -n "$existing_pool_id" ]] && [[ "$existing_pool_id" != "None" ]]; then
+        if aws --endpoint-url "$AWS_ENDPOINT_URL" cognito-idp update-user-pool \
+          --user-pool-id "$existing_pool_id" \
+          --mfa-configuration "$COGNITO_MFA_CONFIGURATION" \
+          --policies "PasswordPolicy={${password_policy}}" \
+          --auto-verified-attributes "${auto_verified_attributes[@]}" >/tmp/localstack-cognito.err 2>&1; then
+          log "Updated Cognito user pool: ${COGNITO_USER_POOL_NAME} (${existing_pool_id})"
+        else
+          log "Cognito pool update skipped (likely LocalStack limitation): $(tr '\n' ' ' </tmp/localstack-cognito.err)"
+        fi
+      else
+        if created_pool_id="$(aws --endpoint-url "$AWS_ENDPOINT_URL" cognito-idp create-user-pool \
+          --pool-name "$COGNITO_USER_POOL_NAME" \
+          --username-attributes "${username_attributes[@]}" \
+          --auto-verified-attributes "${auto_verified_attributes[@]}" \
+          --mfa-configuration "$COGNITO_MFA_CONFIGURATION" \
+          --policies "PasswordPolicy={${password_policy}}" \
+          --schema "$schema" \
+          --query 'UserPool.Id' \
+          --output text 2>/tmp/localstack-cognito.err)"; then
+          log "Created Cognito user pool: ${COGNITO_USER_POOL_NAME} (${created_pool_id})"
+        else
+          log "Cognito provisioning skipped (likely LocalStack limitation): $(tr '\n' ' ' </tmp/localstack-cognito.err)"
+        fi
+      fi
+    else
+      log "Cognito provisioning skipped (likely LocalStack Community limitation): $(tr '\n' ' ' </tmp/localstack-cognito.err)"
+    fi
+
+    if is_true "$COGNITO_PASSWORD_REQUIRE_LOWERCASE" \
+      && is_true "$COGNITO_PASSWORD_REQUIRE_UPPERCASE" \
+      && is_true "$COGNITO_PASSWORD_REQUIRE_NUMBERS" \
+      && is_true "$COGNITO_PASSWORD_REQUIRE_SYMBOLS"; then
+      log "Cognito password complexity policy enabled with min length ${COGNITO_PASSWORD_MIN_LENGTH}"
+    else
+      log "Cognito password policy configured with custom complexity flags"
+    fi
+
+    log "LocalStack resource bootstrap complete"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localstack
+  namespace: aarogya
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: localstack
+  template:
+    metadata:
+      labels:
+        app: localstack
+    spec:
+      containers:
+        - name: localstack
+          image: localstack/localstack:3
+          ports:
+            - containerPort: 4566
+          env:
+            - name: SERVICES
+              value: s3,sqs,cognito,kms,ses
+            - name: AWS_DEFAULT_REGION
+              value: ap-south-1
+            - name: LOCALSTACK_HOST
+              value: localstack
+            - name: LOCALSTACK_S3_BUCKET_NAME
+              value: aarogya-dev
+            - name: LOCALSTACK_SQS_QUEUE_NAME
+              value: aarogya-dev-queue
+            - name: LOCALSTACK_COGNITO_USER_POOL_NAME
+              value: aarogya-dev-users
+            - name: AWS_ACCESS_KEY_ID
+              value: test
+            - name: AWS_SECRET_ACCESS_KEY
+              value: test
+          volumeMounts:
+            - name: init-scripts
+              mountPath: /etc/localstack/init/ready.d/
+          readinessProbe:
+            exec:
+              command:
+                - curl
+                - -fsS
+                - http://localhost:4566/_localstack/health
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: "1"
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: localstack-init
+            defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localstack
+  namespace: aarogya
+spec:
+  selector:
+    app: localstack
+  ports:
+    - name: edge
+      port: 4566
+      targetPort: 4566

@@ -22,6 +22,10 @@ spec:
       labels:
         app: aarogya-api
     spec:
+      initContainers:
+        - name: wait-for-localstack
+          image: busybox:1.36
+          command: ['sh', '-c', 'until wget -qO- http://localstack:4566/_localstack/health; do sleep 2; done']
       containers:
         - name: aarogya-api
           image: aarogya-api:dev
@@ -52,6 +56,36 @@ spec:
               value: "true"
             - name: Database__AutoMigrateOnStartup
               value: "true"
+            - name: Aws__Region
+              value: ap-south-1
+            - name: Aws__ServiceUrl
+              value: http://localstack:4566
+            - name: Aws__UseLocalStack
+              value: "true"
+            - name: Aws__AccessKey
+              value: test
+            - name: Aws__SecretKey
+              value: test
+            - name: Aws__S3__BucketName
+              value: aarogya-dev
+            - name: Aws__Sqs__QueueName
+              value: aarogya-dev-queue
+            - name: Aws__Sqs__ConfigureS3NotificationsOnStartup
+              value: "true"
+            - name: Aws__Sqs__EnableUploadEventConsumer
+              value: "true"
+            - name: Aws__Ses__SenderEmail
+              value: noreply@aarogya.dev
+            - name: Aws__Ses__SenderName
+              value: Aarogya Dev
+            - name: Aws__Cognito__UserPoolName
+              value: aarogya-dev-users
+            - name: Encryption__UseAwsKms
+              value: "false"
+            - name: Encryption__LocalDataKey
+              value: aarogya-local-dev-encryption-key
+            - name: Encryption__BlindIndexKey
+              value: aarogya-local-dev-blind-index-key
           livenessProbe:
             httpGet:
               path: /health
@@ -60,7 +94,7 @@ spec:
             periodSeconds: 20
           readinessProbe:
             httpGet:
-              path: /health/ready
+              path: /health
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10

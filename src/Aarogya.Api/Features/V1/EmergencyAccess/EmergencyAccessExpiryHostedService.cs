@@ -12,16 +12,10 @@ using Microsoft.Extensions.Options;
 namespace Aarogya.Api.Features.V1.EmergencyAccess;
 
 internal sealed class EmergencyAccessExpiryHostedService(
-  IAccessGrantRepository accessGrantRepository,
-  IUnitOfWork unitOfWork,
-  IAuditLoggingService auditLoggingService,
-  ITransactionalEmailNotificationService transactionalEmailNotificationService,
-  ICriticalSmsNotificationService criticalSmsNotificationService,
-  IPushNotificationService pushNotificationService,
+  IServiceScopeFactory scopeFactory,
   IOptions<EmergencyAccessOptions> options,
   IUtcClock clock,
-  ILogger<EmergencyAccessExpiryHostedService> logger,
-  IEntityCacheService? cacheService = null)
+  ILogger<EmergencyAccessExpiryHostedService> logger)
   : BackgroundService
 {
   private const string PreExpiryMarker = "|preexpiry_notified:";
@@ -57,6 +51,15 @@ internal sealed class EmergencyAccessExpiryHostedService(
 
   internal async Task RunCycleAsync(CancellationToken cancellationToken = default)
   {
+    await using var scope = scopeFactory.CreateAsyncScope();
+    var accessGrantRepository = scope.ServiceProvider.GetRequiredService<IAccessGrantRepository>();
+    var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+    var auditLoggingService = scope.ServiceProvider.GetRequiredService<IAuditLoggingService>();
+    var transactionalEmailNotificationService = scope.ServiceProvider.GetRequiredService<ITransactionalEmailNotificationService>();
+    var criticalSmsNotificationService = scope.ServiceProvider.GetRequiredService<ICriticalSmsNotificationService>();
+    var pushNotificationService = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
+    var cacheService = scope.ServiceProvider.GetService<IEntityCacheService>();
+
     var now = clock.UtcNow;
     var config = options.Value;
     var dirty = false;
@@ -72,7 +75,10 @@ internal sealed class EmergencyAccessExpiryHostedService(
         continue;
       }
 
-      await SendPreExpiryNotificationsAsync(grant.Patient, grant.GrantedToUser, grant, cancellationToken);
+      await SendPreExpiryNotificationsAsync(
+        grant.Patient, grant.GrantedToUser, grant,
+        transactionalEmailNotificationService, criticalSmsNotificationService, pushNotificationService,
+        cancellationToken);
       grant.GrantReason = MarkPreExpiryNotified(grant.GrantReason, now);
       accessGrantRepository.Update(grant);
       dirty = true;
@@ -135,6 +141,9 @@ internal sealed class EmergencyAccessExpiryHostedService(
     User patient,
     User doctor,
     AccessGrant grant,
+    ITransactionalEmailNotificationService transactionalEmailNotificationService,
+    ICriticalSmsNotificationService criticalSmsNotificationService,
+    IPushNotificationService pushNotificationService,
     CancellationToken cancellationToken)
   {
     var expiresAtUtc = grant.ExpiresAt ?? clock.UtcNow;

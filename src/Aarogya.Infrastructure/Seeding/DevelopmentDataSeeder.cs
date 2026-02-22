@@ -279,7 +279,7 @@ public sealed class DevelopmentDataSeeder(
   }
 
   private static Faker CreateFaker(int seed)
-    => new Faker("en_IN")
+    => new Faker("en_IND")
     {
       Random = new Randomizer(seed)
     };

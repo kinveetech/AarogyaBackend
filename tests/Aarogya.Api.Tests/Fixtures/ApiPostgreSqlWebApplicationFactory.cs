@@ -236,7 +236,7 @@ public sealed class ApiPostgreSqlWebApplicationFactory : WebApplicationFactory<P
       (
         {0},
         {1},
-        CAST({2} AS user_role),
+        {2},
         {3},
         {4},
         {5},

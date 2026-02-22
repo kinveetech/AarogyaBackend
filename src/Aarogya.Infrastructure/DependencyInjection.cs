@@ -17,10 +17,6 @@ namespace Aarogya.Infrastructure;
 
 public static class DependencyInjection
 {
-  [System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Reliability",
-    "CA2000:Dispose objects before losing scope",
-    Justification = "DbContext lifetime is managed by the DI container")]
   public static IServiceCollection AddInfrastructure(
     this IServiceCollection services,
     IConfiguration configuration)
@@ -57,7 +53,7 @@ public static class DependencyInjection
       connectionString = secureConnectionBuilder.ConnectionString;
     }
 
-    services.AddDbContextPool<AarogyaDbContext>(options =>
+    services.AddDbContext<AarogyaDbContext>((sp, options) =>
     {
       options.UseNpgsql(connectionString, npgsqlOptions =>
       {

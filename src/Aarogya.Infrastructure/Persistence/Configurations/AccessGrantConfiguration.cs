@@ -34,8 +34,8 @@ internal sealed class AccessGrantConfiguration : IEntityTypeConfiguration<Access
 
     builder.Property(x => x.Status)
       .HasColumnName("status")
-      .HasColumnType("access_grant_status")
-      .HasConversion(EnumSnakeCaseConverter.Create<AccessGrantStatus>())
+      .HasConversion(DescriptionEnumConverter.Create<AccessGrantStatus>())
+      .HasMaxLength(20)
       .HasDefaultValue(AccessGrantStatus.Active);
 
     builder.Property(x => x.StartsAt).HasColumnName("starts_at");

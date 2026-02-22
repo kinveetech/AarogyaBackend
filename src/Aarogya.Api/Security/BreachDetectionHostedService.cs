@@ -11,11 +11,7 @@ using Microsoft.Extensions.Options;
 namespace Aarogya.Api.Security;
 
 internal sealed class BreachDetectionHostedService(
-  IAuditLogRepository auditLogRepository,
-  IUserRepository userRepository,
-  ITransactionalEmailSender transactionalEmailSender,
-  IPushNotificationService pushNotificationService,
-  IEntityCacheService cacheService,
+  IServiceScopeFactory scopeFactory,
   IOptions<BreachDetectionOptions> options,
   IUtcClock clock,
   ILogger<BreachDetectionHostedService> logger)
@@ -54,6 +50,13 @@ internal sealed class BreachDetectionHostedService(
 
   internal async Task RunCycleAsync(CancellationToken cancellationToken = default)
   {
+    await using var scope = scopeFactory.CreateAsyncScope();
+    var auditLogRepository = scope.ServiceProvider.GetRequiredService<IAuditLogRepository>();
+    var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+    var transactionalEmailSender = scope.ServiceProvider.GetRequiredService<ITransactionalEmailSender>();
+    var pushNotificationService = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
+    var cacheService = scope.ServiceProvider.GetRequiredService<IEntityCacheService>();
+
     var config = options.Value;
     var now = clock.UtcNow;
     var from = now.AddMinutes(-Math.Max(1, config.LookbackWindowMinutes));
@@ -94,7 +97,8 @@ internal sealed class BreachDetectionHostedService(
       }
 
       var message = BuildMessage(actor, from, now, suspiciousCount, bulkCount);
-      await NotifyAsync(config, actor, message, suspiciousCount, bulkCount, from, now, cancellationToken);
+      await NotifyAsync(config, actor, message, suspiciousCount, bulkCount, from, now,
+        transactionalEmailSender, pushNotificationService, cancellationToken);
       await cacheService.SetAsync(
         dedupeKey,
         "1",
@@ -111,6 +115,8 @@ internal sealed class BreachDetectionHostedService(
     int bulkCount,
     DateTimeOffset from,
     DateTimeOffset to,
+    ITransactionalEmailSender transactionalEmailSender,
+    IPushNotificationService pushNotificationService,
     CancellationToken cancellationToken)
   {
     var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

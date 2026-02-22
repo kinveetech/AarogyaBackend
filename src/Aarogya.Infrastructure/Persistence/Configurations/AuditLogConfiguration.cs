@@ -23,10 +23,8 @@ internal sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
 
     builder.Property(x => x.ActorRole)
       .HasColumnName("actor_role")
-      .HasColumnType("user_role")
-      .HasConversion(
-        v => v.HasValue ? EnumSnakeCaseConverter.Create<UserRole>().ConvertToProviderExpression.Compile()(v.Value) : null,
-        v => string.IsNullOrWhiteSpace(v) ? null : EnumSnakeCaseConverter.Create<UserRole>().ConvertFromProviderExpression.Compile()(v)!);
+      .HasConversion(DescriptionEnumConverter.Create<UserRole>())
+      .HasMaxLength(20);
 
     builder.Property(x => x.Action).HasColumnName("action").IsRequired();
     builder.Property(x => x.EntityType).HasColumnName("entity_type").IsRequired();
