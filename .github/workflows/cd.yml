@@ -1,0 +1,66 @@
+name: Deploy to Dev Server
+
+on:
+  workflow_run:
+    workflows: [".NET Backend CI"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: cd-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Log in to GHCR
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcr.io/kinveetech/aarogyabackend:latest
+          ghcr.io/kinveetech/aarogyabackend:${{ github.event.workflow_run.head_sha }}
+
+    - name: Connect to Tailscale
+      uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3
+      with:
+        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        tags: tag:ci
+
+    - name: Deploy to k3s
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.DEV_SERVER_SSH_KEY }}
+        IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+
+        ssh -o StrictHostKeyChecking=no sk@100.108.60.90 "mkdir -p ~/k8s"
+        scp -o StrictHostKeyChecking=no k8s/*.yaml sk@100.108.60.90:~/k8s/
+
+        ssh -o StrictHostKeyChecking=no sk@100.108.60.90 << EOF
+          export KUBECONFIG=/home/sk/.kube/config
+          kubectl apply -k ~/k8s/
+          kubectl -n aarogya set image deployment/aarogya-api \
+            aarogya-api=ghcr.io/kinveetech/aarogyabackend:${IMAGE_TAG}
+          kubectl -n aarogya rollout status deployment/aarogya-api --timeout=120s
+        EOF
