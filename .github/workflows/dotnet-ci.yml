@@ -21,6 +21,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -32,8 +34,28 @@ jobs:
           global.json
           nuget.config
 
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+
+    - name: Install SonarScanner for .NET
+      run: dotnet tool install --global dotnet-sonarscanner
+
     - name: Restore dependencies
       run: dotnet restore
+
+    - name: SonarCloud scan begin
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        dotnet sonarscanner begin \
+          /k:"kinveetech_AarogyaBackend" \
+          /o:"kinveetech" \
+          /d:sonar.host.url="https://sonarcloud.io" \
+          /d:sonar.token="$SONAR_TOKEN" \
+          /d:sonar.cs.opencover.reportsPaths=".testresults/**/coverage.opencover.xml"
 
     - name: Build
       run: dotnet build --no-restore --configuration Release
@@ -41,9 +63,15 @@ jobs:
     - name: Run tests
       run: |
         dotnet test --no-build --configuration Release --verbosity normal \
-          --collect:"XPlat Code Coverage" \
+          --collect:"XPlat Code Coverage;Format=opencover" \
           --logger "trx;LogFileName=test-results.trx" \
           --results-directory ./.testresults
+
+    - name: SonarCloud scan end
+      if: always()
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
     - name: Upload test results artifact
       if: always()
@@ -68,62 +96,56 @@ jobs:
       run: |
         set -euo pipefail
 
-        mapfile -t coverage_files < <(find ./.testresults -type f -name 'coverage.cobertura.xml' | sort)
+        mapfile -t coverage_files < <(find ./.testresults -type f -name 'coverage.opencover.xml' | sort)
 
         if [ "${#coverage_files[@]}" -eq 0 ]; then
           {
             echo "## Code Coverage Summary"
             echo ""
-            echo "No Cobertura coverage files were found in \`./.testresults\`."
+            echo "No OpenCover coverage files were found in \`./.testresults\`."
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0
         fi
 
         total_covered=0
-        total_valid=0
+        total_sequencepoints=0
 
         {
           echo "## Code Coverage Summary"
           echo ""
-          echo "| File | Line Coverage | Covered / Valid |"
+          echo "| File | Line Coverage | Covered / Total |"
           echo "|---|---:|---:|"
         } >> "$GITHUB_STEP_SUMMARY"
 
         for file in "${coverage_files[@]}"; do
-          covered="$(grep -o 'lines-covered="[0-9]*"' "$file" | head -n1 | grep -o '[0-9]*' || true)"
-          valid="$(grep -o 'lines-valid="[0-9]*"' "$file" | head -n1 | grep -o '[0-9]*' || true)"
+          covered="$(grep -o 'visitedSequencePoints="[0-9]*"' "$file" | head -n1 | grep -o '[0-9]*' || true)"
+          total="$(grep -o 'numSequencePoints="[0-9]*"' "$file" | head -n1 | grep -o '[0-9]*' || true)"
 
           covered="${covered:-0}"
-          valid="${valid:-0}"
+          total="${total:-0}"
 
           total_covered=$((total_covered + covered))
-          total_valid=$((total_valid + valid))
+          total_sequencepoints=$((total_sequencepoints + total))
 
-          if [ "$valid" -gt 0 ]; then
-            pct="$(awk "BEGIN { printf \"%.2f\", (${covered}/${valid}) * 100 }")"
+          if [ "$total" -gt 0 ]; then
+            pct="$(awk "BEGIN { printf \"%.2f\", (${covered}/${total}) * 100 }")"
           else
             pct="0.00"
           fi
 
-          echo "| \`${file#./}\` | ${pct}% | ${covered} / ${valid} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`${file#./}\` | ${pct}% | ${covered} / ${total} |" >> "$GITHUB_STEP_SUMMARY"
         done
 
-        if [ "$total_valid" -gt 0 ]; then
-          total_pct="$(awk "BEGIN { printf \"%.2f\", (${total_covered}/${total_valid}) * 100 }")"
+        if [ "$total_sequencepoints" -gt 0 ]; then
+          total_pct="$(awk "BEGIN { printf \"%.2f\", (${total_covered}/${total_sequencepoints}) * 100 }")"
         else
           total_pct="0.00"
         fi
 
         {
           echo ""
-          echo "**Total line coverage: ${total_pct}% (${total_covered} / ${total_valid})**"
+          echo "**Total line coverage: ${total_pct}% (${total_covered} / ${total_sequencepoints})**"
         } >> "$GITHUB_STEP_SUMMARY"
-
-    - name: Code Coverage Report
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: codecov/codecov-action@v3
-      with:
-        files: '**/coverage.cobertura.xml'
 
     - name: Publish
       run: dotnet publish src/Aarogya.Api/Aarogya.Api.csproj --configuration Release --output ./publish
