@@ -391,7 +391,9 @@ public sealed class ReportsControllerTests
         It.IsAny<CancellationToken>()))
       .Returns(Task.CompletedTask);
 
-    return new ReportsController(reportService, uploadService, checksumService, consentService.Object)
+    var extractionService = new Mock<IReportExtractionService>();
+
+    return new ReportsController(reportService, uploadService, checksumService, extractionService.Object, consentService.Object)
     {
       ControllerContext = new ControllerContext
       {

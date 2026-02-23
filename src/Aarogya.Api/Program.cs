@@ -128,6 +128,11 @@ builder.Services
   .ValidateDataAnnotations();
 
 builder.Services
+  .AddOptionsWithValidateOnStart<PdfExtractionOptions>()
+  .BindConfiguration(PdfExtractionOptions.SectionName)
+  .ValidateDataAnnotations();
+
+builder.Services
   .AddOptionsWithValidateOnStart<VirusScanningOptions>()
   .BindConfiguration(VirusScanningOptions.SectionName)
   .ValidateDataAnnotations();
@@ -235,6 +240,7 @@ builder.Services.AddAarogyaAuthorization();
 builder.Services.AddAarogyaCorsPolicy(builder.Configuration);
 builder.Services.AddAarogyaSecurityHeaders(builder.Configuration);
 builder.Services.AddV1FeatureServices();
+builder.Services.AddLlmChatClient(builder.Configuration);
 
 var rateLimitingOptions = builder.Configuration
   .GetSection(RateLimitingOptions.SectionName)
