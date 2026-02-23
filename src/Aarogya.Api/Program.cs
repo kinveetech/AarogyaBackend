@@ -192,7 +192,7 @@ builder.Services.AddSingleton<IPkceAuthorizationService, InMemoryPkceAuthorizati
 builder.Services.AddSingleton<ICognitoSocialTokenClient, CognitoOAuthTokenClient>();
 builder.Services.AddSingleton<ISocialAuthService, CognitoSocialAuthService>();
 builder.Services.AddSingleton<ICognitoTokenManagementService, CognitoTokenManagementService>();
-builder.Services.AddSingleton<IRoleAssignmentService, InMemoryRoleAssignmentService>();
+builder.Services.AddScoped<IRoleAssignmentService, DatabaseRoleAssignmentService>();
 builder.Services.AddScoped<IUserAutoProvisioningService, UserAutoProvisioningService>();
 builder.Services.AddScoped<IAuditLoggingService, AuditLoggingService>();
 builder.Services.AddHostedService<DataEncryptionKeyRotationHostedService>();

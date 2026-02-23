@@ -17,8 +17,8 @@ public sealed class AarogyaRoleClaimsTransformationTests
   public AarogyaRoleClaimsTransformationTests()
   {
     _roleAssignmentServiceMock
-      .Setup(s => s.GetAssignedRoles(It.IsAny<string>()))
-      .Returns(Array.Empty<string>());
+      .Setup(s => s.GetAssignedRolesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(Array.Empty<string>());
 
     _transformation = new AarogyaRoleClaimsTransformation(_roleAssignmentServiceMock.Object);
   }
@@ -80,8 +80,8 @@ public sealed class AarogyaRoleClaimsTransformationTests
     var principal = new ClaimsPrincipal(identity);
 
     _roleAssignmentServiceMock
-      .Setup(s => s.GetAssignedRoles("user-1"))
-      .Returns(DoctorRole);
+      .Setup(s => s.GetAssignedRolesAsync("user-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(DoctorRole);
 
     var result = await _transformation.TransformAsync(principal);
 
@@ -122,8 +122,8 @@ public sealed class AarogyaRoleClaimsTransformationTests
     var principal = new ClaimsPrincipal(identity);
 
     _roleAssignmentServiceMock
-      .Setup(s => s.GetAssignedRoles("user-1"))
-      .Returns(PatientRole);
+      .Setup(s => s.GetAssignedRolesAsync("user-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(PatientRole);
 
     var result = await _transformation.TransformAsync(principal);
 

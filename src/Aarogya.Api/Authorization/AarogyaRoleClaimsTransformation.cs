@@ -7,13 +7,13 @@ internal sealed class AarogyaRoleClaimsTransformation(IRoleAssignmentService rol
 {
   private static readonly HashSet<string> SupportedRoleNames = new(AarogyaRoles.All, StringComparer.OrdinalIgnoreCase);
 
-  public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+  public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
   {
     ArgumentNullException.ThrowIfNull(principal);
 
     if (principal.Identity is not ClaimsIdentity identity || !identity.IsAuthenticated)
     {
-      return Task.FromResult(principal);
+      return principal;
     }
 
     var tokenRoles = principal.Claims
@@ -23,7 +23,8 @@ internal sealed class AarogyaRoleClaimsTransformation(IRoleAssignmentService rol
       .Select(NormalizeRoleName)
       .Distinct(StringComparer.OrdinalIgnoreCase);
 
-    var assignedRoles = roleAssignmentService.GetAssignedRoles(principal.FindFirstValue("sub") ?? string.Empty);
+    var assignedRoles = await roleAssignmentService.GetAssignedRolesAsync(
+      principal.FindFirstValue("sub") ?? string.Empty);
     var normalizedRoles = tokenRoles
       .Concat(assignedRoles)
       .Where(role => SupportedRoleNames.Contains(role))
@@ -49,7 +50,7 @@ internal sealed class AarogyaRoleClaimsTransformation(IRoleAssignmentService rol
       identity.AddClaim(new Claim(ClaimTypes.Role, role));
     }
 
-    return Task.FromResult(principal);
+    return principal;
   }
 
   private static string NormalizeRoleName(string role)
