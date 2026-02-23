@@ -72,7 +72,6 @@ internal sealed class ReportPdfExtractionProcessor(
     try
     {
       report.Status = ReportStatus.Extracting;
-      reportRepository.Update(report);
       await unitOfWork.SaveChangesAsync(cancellationToken);
 
       var textResult = await ExtractTextAsync(report, options, cancellationToken);
@@ -96,7 +95,6 @@ internal sealed class ReportPdfExtractionProcessor(
         logger.LogWarning("No text extracted from report {ReportId}", reportId);
         report.Status = ReportStatus.ExtractionFailed;
         report.Extraction.ErrorMessage = "No text could be extracted from the PDF.";
-        reportRepository.Update(report);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return;
       }
@@ -122,7 +120,6 @@ internal sealed class ReportPdfExtractionProcessor(
       report.Status = ReportStatus.Extracted;
       report.Extraction.ErrorMessage = null;
 
-      reportRepository.Update(report);
       await unitOfWork.SaveChangesAsync(cancellationToken);
 
       logger.LogInformation(
@@ -142,7 +139,6 @@ internal sealed class ReportPdfExtractionProcessor(
       report.Status = ReportStatus.ExtractionFailed;
       report.Extraction.ErrorMessage = ex.Message;
 
-      reportRepository.Update(report);
       await unitOfWork.SaveChangesAsync(cancellationToken);
     }
   }
