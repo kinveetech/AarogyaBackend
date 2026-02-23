@@ -29,7 +29,8 @@ public sealed class AuthControllerTests
       new NoopApiKeyService(),
       new NoopPkceAuthorizationService(),
       new NoopSocialAuthService(),
-      new NoopRoleAssignmentService())
+      new NoopRoleAssignmentService(),
+      new NoopCognitoTokenManagementService())
     {
       ControllerContext = new ControllerContext
       {
@@ -108,5 +109,14 @@ public sealed class AuthControllerTests
 
     public Task<SocialTokenResult> ExchangeCodeAsync(SocialTokenRequest request, CancellationToken cancellationToken = default)
       => Task.FromResult(new SocialTokenResult(true, "ok", "access", "refresh", "id", 900, "Bearer", false));
+  }
+
+  private sealed class NoopCognitoTokenManagementService : ICognitoTokenManagementService
+  {
+    public Task<SocialTokenResult> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
+      => Task.FromResult(new SocialTokenResult(true, "ok", "access", "refresh", "id", 900, "Bearer"));
+
+    public Task<(bool Success, string Message)> RevokeTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
+      => Task.FromResult((true, "ok"));
   }
 }

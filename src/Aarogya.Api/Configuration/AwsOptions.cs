@@ -102,6 +102,8 @@ public sealed class CognitoOptions
   [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "Configuration binding requires string type")]
   public string? Issuer { get; set; }
 
+  public string? Domain { get; set; }
+
   public CognitoSocialIdentityProviderOptions SocialIdentityProviders { get; set; } = new();
 
   [RegularExpression("^(OFF|ON|OPTIONAL)$", ErrorMessage = "MfaConfiguration must be OFF, ON, or OPTIONAL.")]

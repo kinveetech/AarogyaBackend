@@ -181,6 +181,16 @@ public static class StartupExtensions
       violations.Add("Missing Aws:Cognito:AppClientId");
     }
 
+    var useLocalStack = configuration.GetSection("Aws:UseLocalStack").Get<bool?>() ?? false;
+    if (!useLocalStack)
+    {
+      var cognitoDomain = configuration["Aws:Cognito:Domain"];
+      if (IsMissingConfigurationValue(cognitoDomain))
+      {
+        violations.Add("Missing Aws:Cognito:Domain (required for non-LocalStack environments)");
+      }
+    }
+
     AddSocialProviderConfigurationViolations(configuration, violations);
 
     return violations;
