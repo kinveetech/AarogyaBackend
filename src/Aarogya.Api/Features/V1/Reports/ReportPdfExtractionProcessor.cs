@@ -218,7 +218,6 @@ internal sealed class ReportPdfExtractionProcessor(
 
       report.Parameters.Add(new ReportParameter
       {
-        Id = Guid.NewGuid(),
         ReportId = report.Id,
         ParameterCode = param.Code,
         ParameterName = param.Name,
