@@ -45,6 +45,26 @@ jobs:
         oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
         tags: tag:ci
 
+    - name: Inject secrets into manifests
+      env:
+        JWT_KEY: ${{ secrets.JWT_KEY }}
+        COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+        COGNITO_APP_CLIENT_ID: ${{ secrets.COGNITO_APP_CLIENT_ID }}
+        COGNITO_ISSUER_URL: ${{ secrets.COGNITO_ISSUER_URL }}
+        COGNITO_DOMAIN_PREFIX: ${{ secrets.COGNITO_DOMAIN_PREFIX }}
+        GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      run: |
+        sed -i \
+          -e "s|development-key-change-this-to-32-plus-chars|${JWT_KEY}|g" \
+          -e "s|REPLACE_WITH_COGNITO_POOL_ID|${COGNITO_USER_POOL_ID}|g" \
+          -e "s|REPLACE_WITH_COGNITO_CLIENT_ID|${COGNITO_APP_CLIENT_ID}|g" \
+          -e "s|REPLACE_WITH_COGNITO_ISSUER_URL|${COGNITO_ISSUER_URL}|g" \
+          -e "s|REPLACE_WITH_COGNITO_DOMAIN_PREFIX|${COGNITO_DOMAIN_PREFIX}|g" \
+          -e "s|REPLACE_WITH_GOOGLE_CLIENT_ID|${GOOGLE_CLIENT_ID}|g" \
+          -e "s|REPLACE_WITH_GOOGLE_CLIENT_SECRET|${GOOGLE_CLIENT_SECRET}|g" \
+          k8s/api.yaml
+
     - name: Deploy to k3s
       env:
         SSH_PRIVATE_KEY: ${{ secrets.DEV_SERVER_SSH_KEY }}
