@@ -38,7 +38,10 @@ public sealed record CognitoSocialTokenExchangeResult(
   string Message,
   SocialIdentityClaims? Identity = null,
   int ExpiresInSeconds = 0,
-  string TokenType = "Bearer");
+  string TokenType = "Bearer",
+  string? AccessToken = null,
+  string? IdToken = null,
+  string? RefreshToken = null);
 
 internal sealed class CognitoOAuthTokenClient(
   IOptions<AwsOptions> awsOptions,
@@ -62,7 +65,8 @@ internal sealed class CognitoOAuthTokenClient(
     }
 
     var issuer = AuthenticationExtensions.ResolveCognitoIssuer(_awsOptions);
-    var endpoint = new Uri($"{issuer.TrimEnd('/')}/oauth2/token");
+    var oauthBaseUrl = AuthenticationExtensions.ResolveCognitoOAuthBaseUrl(_awsOptions);
+    var endpoint = new Uri($"{oauthBaseUrl.TrimEnd('/')}/oauth2/token");
 
     var form = new Dictionary<string, string>
     {
@@ -154,11 +158,22 @@ internal sealed class CognitoOAuthTokenClient(
       ? tokenTypeJson.GetString() ?? "Bearer"
       : "Bearer";
 
+    var accessTokenRaw = payload.TryGetProperty("access_token", out var accessTokenJson)
+      ? accessTokenJson.GetString()
+      : null;
+
+    var refreshTokenRaw = payload.TryGetProperty("refresh_token", out var refreshTokenJson)
+      ? refreshTokenJson.GetString()
+      : null;
+
     return new CognitoSocialTokenExchangeResult(
       true,
       "Cognito social token exchange successful.",
       identity,
       expiresIn,
-      tokenType);
+      tokenType,
+      accessTokenRaw,
+      idTokenRaw,
+      refreshTokenRaw);
   }
 }

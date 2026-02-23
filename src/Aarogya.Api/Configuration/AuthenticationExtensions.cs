@@ -144,6 +144,29 @@ public static class AuthenticationExtensions
     return $"https://cognito-idp.{awsOptions.Region}.amazonaws.com/{awsOptions.Cognito.UserPoolId}";
   }
 
+  internal static string ResolveCognitoOAuthBaseUrl(AwsOptions awsOptions)
+  {
+    ArgumentNullException.ThrowIfNull(awsOptions);
+
+    if (awsOptions.UseLocalStack && !string.IsNullOrWhiteSpace(awsOptions.ServiceUrl))
+    {
+      if (string.IsNullOrWhiteSpace(awsOptions.Cognito.UserPoolId))
+      {
+        throw new InvalidOperationException("Aws:Cognito:UserPoolId is required to resolve Cognito OAuth base URL.");
+      }
+
+      return $"{awsOptions.ServiceUrl.TrimEnd('/')}/{awsOptions.Cognito.UserPoolId}";
+    }
+
+    if (string.IsNullOrWhiteSpace(awsOptions.Cognito.Domain) || IsPlaceholderValue(awsOptions.Cognito.Domain))
+    {
+      throw new InvalidOperationException(
+        "Aws:Cognito:Domain is required to resolve Cognito OAuth base URL for non-LocalStack environments.");
+    }
+
+    return $"https://{awsOptions.Cognito.Domain.Trim()}.auth.{awsOptions.Region}.amazoncognito.com";
+  }
+
   internal static bool ShouldRequireHttpsMetadata(AwsOptions awsOptions, string issuer)
   {
     ArgumentNullException.ThrowIfNull(awsOptions);

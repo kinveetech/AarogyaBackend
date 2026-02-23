@@ -1,4 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
 using FluentAssertions;
@@ -7,7 +6,7 @@ using Xunit;
 
 namespace Aarogya.Api.Tests;
 
-public sealed class InMemorySocialAuthServiceTests
+public sealed class CognitoSocialAuthServiceTests
 {
   [Fact]
   public async Task CreateAuthorizeUrlAsync_ShouldReturnHostedUiUrl_ForEnabledProviderAsync()
@@ -25,33 +24,45 @@ public sealed class InMemorySocialAuthServiceTests
     result.AuthorizeUrl.Should().NotBeNull();
     result.AuthorizeUrl!.ToString().Should().Contain("identity_provider=Google");
     result.AuthorizeUrl.ToString().Should().Contain("redirect_uri=aarogya%3A%2F%2Fauth%2Fcallback");
+    result.AuthorizeUrl.ToString().Should().Contain("aarogya-dev.auth.ap-south-1.amazoncognito.com");
     result.State.Should().Be("state-123");
   }
 
   [Fact]
-  public async Task ExchangeCodeAsync_ShouldLinkAccounts_WhenEmailMatchesAcrossProvidersAsync()
+  public async Task CreateAuthorizeUrlAsync_ShouldUseLocalStackUrl_WhenLocalStackEnabledAsync()
+  {
+    var awsOptions = CreateAwsOptions();
+    awsOptions.UseLocalStack = true;
+    awsOptions.ServiceUrl = "http://localhost:4566";
+    var service = CreateService(awsOptions);
+
+    var result = await service.CreateAuthorizeUrlAsync(new SocialAuthorizeRequest(
+      "google",
+      new Uri("aarogya://auth/callback"),
+      "state-123",
+      null,
+      null));
+
+    result.Success.Should().BeTrue();
+    result.AuthorizeUrl!.ToString().Should().Contain("localhost:4566");
+  }
+
+  [Fact]
+  public async Task ExchangeCodeAsync_ShouldPassThroughCognitoTokensAsync()
   {
     var service = CreateService();
 
-    var google = await service.ExchangeCodeAsync(new SocialTokenRequest(
+    var result = await service.ExchangeCodeAsync(new SocialTokenRequest(
       "google",
       new Uri("aarogya://auth/callback"),
       "code-1",
       null));
 
-    var facebook = await service.ExchangeCodeAsync(new SocialTokenRequest(
-      "facebook",
-      new Uri("aarogya://auth/callback"),
-      "code-2",
-      null));
-
-    google.Success.Should().BeTrue();
-    facebook.Success.Should().BeTrue();
-    facebook.IsLinkedAccount.Should().BeTrue();
-
-    var googleJwt = new JwtSecurityTokenHandler().ReadJwtToken(google.AccessToken);
-    var facebookJwt = new JwtSecurityTokenHandler().ReadJwtToken(facebook.AccessToken);
-    googleJwt.Subject.Should().Be(facebookJwt.Subject);
+    result.Success.Should().BeTrue();
+    result.AccessToken.Should().Be("cognito-access-token");
+    result.RefreshToken.Should().Be("cognito-refresh-token");
+    result.IdToken.Should().Be("cognito-id-token");
+    result.IsLinkedAccount.Should().BeFalse();
   }
 
   [Fact]
@@ -86,26 +97,59 @@ public sealed class InMemorySocialAuthServiceTests
     result.Message.Should().Contain("exchange");
   }
 
-  private static InMemorySocialAuthService CreateService(
+  [Fact]
+  public async Task ExchangeCodeAsync_ShouldFail_WhenRedirectUriNotAllowedAsync()
+  {
+    var service = CreateService();
+
+    var result = await service.ExchangeCodeAsync(new SocialTokenRequest(
+      "google",
+      new Uri("https://evil.com/callback"),
+      "code-1",
+      null));
+
+    result.Success.Should().BeFalse();
+    result.Message.Should().Contain("Redirect URI");
+  }
+
+  [Fact]
+  public async Task ExchangeCodeAsync_ShouldFail_WhenAuthorizationCodeEmptyAsync()
+  {
+    var service = CreateService();
+
+    var result = await service.ExchangeCodeAsync(new SocialTokenRequest(
+      "google",
+      new Uri("aarogya://auth/callback"),
+      "",
+      null));
+
+    result.Success.Should().BeFalse();
+    result.Message.Should().Contain("Authorization code");
+  }
+
+  [Fact]
+  public async Task CreateAuthorizeUrlAsync_ShouldFail_WhenProviderUnsupportedAsync()
+  {
+    var service = CreateService();
+
+    var result = await service.CreateAuthorizeUrlAsync(new SocialAuthorizeRequest(
+      "twitter",
+      new Uri("aarogya://auth/callback"),
+      null,
+      null,
+      null));
+
+    result.Success.Should().BeFalse();
+    result.Message.Should().Contain("Unsupported");
+  }
+
+  private static CognitoSocialAuthService CreateService(
     AwsOptions? awsOptions = null,
     ICognitoSocialTokenClient? tokenClient = null)
   {
-    return new InMemorySocialAuthService(
+    return new CognitoSocialAuthService(
       Options.Create(awsOptions ?? CreateAwsOptions()),
-      Options.Create(new PkceOptions
-      {
-        AuthorizationCodeExpirySeconds = 300,
-        AccessTokenExpirySeconds = 900,
-        RefreshTokenExpirySeconds = 2592000
-      }),
-      Options.Create(new JwtOptions
-      {
-        Key = "test-signing-key-12345678901234567890",
-        Issuer = "AarogyaAPI",
-        Audience = "AarogyaClients"
-      }),
-      tokenClient ?? new FakeCognitoSocialTokenClient(),
-      new FakeClock(new DateTimeOffset(2026, 02, 20, 0, 0, 0, TimeSpan.Zero)));
+      tokenClient ?? new FakeCognitoSocialTokenClient());
   }
 
   private static AwsOptions CreateAwsOptions()
@@ -119,6 +163,7 @@ public sealed class InMemorySocialAuthServiceTests
         UserPoolId = "ap-south-1_poolId",
         AppClientId = "app-client-id",
         Issuer = "https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_poolId",
+        Domain = "aarogya-dev",
         SocialIdentityProviders = new CognitoSocialIdentityProviderOptions
         {
           Google = CreateEnabledProvider("google-client-id", "google-client-secret"),
@@ -140,11 +185,6 @@ public sealed class InMemorySocialAuthServiceTests
     };
   }
 
-  private sealed class FakeClock(DateTimeOffset utcNow) : IUtcClock
-  {
-    public DateTimeOffset UtcNow { get; private set; } = utcNow;
-  }
-
   private sealed class FakeCognitoSocialTokenClient : ICognitoSocialTokenClient
   {
     public Task<CognitoSocialTokenExchangeResult> ExchangeAuthorizationCodeAsync(
@@ -154,14 +194,17 @@ public sealed class InMemorySocialAuthServiceTests
       string? codeVerifier,
       CancellationToken cancellationToken = default)
     {
-      var identity = authorizationCode switch
-      {
-        "code-1" => new SocialIdentityClaims("google-user-1", "same.user@example.com", "Same", "User"),
-        "code-2" => new SocialIdentityClaims("facebook-user-9", "same.user@example.com", "Same", "User"),
-        _ => new SocialIdentityClaims("apple-user-1", "apple.user@example.com", "Apple", "User")
-      };
+      var identity = new SocialIdentityClaims("google-user-1", "user@example.com", "Test", "User");
 
-      return Task.FromResult(new CognitoSocialTokenExchangeResult(true, "ok", identity, 900, "Bearer"));
+      return Task.FromResult(new CognitoSocialTokenExchangeResult(
+        true,
+        "ok",
+        identity,
+        3600,
+        "Bearer",
+        "cognito-access-token",
+        "cognito-id-token",
+        "cognito-refresh-token"));
     }
   }
 

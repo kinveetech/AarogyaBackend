@@ -197,6 +197,7 @@ public class ConfigurationValidationTests
     }
 
     values["Aws:Cognito:SocialIdentityProviders:MobileRedirectUris:0"] = "aarogya://auth/callback";
+    values.TryAdd("Aws:Cognito:Domain", "aarogya-test");
     return values;
   }
 

@@ -61,3 +61,14 @@ public sealed record SocialTokenResult(
   int ExpiresInSeconds = 0,
   string TokenType = "Bearer",
   bool IsLinkedAccount = false);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API controller constructor injection.")]
+public interface ICognitoTokenManagementService
+{
+  public Task<SocialTokenResult> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+
+  public Task<(bool Success, string Message)> RevokeTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+}

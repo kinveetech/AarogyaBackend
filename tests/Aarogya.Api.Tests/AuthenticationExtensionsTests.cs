@@ -88,6 +88,67 @@ public sealed class AuthenticationExtensionsTests
     requireHttps.Should().BeTrue();
   }
 
+  [Fact]
+  public void ResolveCognitoOAuthBaseUrl_ShouldUseDomainPrefix_ForRealCognito()
+  {
+    var options = CreateOptions();
+    options.Cognito.Domain = "aarogya-dev";
+
+    var url = AuthenticationExtensions.ResolveCognitoOAuthBaseUrl(options);
+
+    url.Should().Be("https://aarogya-dev.auth.ap-south-1.amazoncognito.com");
+  }
+
+  [Fact]
+  public void ResolveCognitoOAuthBaseUrl_ShouldUseLocalStackUrl_WhenEnabled()
+  {
+    var options = CreateOptions();
+    options.UseLocalStack = true;
+    options.ServiceUrl = "http://localhost:4566";
+
+    var url = AuthenticationExtensions.ResolveCognitoOAuthBaseUrl(options);
+
+    url.Should().Be("http://localhost:4566/ap-south-1_examplePoolId");
+  }
+
+  [Fact]
+  public void ResolveCognitoOAuthBaseUrl_ShouldThrow_WhenDomainMissing_AndNotLocalStack()
+  {
+    var options = CreateOptions();
+    options.Cognito.Domain = null;
+
+    var action = () => AuthenticationExtensions.ResolveCognitoOAuthBaseUrl(options);
+
+    action.Should().Throw<InvalidOperationException>()
+      .WithMessage("*Domain*");
+  }
+
+  [Fact]
+  public void ResolveCognitoOAuthBaseUrl_ShouldThrow_WhenDomainIsPlaceholder()
+  {
+    var options = CreateOptions();
+    options.Cognito.Domain = "SET_VIA_ENV_VAR";
+
+    var action = () => AuthenticationExtensions.ResolveCognitoOAuthBaseUrl(options);
+
+    action.Should().Throw<InvalidOperationException>()
+      .WithMessage("*Domain*");
+  }
+
+  [Fact]
+  public void ResolveCognitoOAuthBaseUrl_ShouldThrow_WhenLocalStackAndUserPoolIdMissing()
+  {
+    var options = CreateOptions();
+    options.UseLocalStack = true;
+    options.ServiceUrl = "http://localhost:4566";
+    options.Cognito.UserPoolId = null;
+
+    var action = () => AuthenticationExtensions.ResolveCognitoOAuthBaseUrl(options);
+
+    action.Should().Throw<InvalidOperationException>()
+      .WithMessage("*UserPoolId*");
+  }
+
   private static AwsOptions CreateOptions()
   {
     return new AwsOptions

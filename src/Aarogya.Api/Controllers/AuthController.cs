@@ -27,19 +27,22 @@ public sealed class AuthController : ControllerBase
   private readonly IPkceAuthorizationService _pkceAuthorizationService;
   private readonly ISocialAuthService _socialAuthService;
   private readonly IRoleAssignmentService _roleAssignmentService;
+  private readonly ICognitoTokenManagementService _cognitoTokenManagementService;
 
   public AuthController(
     IPhoneOtpService phoneOtpService,
     IApiKeyService apiKeyService,
     IPkceAuthorizationService pkceAuthorizationService,
     ISocialAuthService socialAuthService,
-    IRoleAssignmentService roleAssignmentService)
+    IRoleAssignmentService roleAssignmentService,
+    ICognitoTokenManagementService cognitoTokenManagementService)
   {
     _phoneOtpService = phoneOtpService;
     _apiKeyService = apiKeyService;
     _pkceAuthorizationService = pkceAuthorizationService;
     _socialAuthService = socialAuthService;
     _roleAssignmentService = roleAssignmentService;
+    _cognitoTokenManagementService = cognitoTokenManagementService;
   }
 
   [AllowAnonymous]
@@ -135,6 +138,48 @@ public sealed class AuthController : ControllerBase
       result.TokenType,
       result.ExpiresInSeconds,
       result.IsLinkedAccount));
+  }
+
+  [AllowAnonymous]
+  [HttpPost("social/token/refresh")]
+  [ProducesResponseType(typeof(SocialTokenResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> RefreshSocialTokenAsync(
+    [FromBody] SocialRefreshTokenCommand request,
+    CancellationToken cancellationToken)
+  {
+
+    var result = await _cognitoTokenManagementService.RefreshTokenAsync(request.RefreshToken, cancellationToken);
+    if (!result.Success)
+    {
+      return BadRequest(new PkceErrorResponse(result.Message));
+    }
+
+    return Ok(new SocialTokenResponse(
+      result.AccessToken!,
+      result.RefreshToken!,
+      result.IdToken!,
+      result.TokenType,
+      result.ExpiresInSeconds,
+      false));
+  }
+
+  [AllowAnonymous]
+  [HttpPost("social/token/revoke")]
+  [ProducesResponseType(typeof(PkceRevokeResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> RevokeSocialTokenAsync(
+    [FromBody] SocialRevokeTokenCommand request,
+    CancellationToken cancellationToken)
+  {
+
+    var (success, message) = await _cognitoTokenManagementService.RevokeTokenAsync(request.RefreshToken, cancellationToken);
+    if (!success)
+    {
+      return BadRequest(new PkceErrorResponse(message));
+    }
+
+    return Ok(new PkceRevokeResponse(message));
   }
 
   [AllowAnonymous]
@@ -582,3 +627,19 @@ public sealed record RoleAssignmentResponse(string Message);
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public response metadata attributes.")]
 public sealed record PkceErrorResponse(string Error);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record SocialRefreshTokenCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string RefreshToken);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record SocialRevokeTokenCommand(
+  [property: System.ComponentModel.DataAnnotations.Required]
+  string RefreshToken);
