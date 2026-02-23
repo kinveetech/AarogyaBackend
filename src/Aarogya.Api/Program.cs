@@ -193,6 +193,7 @@ builder.Services.AddSingleton<ICognitoSocialTokenClient, CognitoOAuthTokenClient
 builder.Services.AddSingleton<ISocialAuthService, CognitoSocialAuthService>();
 builder.Services.AddSingleton<ICognitoTokenManagementService, CognitoTokenManagementService>();
 builder.Services.AddSingleton<IRoleAssignmentService, InMemoryRoleAssignmentService>();
+builder.Services.AddScoped<IUserAutoProvisioningService, UserAutoProvisioningService>();
 builder.Services.AddScoped<IAuditLoggingService, AuditLoggingService>();
 builder.Services.AddHostedService<DataEncryptionKeyRotationHostedService>();
 builder.Services.AddHostedService<BreachDetectionHostedService>();
@@ -282,6 +283,7 @@ if (!app.Environment.IsDevelopment())
 app.UseCors("AarogyaPolicy");
 app.UseResponseCaching();
 app.UseAuthentication();
+app.UseMiddleware<UserAutoProvisioningMiddleware>();
 if (rateLimitingOptions.EnableRateLimiting)
 {
   app.UseRateLimiter();
