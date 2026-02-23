@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Amazon;
+using Amazon.BedrockRuntime;
 using Amazon.CloudFront;
 using Amazon.CognitoIdentityProvider;
 using Amazon.Extensions.NETCore.Setup;
@@ -142,6 +143,24 @@ public static class AwsServiceRegistration
     else
     {
       services.AddAWSService<IAmazonKeyManagementService>();
+    }
+
+    // Register Bedrock Runtime client (not available in LocalStack)
+    if (!useLocalStack)
+    {
+      var bedrockRegion = configuration.GetSection("PdfExtraction")["BedrockRegion"];
+      if (!string.IsNullOrWhiteSpace(bedrockRegion))
+      {
+#pragma warning disable CS0618 // FallbackCredentialsFactory is deprecated but remains functional
+        services.AddSingleton<IAmazonBedrockRuntime>(_ => new AmazonBedrockRuntimeClient(
+          awsOptions.Credentials ?? FallbackCredentialsFactory.GetCredentials(),
+          RegionEndpoint.GetBySystemName(bedrockRegion)));
+#pragma warning restore CS0618
+      }
+      else
+      {
+        services.AddAWSService<IAmazonBedrockRuntime>();
+      }
     }
 
     // Register Textract client
