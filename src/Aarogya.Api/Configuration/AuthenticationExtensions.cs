@@ -77,12 +77,30 @@ public static class AuthenticationExtensions
         options.Authority = issuer;
         options.RequireHttpsMetadata = ShouldRequireHttpsMetadata(awsOptions, issuer);
 
+        var expectedClientId = awsOptions.Cognito.AppClientId;
         options.TokenValidationParameters = new TokenValidationParameters
         {
           ValidateIssuer = true,
           ValidIssuer = issuer,
           ValidateAudience = true,
-          ValidAudience = awsOptions.Cognito.AppClientId,
+          ValidAudience = expectedClientId,
+          AudienceValidator = (audiences, token, _) =>
+          {
+            // Cognito ID tokens have "aud" = client_id.
+            // Cognito access tokens omit "aud" and use "client_id" instead.
+            if (audiences.Any(a => string.Equals(a, expectedClientId, StringComparison.Ordinal)))
+            {
+              return true;
+            }
+
+            if (token is JsonWebToken jwt
+              && jwt.TryGetPayloadValue<string>("client_id", out var clientId))
+            {
+              return string.Equals(clientId, expectedClientId, StringComparison.Ordinal);
+            }
+
+            return false;
+          },
           ValidateLifetime = true,
           ValidateIssuerSigningKey = true,
           NameClaimType = "sub",

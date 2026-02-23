@@ -92,14 +92,14 @@ public sealed class AuthControllerTests
 
   private sealed class NoopRoleAssignmentService : IRoleAssignmentService
   {
-    public bool TryAssignRole(string actorSub, IReadOnlyCollection<string> actorRoles, string targetSub, string targetRole, out string message)
-    {
-      message = "ok";
-      return true;
-    }
+    public Task<(bool Success, string Message)> TryAssignRoleAsync(
+      string actorSub, IReadOnlyCollection<string> actorRoles, string targetSub, string targetRole,
+      CancellationToken cancellationToken = default)
+      => Task.FromResult((true, "ok"));
 
-    public IReadOnlyCollection<string> GetAssignedRoles(string userSub)
-      => [];
+    public Task<IReadOnlyCollection<string>> GetAssignedRolesAsync(
+      string userSub, CancellationToken cancellationToken = default)
+      => Task.FromResult<IReadOnlyCollection<string>>([]);
   }
 
   private sealed class NoopSocialAuthService : ISocialAuthService

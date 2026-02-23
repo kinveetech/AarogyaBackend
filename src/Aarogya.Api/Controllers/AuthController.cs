@@ -373,9 +373,10 @@ public sealed class AuthController : ControllerBase
   [ProducesResponseType(typeof(PkceErrorResponse), StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public IActionResult AssignRole([FromBody] RoleAssignmentCommand request)
+  public async Task<IActionResult> AssignRoleAsync(
+    [FromBody] RoleAssignmentCommand request,
+    CancellationToken cancellationToken)
   {
-
     var actorSub = User.FindFirstValue("sub");
     if (string.IsNullOrWhiteSpace(actorSub))
     {
@@ -388,12 +389,14 @@ public sealed class AuthController : ControllerBase
       .Distinct(StringComparer.OrdinalIgnoreCase)
       .ToArray();
 
-    if (!_roleAssignmentService.TryAssignRole(
+    var (success, message) = await _roleAssignmentService.TryAssignRoleAsync(
       actorSub,
       actorRoles,
       request.TargetUserSub,
       request.Role,
-      out var message))
+      cancellationToken);
+
+    if (!success)
     {
       return BadRequest(new PkceErrorResponse(message));
     }

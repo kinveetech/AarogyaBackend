@@ -1,5 +1,6 @@
-using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Aarogya.Domain.Enums;
+using Aarogya.Domain.Repositories;
 
 namespace Aarogya.Api.Authorization;
 
@@ -9,65 +10,81 @@ namespace Aarogya.Api.Authorization;
   Justification = "Used by public controller constructor injection.")]
 public interface IRoleAssignmentService
 {
-  public bool TryAssignRole(
+  public Task<(bool Success, string Message)> TryAssignRoleAsync(
     string actorSub,
     IReadOnlyCollection<string> actorRoles,
     string targetSub,
     string targetRole,
-    out string message);
+    CancellationToken cancellationToken = default);
 
-  public IReadOnlyCollection<string> GetAssignedRoles(string userSub);
+  public Task<IReadOnlyCollection<string>> GetAssignedRolesAsync(
+    string userSub,
+    CancellationToken cancellationToken = default);
 }
 
-internal sealed class InMemoryRoleAssignmentService : IRoleAssignmentService
+internal sealed class DatabaseRoleAssignmentService(
+  IUserRepository userRepository,
+  IUnitOfWork unitOfWork) : IRoleAssignmentService
 {
-  private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _userRoles = new(StringComparer.Ordinal);
-
-  public bool TryAssignRole(
+  public async Task<(bool Success, string Message)> TryAssignRoleAsync(
     string actorSub,
     IReadOnlyCollection<string> actorRoles,
     string targetSub,
     string targetRole,
-    out string message)
+    CancellationToken cancellationToken = default)
   {
     if (!actorRoles.Contains(AarogyaRoles.Admin, StringComparer.OrdinalIgnoreCase))
     {
-      message = "Only admins can assign roles.";
-      return false;
+      return (false, "Only admins can assign roles.");
     }
 
     if (!AarogyaRoles.All.Contains(targetRole, StringComparer.OrdinalIgnoreCase))
     {
-      message = "Unknown role.";
-      return false;
+      return (false, "Unknown role.");
     }
 
-    var normalizedRole = AarogyaRoles.All.First(role => string.Equals(role, targetRole, StringComparison.OrdinalIgnoreCase));
+    var normalizedRole = AarogyaRoles.All.First(
+      role => string.Equals(role, targetRole, StringComparison.OrdinalIgnoreCase));
     var isSelfUpdate = string.Equals(actorSub, targetSub, StringComparison.Ordinal);
     var alreadyHasRole = actorRoles.Contains(normalizedRole, StringComparer.OrdinalIgnoreCase);
 
     if (isSelfUpdate && !alreadyHasRole)
     {
-      message = "Cannot escalate your own role.";
-      return false;
+      return (false, "Cannot escalate your own role.");
     }
 
-    var assignedRoles = _userRoles.GetOrAdd(targetSub, _ => new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase));
-    assignedRoles[normalizedRole] = 0;
+    var user = await userRepository.GetByExternalAuthIdAsync(targetSub, cancellationToken);
+    if (user is null)
+    {
+      return (false, $"User '{targetSub}' not found.");
+    }
 
-    message = $"Role '{normalizedRole}' assigned to user '{targetSub}'.";
-    return true;
+    if (!Enum.TryParse<UserRole>(normalizedRole, ignoreCase: true, out var parsedRole))
+    {
+      return (false, $"Role '{normalizedRole}' cannot be mapped to a valid user role.");
+    }
+
+    user.Role = parsedRole;
+    await unitOfWork.SaveChangesAsync(cancellationToken);
+
+    return (true, $"Role '{normalizedRole}' assigned to user '{targetSub}'.");
   }
 
-  public IReadOnlyCollection<string> GetAssignedRoles(string userSub)
+  public async Task<IReadOnlyCollection<string>> GetAssignedRolesAsync(
+    string userSub,
+    CancellationToken cancellationToken = default)
   {
     if (string.IsNullOrWhiteSpace(userSub))
     {
-      return Array.Empty<string>();
+      return [];
     }
 
-    return _userRoles.TryGetValue(userSub, out var roles)
-      ? roles.Keys.ToArray()
-      : Array.Empty<string>();
+    var user = await userRepository.GetByExternalAuthIdAsync(userSub, cancellationToken);
+    if (user is null)
+    {
+      return [];
+    }
+
+    return [user.Role.ToString()];
   }
 }
