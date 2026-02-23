@@ -13,5 +13,6 @@ public sealed class CleanReportsAwaitingExtractionSpecification : BaseSpecificat
   {
     ApplyOrderBy(report => report.UpdatedAt);
     ApplyPaging(0, batchSize);
+    ApplyAsNoTracking();
   }
 }
