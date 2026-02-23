@@ -222,6 +222,22 @@ internal sealed class ReportService(
         parameter.IsAbnormal))
       .ToArray();
 
+    ExtractionStatusResponse? extraction = null;
+    if (report.Extraction is not null)
+    {
+      extraction = new ExtractionStatusResponse(
+        report.Id,
+        ToStatusString(report.Status),
+        report.Extraction.ExtractionMethod,
+        report.Extraction.StructuringModel,
+        report.Extraction.ExtractedParameterCount,
+        report.Extraction.OverallConfidence,
+        report.Extraction.PageCount,
+        report.Extraction.ExtractedAt,
+        report.Extraction.ErrorMessage,
+        report.Extraction.AttemptCount);
+    }
+
     return new ReportDetailResponse(
       report.Id,
       report.ReportNumber,
@@ -235,7 +251,8 @@ internal sealed class ReportService(
       report.ReportedAt,
       report.Results.Notes,
       parameters,
-      download);
+      download,
+      extraction);
   }
 
   public async Task<ReportSummaryResponse> AddForUserAsync(

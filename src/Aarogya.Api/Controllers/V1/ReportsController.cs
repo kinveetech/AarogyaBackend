@@ -33,17 +33,20 @@ public sealed class ReportsController : ControllerBase
   private readonly IReportService _reportService;
   private readonly IReportFileUploadService _reportFileUploadService;
   private readonly IReportChecksumVerificationService _reportChecksumVerificationService;
+  private readonly IReportExtractionService _reportExtractionService;
   private readonly IConsentService _consentService;
 
   public ReportsController(
     IReportService reportService,
     IReportFileUploadService reportFileUploadService,
     IReportChecksumVerificationService reportChecksumVerificationService,
+    IReportExtractionService reportExtractionService,
     IConsentService consentService)
   {
     _reportService = reportService;
     _reportFileUploadService = reportFileUploadService;
     _reportChecksumVerificationService = reportChecksumVerificationService;
+    _reportExtractionService = reportExtractionService;
     _consentService = consentService;
   }
 
@@ -360,6 +363,95 @@ public sealed class ReportsController : ControllerBase
         new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
           ["checksum"] = [ex.Message]
+        }));
+    }
+  }
+
+  [HttpGet("{id:guid}/extraction")]
+  [ProducesResponseType(typeof(ExtractionStatusResponse), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> GetExtractionStatusAsync(Guid id, CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    try
+    {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
+      var result = await _reportExtractionService.GetExtractionStatusAsync(userSub, id, cancellationToken);
+      return result is null ? NotFound() : Ok(result);
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
+    }
+    catch (KeyNotFoundException ex)
+    {
+      return NotFound(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["report"] = [ex.Message]
+        }));
+    }
+    catch (UnauthorizedAccessException)
+    {
+      return Forbid();
+    }
+  }
+
+  [HttpPost("{id:guid}/extract")]
+  [ProducesResponseType(StatusCodes.Status202Accepted)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ValidationErrorResponse), StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> TriggerExtractionAsync(
+    Guid id,
+    [FromBody] TriggerExtractionRequest request,
+    CancellationToken cancellationToken)
+  {
+    var userSub = User.GetSubjectOrNull();
+    if (userSub is null)
+    {
+      return Unauthorized();
+    }
+
+    try
+    {
+      await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
+      await _reportExtractionService.TriggerExtractionAsync(userSub, id, request.ForceReprocess, cancellationToken);
+      return Accepted();
+    }
+    catch (ConsentRequiredException ex)
+    {
+      return ForbidWithConsentError(ex.Purpose);
+    }
+    catch (KeyNotFoundException ex)
+    {
+      return NotFound(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["report"] = [ex.Message]
+        }));
+    }
+    catch (UnauthorizedAccessException)
+    {
+      return Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new ValidationErrorResponse(
+        "Validation failed.",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+          ["extraction"] = [ex.Message]
         }));
     }
   }

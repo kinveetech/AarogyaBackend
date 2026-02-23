@@ -55,6 +55,8 @@ internal static class V1FeatureServiceCollectionExtensions
     services.AddKeyedScoped<ITextExtractionProvider, TextractTextExtractionProvider>("textract");
     services.AddScoped<IReportParameterExtractor, LlmReportParameterExtractor>();
     services.AddScoped<IReportPdfExtractionProcessor, ReportPdfExtractionProcessor>();
+    services.AddScoped<IReportExtractionService, ReportExtractionService>();
+    services.AddHostedService<ReportPdfExtractionHostedService>();
 
     return services;
   }

@@ -92,7 +92,30 @@ public sealed record ReportDetailResponse(
   DateTimeOffset? ReportedAt,
   string? Notes,
   IReadOnlyList<ReportDetailParameterResponse> Parameters,
-  ReportSignedDownloadUrlResponse Download);
+  ReportSignedDownloadUrlResponse Download,
+  ExtractionStatusResponse? Extraction = null);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record ExtractionStatusResponse(
+  Guid ReportId,
+  string Status,
+  string? ExtractionMethod,
+  string? StructuringModel,
+  int ExtractedParameterCount,
+  double? OverallConfidence,
+  int? PageCount,
+  DateTimeOffset? ExtractedAt,
+  string? ErrorMessage,
+  int AttemptCount);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Used by public API action signature for model binding.")]
+public sealed record TriggerExtractionRequest(bool ForceReprocess = false);
 
 [SuppressMessage(
   "Performance",
