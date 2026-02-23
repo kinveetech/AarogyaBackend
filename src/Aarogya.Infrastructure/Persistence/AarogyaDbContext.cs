@@ -36,6 +36,8 @@ public sealed class AarogyaDbContext(
 
   public DbSet<AadhaarVaultAccessLog> AadhaarVaultAccessLogs => Set<AadhaarVaultAccessLog>();
 
+  public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
     ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -55,6 +57,7 @@ public sealed class AarogyaDbContext(
     modelBuilder.ApplyConfiguration(new AccessGrantConfiguration());
     modelBuilder.ApplyConfiguration(new AuditLogConfiguration());
     modelBuilder.ApplyConfiguration(new ConsentRecordConfiguration());
+    modelBuilder.ApplyConfiguration(new ApiKeyConfiguration());
   }
 
   public override int SaveChanges(bool acceptAllChangesOnSuccess)
