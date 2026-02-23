@@ -70,7 +70,7 @@ internal sealed class S3UploadEventConsumerHostedService(
       VisibilityTimeout = sqsOptions.VisibilityTimeoutSeconds
     }, cancellationToken);
 
-    if (receive.Messages.Count == 0)
+    if (receive.Messages is not { Count: > 0 })
     {
       await Task.Delay(sqsOptions.EmptyPollDelayMilliseconds, cancellationToken);
       return;
