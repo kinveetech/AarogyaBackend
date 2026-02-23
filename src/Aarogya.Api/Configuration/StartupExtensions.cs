@@ -198,10 +198,10 @@ public static class StartupExtensions
 
   private static void AddSocialProviderConfigurationViolations(IConfiguration configuration, List<string> violations)
   {
-    var redirectUris = configuration.GetSection("Aws:Cognito:SocialIdentityProviders:MobileRedirectUris").Get<string[]>() ?? [];
+    var redirectUris = configuration.GetSection("Aws:Cognito:SocialIdentityProviders:AllowedRedirectUris").Get<string[]>() ?? [];
     if (redirectUris.Length == 0 || Array.TrueForAll(redirectUris, IsMissingConfigurationValue))
     {
-      violations.Add("Missing Aws:Cognito:SocialIdentityProviders:MobileRedirectUris");
+      violations.Add("Missing Aws:Cognito:SocialIdentityProviders:AllowedRedirectUris");
     }
 
     foreach (var provider in new[] { "Google", "Apple", "Facebook" })

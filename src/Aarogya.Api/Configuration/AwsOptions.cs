@@ -121,7 +121,7 @@ public sealed class CognitoSocialIdentityProviderOptions
   public SocialProviderOptions Facebook { get; set; } = new();
 
   [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "Configuration binding requires mutable collection.")]
-  public List<string> MobileRedirectUris { get; set; } = [];
+  public List<string> AllowedRedirectUris { get; set; } = [];
 }
 
 public sealed class SocialProviderOptions
