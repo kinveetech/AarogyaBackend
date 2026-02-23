@@ -196,7 +196,7 @@ public class ConfigurationValidationTests
       values[$"{providerKey}:ClientSecret"] = $"{providerId}-client-secret";
     }
 
-    values["Aws:Cognito:SocialIdentityProviders:MobileRedirectUris:0"] = "aarogya://auth/callback";
+    values["Aws:Cognito:SocialIdentityProviders:AllowedRedirectUris:0"] = "aarogya://auth/callback";
     values.TryAdd("Aws:Cognito:Domain", "aarogya-test");
     return values;
   }

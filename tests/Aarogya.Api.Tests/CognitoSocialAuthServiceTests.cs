@@ -169,7 +169,7 @@ public sealed class CognitoSocialAuthServiceTests
           Google = CreateEnabledProvider("google-client-id", "google-client-secret"),
           Apple = CreateEnabledProvider("apple-client-id", "apple-client-secret"),
           Facebook = CreateEnabledProvider("facebook-client-id", "facebook-client-secret"),
-          MobileRedirectUris = ["aarogya://auth/callback"]
+          AllowedRedirectUris = ["aarogya://auth/callback"]
         }
       }
     };

@@ -26,9 +26,9 @@ internal sealed class CognitoSocialAuthService(
       return Task.FromResult(new SocialAuthorizeResult(false, $"Provider '{provider}' is not enabled."));
     }
 
-    if (!IsAllowedMobileRedirectUri(request.RedirectUri))
+    if (!IsAllowedRedirectUri(request.RedirectUri))
     {
-      return Task.FromResult(new SocialAuthorizeResult(false, "Redirect URI is not allowed for mobile OAuth flow."));
+      return Task.FromResult(new SocialAuthorizeResult(false, "Redirect URI is not in the allowed list."));
     }
 
     var state = string.IsNullOrWhiteSpace(request.State) ? JwtTokenHelpers.GenerateToken(16) : request.State.Trim();
@@ -76,9 +76,9 @@ internal sealed class CognitoSocialAuthService(
       return new SocialTokenResult(false, $"Provider '{provider}' is not enabled.");
     }
 
-    if (!IsAllowedMobileRedirectUri(request.RedirectUri))
+    if (!IsAllowedRedirectUri(request.RedirectUri))
     {
-      return new SocialTokenResult(false, "Redirect URI is not allowed for mobile OAuth flow.");
+      return new SocialTokenResult(false, "Redirect URI is not in the allowed list.");
     }
 
     if (string.IsNullOrWhiteSpace(request.AuthorizationCode))
@@ -109,14 +109,14 @@ internal sealed class CognitoSocialAuthService(
       false);
   }
 
-  private bool IsAllowedMobileRedirectUri(Uri redirectUri)
+  private bool IsAllowedRedirectUri(Uri redirectUri)
   {
     if (!redirectUri.IsAbsoluteUri)
     {
       return false;
     }
 
-    return _awsOptions.Cognito.SocialIdentityProviders.MobileRedirectUris
+    return _awsOptions.Cognito.SocialIdentityProviders.AllowedRedirectUris
       .Exists(uri => string.Equals(uri?.Trim(), redirectUri.ToString(), StringComparison.OrdinalIgnoreCase));
   }
 
