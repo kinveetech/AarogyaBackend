@@ -6,6 +6,12 @@ metadata:
 type: Opaque
 stringData:
   Jwt__Key: development-key-change-this-to-32-plus-chars
+  Aws__Cognito__UserPoolId: REPLACE_WITH_COGNITO_POOL_ID
+  Aws__Cognito__AppClientId: REPLACE_WITH_COGNITO_CLIENT_ID
+  Aws__Cognito__Issuer: REPLACE_WITH_COGNITO_ISSUER_URL
+  Aws__Cognito__Domain: REPLACE_WITH_COGNITO_DOMAIN_PREFIX
+  Google__ClientId: REPLACE_WITH_GOOGLE_CLIENT_ID
+  Google__ClientSecret: REPLACE_WITH_GOOGLE_CLIENT_SECRET
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -82,6 +88,42 @@ spec:
               value: Aarogya Dev
             - name: Aws__Cognito__UserPoolName
               value: aarogya-dev-users
+            - name: Aws__Cognito__UserPoolId
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: Aws__Cognito__UserPoolId
+            - name: Aws__Cognito__AppClientId
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: Aws__Cognito__AppClientId
+            - name: Aws__Cognito__Issuer
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: Aws__Cognito__Issuer
+            - name: Aws__Cognito__Domain
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: Aws__Cognito__Domain
+            - name: Aws__Cognito__SocialIdentityProviders__AllowedRedirectUris__0
+              value: "aarogya://auth/callback"
+            - name: Aws__Cognito__SocialIdentityProviders__AllowedRedirectUris__1
+              value: "http://localhost:3000/api/auth/callback/cognito-pkce"
+            - name: Aws__Cognito__SocialIdentityProviders__Google__Enabled
+              value: "true"
+            - name: Aws__Cognito__SocialIdentityProviders__Google__ClientId
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: Google__ClientId
+            - name: Aws__Cognito__SocialIdentityProviders__Google__ClientSecret
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: Google__ClientSecret
             - name: Encryption__UseAwsKms
               value: "false"
             - name: Encryption__LocalDataKey
