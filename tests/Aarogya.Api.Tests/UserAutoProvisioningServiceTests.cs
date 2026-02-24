@@ -4,6 +4,7 @@ using Aarogya.Api.Caching;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -111,6 +112,71 @@ public sealed class UserAutoProvisioningServiceTests
     await service.EnsureUserExistsAsync(principal);
 
     repo.Verify(r => r.GetByExternalAuthIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+  }
+
+  [Fact]
+  public async Task EnsureUserExistsAsync_ShouldAddRoleClaim_WhenNewUserCreatedAsync()
+  {
+    var (service, repo, uow, cache) = CreateService();
+    cache.Setup(c => c.GetAsync<bool>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(false);
+    repo.Setup(r => r.GetByExternalAuthIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync((User?)null);
+    repo.Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+    uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+    var principal = CreatePrincipal("sub-new", "new@example.com", "Alice", "Smith");
+    await service.EnsureUserExistsAsync(principal);
+
+    var identity = principal.Identity as ClaimsIdentity;
+    identity.Should().NotBeNull();
+    identity!.HasClaim(ClaimTypes.Role, UserRole.Patient.ToString()).Should().BeTrue(
+      "newly provisioned users should get the Patient role claim added to their identity");
+  }
+
+  [Fact]
+  public async Task EnsureUserExistsAsync_ShouldNotAddRoleClaim_WhenUserAlreadyExistsAsync()
+  {
+    var (service, repo, _, cache) = CreateService();
+    cache.Setup(c => c.GetAsync<bool>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(false);
+    repo.Setup(r => r.GetByExternalAuthIdAsync("sub-existing", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new User { ExternalAuthId = "sub-existing" });
+
+    var principal = CreatePrincipal("sub-existing", "existing@example.com");
+    await service.EnsureUserExistsAsync(principal);
+
+    var identity = principal.Identity as ClaimsIdentity;
+    identity.Should().NotBeNull();
+    identity!.HasClaim(ClaimTypes.Role, UserRole.Patient.ToString()).Should().BeFalse(
+      "existing users should not get role claims from auto-provisioning");
+  }
+
+  [Fact]
+  public async Task EnsureUserExistsAsync_ShouldNotDuplicateRoleClaim_WhenAlreadyPresentAsync()
+  {
+    var (service, repo, uow, cache) = CreateService();
+    cache.Setup(c => c.GetAsync<bool>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(false);
+    repo.Setup(r => r.GetByExternalAuthIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync((User?)null);
+    repo.Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+    uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+    var claims = new List<Claim>
+    {
+      new("sub", "sub-preexisting-role"),
+      new("email", "pre@example.com"),
+      new(ClaimTypes.Role, UserRole.Patient.ToString())
+    };
+    var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"));
+
+    await service.EnsureUserExistsAsync(principal);
+
+    var identity = principal.Identity as ClaimsIdentity;
+    identity.Should().NotBeNull();
+    identity!.FindAll(ClaimTypes.Role).Should().HaveCount(1,
+      "the role claim should not be duplicated if already present");
   }
 
   private static (UserAutoProvisioningService Service, Mock<IUserRepository> Repo, Mock<IUnitOfWork> Uow, Mock<IEntityCacheService> Cache)

@@ -73,5 +73,14 @@ internal sealed class UserAutoProvisioningService(
 
     logger.LogInformation("Auto-provisioned user {Sub} with role {Role}", sub, UserRole.Patient);
     await cacheService.SetAsync(cacheKey, true, CacheTtl, cancellationToken);
+
+    // IClaimsTransformation runs during UseAuthentication(), before this middleware,
+    // so the role claim was not added for newly created users. Add it now so
+    // UseAuthorization() sees the correct role on this first request.
+    if (principal.Identity is ClaimsIdentity identity
+      && !identity.HasClaim(ClaimTypes.Role, UserRole.Patient.ToString()))
+    {
+      identity.AddClaim(new Claim(ClaimTypes.Role, UserRole.Patient.ToString()));
+    }
   }
 }
