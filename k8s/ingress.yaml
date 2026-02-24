@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aarogya-api-ingress
+  namespace: aarogya
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - api.dev.kinvee.in
+      secretName: api-tls
+  rules:
+    - host: api.dev.kinvee.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aarogya-api
+                port:
+                  number: 80

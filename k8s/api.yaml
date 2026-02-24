@@ -121,6 +121,8 @@ spec:
               value: "aarogya://auth/callback"
             - name: Aws__Cognito__SocialIdentityProviders__AllowedRedirectUris__1
               value: "http://localhost:3000/api/auth/callback/cognito-pkce"
+            - name: Aws__Cognito__SocialIdentityProviders__AllowedRedirectUris__2
+              value: "https://dev.kinvee.in/api/auth/callback/cognito-pkce"
             - name: Aws__Cognito__SocialIdentityProviders__Google__Enabled
               value: "true"
             - name: Aws__Cognito__SocialIdentityProviders__Google__ClientId
@@ -170,11 +172,10 @@ metadata:
   name: aarogya-api
   namespace: aarogya
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: aarogya-api
   ports:
     - name: http
       port: 80
       targetPort: 8080
-      nodePort: 30080
