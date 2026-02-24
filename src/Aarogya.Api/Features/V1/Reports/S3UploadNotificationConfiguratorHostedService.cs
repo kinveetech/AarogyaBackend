@@ -110,11 +110,11 @@ internal sealed class S3UploadNotificationConfiguratorHostedService(
           Principal = new { Service = "s3.amazonaws.com" },
           Action = "sqs:SendMessage",
           Resource = queueArn,
-          Condition = new
+          Condition = new Dictionary<string, object>(StringComparer.Ordinal)
           {
-            ArnEquals = new
+            ["ArnLike"] = new Dictionary<string, string>(StringComparer.Ordinal)
             {
-              SourceArn = bucketArn
+              ["aws:SourceArn"] = bucketArn
             }
           }
         }
