@@ -48,21 +48,29 @@ jobs:
     - name: Inject secrets into manifests
       env:
         JWT_KEY: ${{ secrets.JWT_KEY }}
+        AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+        AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
         COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
         COGNITO_APP_CLIENT_ID: ${{ secrets.COGNITO_APP_CLIENT_ID }}
         COGNITO_ISSUER_URL: ${{ secrets.COGNITO_ISSUER_URL }}
         COGNITO_DOMAIN_PREFIX: ${{ secrets.COGNITO_DOMAIN_PREFIX }}
         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        ENCRYPTION_DATA_KEY: ${{ secrets.ENCRYPTION_DATA_KEY }}
+        ENCRYPTION_BLIND_INDEX_KEY: ${{ secrets.ENCRYPTION_BLIND_INDEX_KEY }}
       run: |
         sed -i \
           -e "s|development-key-change-this-to-32-plus-chars|${JWT_KEY}|g" \
+          -e "s|REPLACE_WITH_AWS_ACCESS_KEY|${AWS_ACCESS_KEY}|g" \
+          -e "s|REPLACE_WITH_AWS_SECRET_KEY|${AWS_SECRET_KEY}|g" \
           -e "s|REPLACE_WITH_COGNITO_POOL_ID|${COGNITO_USER_POOL_ID}|g" \
           -e "s|REPLACE_WITH_COGNITO_CLIENT_ID|${COGNITO_APP_CLIENT_ID}|g" \
           -e "s|REPLACE_WITH_COGNITO_ISSUER_URL|${COGNITO_ISSUER_URL}|g" \
           -e "s|REPLACE_WITH_COGNITO_DOMAIN_PREFIX|${COGNITO_DOMAIN_PREFIX}|g" \
           -e "s|REPLACE_WITH_GOOGLE_CLIENT_ID|${GOOGLE_CLIENT_ID}|g" \
           -e "s|REPLACE_WITH_GOOGLE_CLIENT_SECRET|${GOOGLE_CLIENT_SECRET}|g" \
+          -e "s|REPLACE_WITH_ENCRYPTION_DATA_KEY|${ENCRYPTION_DATA_KEY}|g" \
+          -e "s|REPLACE_WITH_ENCRYPTION_BLIND_INDEX_KEY|${ENCRYPTION_BLIND_INDEX_KEY}|g" \
           k8s/api.yaml
 
     - name: Deploy to k3s
