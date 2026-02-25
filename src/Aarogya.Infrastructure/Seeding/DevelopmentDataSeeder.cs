@@ -99,7 +99,8 @@ public sealed class DevelopmentDataSeeder(
       DateOfBirth = role == UserRole.Patient
         ? DateOnly.FromDateTime(faker.Date.Past(70, DateTime.UtcNow.AddYears(-18)))
         : null,
-      Gender = faker.PickRandom("male", "female", "other")
+      Gender = faker.PickRandom("male", "female", "other"),
+      RegistrationStatus = RegistrationStatus.Approved
     });
   }
 

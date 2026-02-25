@@ -27,6 +27,8 @@ public sealed class CachedUserProfileServiceTests
     null,
     "A+",
     new DateOnly(1990, 5, 15),
+    null,
+    "approved",
     ["Patient"]);
 
   [Fact]

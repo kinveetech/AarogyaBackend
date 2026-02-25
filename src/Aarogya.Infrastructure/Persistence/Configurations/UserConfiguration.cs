@@ -44,6 +44,12 @@ internal sealed class UserConfiguration(IPiiFieldEncryptionService encryptionSer
     builder.Property(x => x.AadhaarRefToken).HasColumnName("aadhaar_ref_token");
     builder.Property(x => x.AadhaarSha256).HasColumnName("aadhaar_sha256").HasColumnType(ByteaType);
 
+    builder.Property(x => x.RegistrationStatus)
+      .HasColumnName("registration_status")
+      .HasConversion(DescriptionEnumConverter.Create<RegistrationStatus>())
+      .HasMaxLength(20)
+      .HasDefaultValue(RegistrationStatus.PendingApproval);
+
     builder.Property(x => x.IsActive).HasColumnName("is_active").HasDefaultValue(true);
     builder.Property(x => x.CreatedAt).HasColumnName("created_at");
     builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");

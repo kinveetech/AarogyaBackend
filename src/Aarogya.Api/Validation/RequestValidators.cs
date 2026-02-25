@@ -397,6 +397,130 @@ internal sealed class UpdateUserProfileRequestValidator : AbstractValidator<Upda
   }
 }
 
+internal sealed class RegisterUserRequestValidator : AbstractValidator<RegisterUserRequest>
+{
+  private static readonly DateOnly MinimumBirthDate = new(1900, 1, 1);
+  private static readonly string[] AllowedRoles = ["patient", "doctor", "lab_technician"];
+  private static readonly string[] AllowedBloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+  private static readonly string[] AllowedGenders = ["male", "female", "other", "unknown"];
+
+  public RegisterUserRequestValidator()
+  {
+    RuleFor(x => x.Role)
+      .NotEmpty()
+      .Must(role => AllowedRoles.Contains(role.Trim(), StringComparer.OrdinalIgnoreCase))
+      .WithMessage("Role must be one of patient, doctor, lab_technician.");
+
+    RuleFor(x => x.FirstName).NotEmpty().MaximumLength(120);
+    RuleFor(x => x.LastName).NotEmpty().MaximumLength(120);
+    RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
+
+    RuleFor(x => x.Phone)
+      .MustBeIndianPhoneNumber()
+      .When(x => x.Phone is not null);
+
+    RuleFor(x => x.Address)
+      .MaximumLength(500)
+      .When(x => x.Address is not null);
+
+    RuleFor(x => x.BloodGroup)
+      .Must(value => value is not null && AllowedBloodGroups.Contains(value.Trim().ToUpperInvariant(), StringComparer.Ordinal))
+      .WithMessage("Blood group must be one of A+, A-, B+, B-, AB+, AB-, O+, O-.")
+      .When(x => x.BloodGroup is not null);
+
+    RuleFor(x => x.Gender)
+      .Must(value => value is not null && AllowedGenders.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase))
+      .WithMessage("Gender must be one of male, female, other, unknown.")
+      .When(x => x.Gender is not null);
+
+    RuleFor(x => x.DateOfBirth)
+      .LessThanOrEqualTo(DateOnly.FromDateTime(DateTime.UtcNow))
+      .GreaterThanOrEqualTo(MinimumBirthDate)
+      .When(x => x.DateOfBirth.HasValue);
+
+    RuleFor(x => x.DoctorData)
+      .NotNull()
+      .WithMessage("DoctorData is required for doctor registration.")
+      .When(x => string.Equals(x.Role?.Trim(), "doctor", StringComparison.OrdinalIgnoreCase));
+
+    RuleFor(x => x.DoctorData)
+      .Null()
+      .WithMessage("DoctorData must be null for non-doctor registration.")
+      .When(x => !string.Equals(x.Role?.Trim(), "doctor", StringComparison.OrdinalIgnoreCase));
+
+    RuleFor(x => x.DoctorData!.MedicalLicenseNumber)
+      .NotEmpty().MaximumLength(50)
+      .When(x => x.DoctorData is not null);
+
+    RuleFor(x => x.DoctorData!.Specialization)
+      .NotEmpty().MaximumLength(100)
+      .When(x => x.DoctorData is not null);
+
+    RuleFor(x => x.DoctorData!.ClinicOrHospitalName)
+      .MaximumLength(200)
+      .When(x => x.DoctorData?.ClinicOrHospitalName is not null);
+
+    RuleFor(x => x.DoctorData!.ClinicAddress)
+      .MaximumLength(500)
+      .When(x => x.DoctorData?.ClinicAddress is not null);
+
+    RuleFor(x => x.LabTechnicianData)
+      .NotNull()
+      .WithMessage("LabTechnicianData is required for lab_technician registration.")
+      .When(x => string.Equals(x.Role?.Trim(), "lab_technician", StringComparison.OrdinalIgnoreCase));
+
+    RuleFor(x => x.LabTechnicianData)
+      .Null()
+      .WithMessage("LabTechnicianData must be null for non-lab_technician registration.")
+      .When(x => !string.Equals(x.Role?.Trim(), "lab_technician", StringComparison.OrdinalIgnoreCase));
+
+    RuleFor(x => x.LabTechnicianData!.LabName)
+      .NotEmpty().MaximumLength(200)
+      .When(x => x.LabTechnicianData is not null);
+
+    RuleFor(x => x.LabTechnicianData!.LabLicenseNumber)
+      .MaximumLength(100)
+      .When(x => x.LabTechnicianData?.LabLicenseNumber is not null);
+
+    RuleFor(x => x.LabTechnicianData!.NablAccreditationId)
+      .MaximumLength(50)
+      .When(x => x.LabTechnicianData?.NablAccreditationId is not null);
+
+    RuleForEach(x => x.Consents)
+      .SetValidator(new InitialConsentGrantValidator())
+      .When(x => x.Consents is not null);
+  }
+}
+
+internal sealed class InitialConsentGrantValidator : AbstractValidator<InitialConsentGrant>
+{
+  public InitialConsentGrantValidator()
+  {
+    RuleFor(x => x.Purpose)
+      .NotEmpty()
+      .Must(Features.V1.Consents.ConsentPurposeCatalog.IsSupported)
+      .WithMessage("Unsupported consent purpose.");
+  }
+}
+
+internal sealed class ApproveRegistrationRequestValidator : AbstractValidator<ApproveRegistrationRequest>
+{
+  public ApproveRegistrationRequestValidator()
+  {
+    RuleFor(x => x.Notes)
+      .MaximumLength(500)
+      .When(x => x.Notes is not null);
+  }
+}
+
+internal sealed class RejectRegistrationRequestValidator : AbstractValidator<RejectRegistrationRequest>
+{
+  public RejectRegistrationRequestValidator()
+  {
+    RuleFor(x => x.Reason).NotEmpty().MaximumLength(500);
+  }
+}
+
 internal sealed class DataDeletionRequestValidator : AbstractValidator<DataDeletionRequest>
 {
   public DataDeletionRequestValidator()

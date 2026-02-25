@@ -35,6 +35,8 @@ public sealed class UsersControllerTests
       "Pune",
       "O+",
       new DateOnly(1995, 6, 5),
+      null,
+      "approved",
       ["Patient"]);
 
     var userProfileService = new Mock<IUserProfileService>();
@@ -179,7 +181,9 @@ public sealed class UsersControllerTests
     return new UsersController(
       userProfileService,
       userDataRightsService ?? Mock.Of<IUserDataRightsService>(),
-      consentService.Object)
+      consentService.Object,
+      Mock.Of<IUserRegistrationService>(),
+      Mock.Of<IRegistrationApprovalService>())
     {
       ControllerContext = new ControllerContext
       {

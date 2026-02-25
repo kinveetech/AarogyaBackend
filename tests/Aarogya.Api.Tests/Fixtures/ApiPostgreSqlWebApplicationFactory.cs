@@ -228,6 +228,7 @@ public sealed class ApiPostgreSqlWebApplicationFactory : WebApplicationFactory<P
         last_name_encrypted,
         email_encrypted,
         phone_encrypted,
+        registration_status,
         is_active,
         created_at,
         updated_at
@@ -241,6 +242,7 @@ public sealed class ApiPostgreSqlWebApplicationFactory : WebApplicationFactory<P
         {4},
         {5},
         {6},
+        'approved',
         TRUE,
         {7},
         {7}
