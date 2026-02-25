@@ -108,7 +108,8 @@ public sealed class CachedUserProfileServiceTests
 
     var aadhaarService = new Mock<IAadhaarVaultService>();
     aadhaarService
-      .Setup(x => x.VerifyAndCreateReferenceTokenAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.VerifyAndCreateReferenceTokenAsync(
+        It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(new AadhaarVerificationResult(Guid.NewGuid(), false, "test-provider", null, null));
 
     var cacheService = new Mock<IEntityCacheService>();
@@ -117,7 +118,7 @@ public sealed class CachedUserProfileServiceTests
       aadhaarVaultService: aadhaarService.Object,
       cacheService: cacheService.Object);
 
-    var request = new VerifyAadhaarRequest("123456789012");
+    var request = new VerifyAadhaarRequest("123456789012", "Jane", "Doe", new DateOnly(1990, 5, 15));
     await sut.VerifyCurrentUserAadhaarAsync("seed-PATIENT-1", request, CancellationToken.None);
 
     cacheService.Verify(

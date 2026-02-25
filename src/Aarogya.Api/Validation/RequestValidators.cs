@@ -320,9 +320,17 @@ internal sealed class AadhaarNumberValidator : AbstractValidator<string>
 
 internal sealed class VerifyAadhaarRequestValidator : AbstractValidator<VerifyAadhaarRequest>
 {
+  private static readonly DateOnly MinimumBirthDate = new(1900, 1, 1);
+
   public VerifyAadhaarRequestValidator()
   {
     RuleFor(x => x.AadhaarNumber).MustBeAadhaarNumber();
+    RuleFor(x => x.FirstName).NotEmpty().MaximumLength(120);
+    RuleFor(x => x.LastName).NotEmpty().MaximumLength(120);
+    RuleFor(x => x.DateOfBirth)
+      .NotEmpty()
+      .LessThan(DateOnly.FromDateTime(DateTime.UtcNow))
+      .GreaterThanOrEqualTo(MinimumBirthDate);
   }
 }
 

@@ -15,7 +15,7 @@ public sealed class MockAadhaarApiClientTests
   {
     var sut = CreateClient(useMockApi: false);
 
-    var result = await sut.ValidateAsync("", CancellationToken.None);
+    var result = await sut.ValidateAsync("", cancellationToken: CancellationToken.None);
 
     result.IsValid.Should().BeFalse();
     result.Message.Should().Be("Aadhaar number is required.");
@@ -27,7 +27,7 @@ public sealed class MockAadhaarApiClientTests
   {
     var sut = CreateClient(useMockApi: false);
 
-    var result = await sut.ValidateAsync("   ", CancellationToken.None);
+    var result = await sut.ValidateAsync("   ", cancellationToken: CancellationToken.None);
 
     result.IsValid.Should().BeFalse();
   }
@@ -37,7 +37,7 @@ public sealed class MockAadhaarApiClientTests
   {
     var sut = CreateClient(useMockApi: false);
 
-    var result = await sut.ValidateAsync("123456789012", CancellationToken.None);
+    var result = await sut.ValidateAsync("123456789012", cancellationToken: CancellationToken.None);
 
     result.IsValid.Should().BeTrue();
     result.RequestId.Should().StartWith("local-");
@@ -56,7 +56,7 @@ public sealed class MockAadhaarApiClientTests
 
     var sut = CreateClient(useMockApi: true, httpClient: httpClient);
 
-    var result = await sut.ValidateAsync("123456789012", CancellationToken.None);
+    var result = await sut.ValidateAsync("123456789012", cancellationToken: CancellationToken.None);
 
     result.IsValid.Should().BeTrue();
     result.RequestId.Should().StartWith("local-");
@@ -83,7 +83,7 @@ public sealed class MockAadhaarApiClientTests
 
     var sut = CreateClient(useMockApi: true, httpClient: httpClient);
 
-    var result = await sut.ValidateAsync("123456789012", CancellationToken.None);
+    var result = await sut.ValidateAsync("123456789012", cancellationToken: CancellationToken.None);
 
     result.IsValid.Should().BeTrue();
     result.RequestId.Should().Be("req-123");
@@ -100,10 +100,42 @@ public sealed class MockAadhaarApiClientTests
 
     var sut = CreateClient(useMockApi: true, httpClient: httpClient);
 
-    var result = await sut.ValidateAsync("123456789012", CancellationToken.None);
+    var result = await sut.ValidateAsync("123456789012", cancellationToken: CancellationToken.None);
 
     result.IsValid.Should().BeFalse();
     result.Message.Should().Contain("InternalServerError");
+  }
+
+  [Fact]
+  public async Task ValidateAsync_ShouldUseDemographics_WhenProvidedAndMockApiDisabledAsync()
+  {
+    var sut = CreateClient(useMockApi: false);
+
+    var result = await sut.ValidateAsync(
+      "123456789012",
+      firstName: "Ravi",
+      lastName: "Kumar",
+      dateOfBirth: new DateOnly(1990, 5, 15),
+      cancellationToken: CancellationToken.None);
+
+    result.IsValid.Should().BeTrue();
+    result.Demographics.Should().NotBeNull();
+    result.Demographics!.FullName.Should().Be("Ravi Kumar");
+    result.Demographics.DateOfBirth.Should().Be(new DateOnly(1990, 5, 15));
+    result.Demographics.Address.Should().Be("India");
+  }
+
+  [Fact]
+  public async Task ValidateAsync_ShouldFallBackToSuffix_WhenNoDemographicsProvidedAsync()
+  {
+    var sut = CreateClient(useMockApi: false);
+
+    var result = await sut.ValidateAsync("123456789012", cancellationToken: CancellationToken.None);
+
+    result.IsValid.Should().BeTrue();
+    result.Demographics.Should().NotBeNull();
+    result.Demographics!.FullName.Should().Contain("9012");
+    result.Demographics.DateOfBirth.Should().BeNull();
   }
 
   [Fact]

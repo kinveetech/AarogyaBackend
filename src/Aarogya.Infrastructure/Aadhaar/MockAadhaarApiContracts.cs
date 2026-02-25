@@ -1,6 +1,10 @@
 namespace Aarogya.Infrastructure.Aadhaar;
 
-public sealed record MockAadhaarValidationRequest(string AadhaarNumber);
+public sealed record MockAadhaarValidationRequest(
+  string AadhaarNumber,
+  string? FirstName = null,
+  string? LastName = null,
+  DateOnly? DateOfBirth = null);
 
 public sealed record MockAadhaarValidationResponse(
   bool IsValid,

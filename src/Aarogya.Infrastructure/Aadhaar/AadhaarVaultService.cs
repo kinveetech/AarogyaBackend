@@ -16,11 +16,14 @@ public sealed class AadhaarVaultService(
   public async Task<AadhaarVerificationResult> VerifyAndCreateReferenceTokenAsync(
     string aadhaarNumber,
     Guid? actorUserId = null,
+    string? firstName = null,
+    string? lastName = null,
+    DateOnly? dateOfBirth = null,
     CancellationToken cancellationToken = default)
   {
     var normalizedAadhaar = AadhaarHashing.Normalize(aadhaarNumber);
 
-    var validation = await mockAadhaarApiClient.ValidateAsync(normalizedAadhaar, cancellationToken);
+    var validation = await mockAadhaarApiClient.ValidateAsync(normalizedAadhaar, firstName, lastName, dateOfBirth, cancellationToken);
     if (!validation.IsValid)
     {
       throw new InvalidOperationException(validation.Message ?? "Aadhaar validation failed.");
@@ -81,9 +84,12 @@ public sealed class AadhaarVaultService(
   public async Task<Guid> CreateOrGetReferenceTokenAsync(
     string aadhaarNumber,
     Guid? actorUserId = null,
+    string? firstName = null,
+    string? lastName = null,
+    DateOnly? dateOfBirth = null,
     CancellationToken cancellationToken = default)
   {
-    var verification = await VerifyAndCreateReferenceTokenAsync(aadhaarNumber, actorUserId, cancellationToken);
+    var verification = await VerifyAndCreateReferenceTokenAsync(aadhaarNumber, actorUserId, firstName, lastName, dateOfBirth, cancellationToken);
     return verification.ReferenceToken;
   }
 

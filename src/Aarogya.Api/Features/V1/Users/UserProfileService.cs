@@ -108,7 +108,13 @@ internal sealed class UserProfileService(
     }
 
     var normalizedAadhaar = AadhaarHashing.Normalize(request.AadhaarNumber);
-    var verification = await aadhaarVaultService.VerifyAndCreateReferenceTokenAsync(normalizedAadhaar, user.Id, cancellationToken);
+    var verification = await aadhaarVaultService.VerifyAndCreateReferenceTokenAsync(
+      normalizedAadhaar,
+      user.Id,
+      request.FirstName,
+      request.LastName,
+      request.DateOfBirth,
+      cancellationToken);
 
     user.AadhaarRefToken = verification.ReferenceToken;
     user.AadhaarSha256 = AadhaarHashing.ComputeSha256(normalizedAadhaar);

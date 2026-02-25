@@ -96,7 +96,8 @@ public sealed class UsersControllerTests
 
     var controller = CreateController(userProfileService.Object, CreateUser("seed-PATIENT-1"));
 
-    var result = await controller.VerifyCurrentUserAadhaarAsync(new VerifyAadhaarRequest("123456789012"), CancellationToken.None);
+    var result = await controller.VerifyCurrentUserAadhaarAsync(
+      new VerifyAadhaarRequest("123456789012", "Ravi", "Kumar", new DateOnly(1990, 5, 15)), CancellationToken.None);
 
     var ok = result.Should().BeOfType<OkObjectResult>().Subject;
     ok.Value.Should().BeEquivalentTo(verification);
@@ -112,7 +113,8 @@ public sealed class UsersControllerTests
 
     var controller = CreateController(userProfileService.Object, CreateUser("seed-PATIENT-1"));
 
-    var result = await controller.VerifyCurrentUserAadhaarAsync(new VerifyAadhaarRequest("123456789012"), CancellationToken.None);
+    var result = await controller.VerifyCurrentUserAadhaarAsync(
+      new VerifyAadhaarRequest("123456789012", "Ravi", "Kumar", new DateOnly(1990, 5, 15)), CancellationToken.None);
 
     var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
     badRequest.Value.Should().BeOfType<ValidationErrorResponse>();

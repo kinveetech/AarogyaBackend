@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 namespace Aarogya.Api.Features.V1.Users;
 
@@ -36,7 +37,11 @@ public sealed record UpdateUserProfileRequest(
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public API action signature.")]
-public sealed record VerifyAadhaarRequest(string AadhaarNumber);
+public sealed record VerifyAadhaarRequest(
+  string AadhaarNumber,
+  string FirstName,
+  string LastName,
+  [property: JsonRequired] DateOnly DateOfBirth);
 
 [SuppressMessage(
   "Performance",
