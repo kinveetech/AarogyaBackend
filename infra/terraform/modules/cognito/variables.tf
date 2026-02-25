@@ -30,6 +30,42 @@ variable "google_client_secret" {
   sensitive   = true
 }
 
+variable "apple_client_id" {
+  description = "Apple Services ID (e.g. in.kinvee.aarogya.auth)"
+  type        = string
+  sensitive   = true
+}
+
+variable "apple_team_id" {
+  description = "Apple Developer Team ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "apple_key_id" {
+  description = "Apple Sign In key ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "apple_private_key" {
+  description = "Apple Sign In private key (.p8 contents)"
+  type        = string
+  sensitive   = true
+}
+
+variable "facebook_app_id" {
+  description = "Facebook App ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "facebook_app_secret" {
+  description = "Facebook App Secret"
+  type        = string
+  sensitive   = true
+}
+
 variable "callback_urls" {
   description = "Allowed OAuth callback URLs"
   type        = list(string)

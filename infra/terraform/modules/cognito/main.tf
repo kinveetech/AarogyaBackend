@@ -74,6 +74,51 @@ resource "aws_cognito_identity_provider" "google" {
   }
 }
 
+resource "aws_cognito_identity_provider" "apple" {
+  count = var.apple_client_id != "" ? 1 : 0
+
+  user_pool_id  = aws_cognito_user_pool.this.id
+  provider_name = "SignInWithApple"
+  provider_type = "SignInWithApple"
+
+  provider_details = {
+    client_id        = var.apple_client_id
+    team_id          = var.apple_team_id
+    key_id           = var.apple_key_id
+    private_key      = var.apple_private_key
+    authorize_scopes = "email name"
+  }
+
+  attribute_mapping = {
+    email       = "email"
+    given_name  = "firstName"
+    family_name = "lastName"
+    username    = "sub"
+  }
+}
+
+resource "aws_cognito_identity_provider" "facebook" {
+  count = var.facebook_app_id != "" ? 1 : 0
+
+  user_pool_id  = aws_cognito_user_pool.this.id
+  provider_name = "Facebook"
+  provider_type = "Facebook"
+
+  provider_details = {
+    client_id        = var.facebook_app_id
+    client_secret    = var.facebook_app_secret
+    authorize_scopes = "email,public_profile"
+    api_version      = "v21.0"
+  }
+
+  attribute_mapping = {
+    email       = "email"
+    given_name  = "first_name"
+    family_name = "last_name"
+    username    = "id"
+  }
+}
+
 resource "aws_cognito_user_pool_client" "this" {
   name         = "${var.project}-${var.environment}-client"
   user_pool_id = aws_cognito_user_pool.this.id
@@ -89,6 +134,8 @@ resource "aws_cognito_user_pool_client" "this" {
   supported_identity_providers = compact([
     "COGNITO",
     var.google_client_id != "" ? "Google" : "",
+    var.apple_client_id != "" ? "SignInWithApple" : "",
+    var.facebook_app_id != "" ? "Facebook" : "",
   ])
 
   callback_urls = var.callback_urls
@@ -98,5 +145,9 @@ resource "aws_cognito_user_pool_client" "this" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_scopes                 = ["openid", "email", "profile"]
 
-  depends_on = [aws_cognito_identity_provider.google]
+  depends_on = [
+    aws_cognito_identity_provider.google,
+    aws_cognito_identity_provider.apple,
+    aws_cognito_identity_provider.facebook,
+  ]
 }

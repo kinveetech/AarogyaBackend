@@ -92,6 +92,12 @@ module "cognito" {
   pre_signup_lambda_arn = module.lambda_pre_signup.function_arn
   google_client_id      = var.google_client_id
   google_client_secret  = var.google_client_secret
+  apple_client_id       = var.apple_client_id
+  apple_team_id         = var.apple_team_id
+  apple_key_id          = var.apple_key_id
+  apple_private_key     = var.apple_private_key
+  facebook_app_id       = var.facebook_app_id
+  facebook_app_secret   = var.facebook_app_secret
   callback_urls         = var.cognito_callback_urls
 }
 
