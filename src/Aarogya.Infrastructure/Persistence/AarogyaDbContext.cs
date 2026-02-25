@@ -36,6 +36,10 @@ public sealed class AarogyaDbContext(
 
   public DbSet<AadhaarVaultAccessLog> AadhaarVaultAccessLogs => Set<AadhaarVaultAccessLog>();
 
+  public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
+
+  public DbSet<LabTechnicianProfile> LabTechnicianProfiles => Set<LabTechnicianProfile>();
+
   public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -57,6 +61,8 @@ public sealed class AarogyaDbContext(
     modelBuilder.ApplyConfiguration(new AccessGrantConfiguration());
     modelBuilder.ApplyConfiguration(new AuditLogConfiguration());
     modelBuilder.ApplyConfiguration(new ConsentRecordConfiguration());
+    modelBuilder.ApplyConfiguration(new DoctorProfileConfiguration(_piiFieldEncryptionService));
+    modelBuilder.ApplyConfiguration(new LabTechnicianProfileConfiguration(_piiFieldEncryptionService));
     modelBuilder.ApplyConfiguration(new ApiKeyConfiguration());
   }
 

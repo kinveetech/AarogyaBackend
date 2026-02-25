@@ -36,11 +36,17 @@ public sealed class User : IAuditableEntity
 
   public byte[]? AadhaarSha256 { get; set; }
 
+  public RegistrationStatus RegistrationStatus { get; set; } = RegistrationStatus.PendingApproval;
+
   public bool IsActive { get; set; } = true;
 
   public DateTimeOffset CreatedAt { get; set; }
 
   public DateTimeOffset UpdatedAt { get; set; }
+
+  public DoctorProfile? DoctorProfile { get; set; }
+
+  public LabTechnicianProfile? LabTechnicianProfile { get; set; }
 
   public ICollection<Report> PatientReports { get; set; } = [];
 

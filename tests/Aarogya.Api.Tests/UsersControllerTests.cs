@@ -35,6 +35,8 @@ public sealed class UsersControllerTests
       "Pune",
       "O+",
       new DateOnly(1995, 6, 5),
+      null,
+      "approved",
       ["Patient"]);
 
     var userProfileService = new Mock<IUserProfileService>();

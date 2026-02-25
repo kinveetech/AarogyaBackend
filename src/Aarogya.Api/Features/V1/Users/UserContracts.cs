@@ -15,6 +15,8 @@ public sealed record UserProfileResponse(
   string? Address,
   string? BloodGroup,
   DateOnly? DateOfBirth,
+  string? Gender,
+  string RegistrationStatus,
   IReadOnlyList<string> Roles);
 
 [SuppressMessage(

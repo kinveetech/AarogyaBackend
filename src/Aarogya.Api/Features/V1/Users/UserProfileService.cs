@@ -153,7 +153,20 @@ internal sealed class UserProfileService(
       user.Address,
       user.BloodGroup,
       user.DateOfBirth,
+      user.Gender,
+      ToRegistrationStatusName(user.RegistrationStatus),
       [ToRoleName(user.Role)]);
+  }
+
+  private static string ToRegistrationStatusName(RegistrationStatus status)
+  {
+    return status switch
+    {
+      RegistrationStatus.PendingApproval => "pending_approval",
+      RegistrationStatus.Approved => "approved",
+      RegistrationStatus.Rejected => "rejected",
+      _ => status.ToString()
+    };
   }
 
   private static string ToRoleName(UserRole role)

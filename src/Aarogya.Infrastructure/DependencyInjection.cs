@@ -86,6 +86,8 @@ public static class DependencyInjection
     services.AddScoped<IEmergencyContactRepository, EmergencyContactRepository>();
     services.AddScoped<IAuditLogRepository, AuditLogRepository>();
     services.AddScoped<IConsentRecordRepository, ConsentRecordRepository>();
+    services.AddScoped<IDoctorProfileRepository, DoctorProfileRepository>();
+    services.AddScoped<ILabTechnicianProfileRepository, LabTechnicianProfileRepository>();
     services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
     var seedDataOptions = new SeedDataOptions();

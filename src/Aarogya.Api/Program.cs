@@ -9,6 +9,7 @@ using Aarogya.Api.Endpoints;
 using Aarogya.Api.Features.V1;
 using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Features.V1.Reports;
+using Aarogya.Api.Features.V1.Users;
 using Aarogya.Api.Health;
 using Aarogya.Api.RateLimiting;
 using Aarogya.Api.Security;
@@ -193,7 +194,8 @@ builder.Services.AddSingleton<ICognitoSocialTokenClient, CognitoOAuthTokenClient
 builder.Services.AddSingleton<ISocialAuthService, CognitoSocialAuthService>();
 builder.Services.AddSingleton<ICognitoTokenManagementService, CognitoTokenManagementService>();
 builder.Services.AddScoped<IRoleAssignmentService, DatabaseRoleAssignmentService>();
-builder.Services.AddScoped<IUserAutoProvisioningService, UserAutoProvisioningService>();
+builder.Services.AddScoped<IUserRegistrationService, UserRegistrationService>();
+builder.Services.AddScoped<IRegistrationApprovalService, RegistrationApprovalService>();
 builder.Services.AddScoped<IAuditLoggingService, AuditLoggingService>();
 builder.Services.AddHostedService<DataEncryptionKeyRotationHostedService>();
 builder.Services.AddHostedService<BreachDetectionHostedService>();
@@ -283,7 +285,7 @@ if (!app.Environment.IsDevelopment())
 app.UseCors("AarogyaPolicy");
 app.UseResponseCaching();
 app.UseAuthentication();
-app.UseMiddleware<UserAutoProvisioningMiddleware>();
+app.UseMiddleware<RegistrationRequiredMiddleware>();
 if (rateLimitingOptions.EnableRateLimiting)
 {
   app.UseRateLimiter();

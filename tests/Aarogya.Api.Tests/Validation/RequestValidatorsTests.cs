@@ -617,4 +617,199 @@ public sealed class RequestValidatorsTests
   }
 
   #endregion
+
+  #region RegisterUserRequestValidator
+
+  [Fact]
+  public void RegisterUserRequestValidator_ShouldAccept_ValidPatientRequest()
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "patient", "Test", "Patient", "test@aarogya.dev",
+      "+919876543210", new DateOnly(1990, 1, 1), "male", "Pune", "O+",
+      null, null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void RegisterUserRequestValidator_ShouldAccept_ValidDoctorRequest()
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "doctor", "Test", "Doctor", "doc@aarogya.dev",
+      null, null, null, null, null,
+      new DoctorRegistrationData("MED-123", "Cardiology", "City Hospital", null),
+      null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void RegisterUserRequestValidator_ShouldAccept_ValidLabTechnicianRequest()
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "lab_technician", "Test", "Lab", "lab@aarogya.dev",
+      null, null, null, null, null,
+      null, new LabTechnicianRegistrationData("City Lab", null, null),
+      null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Theory]
+  [InlineData("")]
+  [InlineData("admin")]
+  [InlineData("superuser")]
+  public void RegisterUserRequestValidator_ShouldReject_InvalidRole(string role)
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      role, "Test", "User", "test@aarogya.dev",
+      null, null, null, null, null, null, null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void RegisterUserRequestValidator_ShouldReject_EmptyFirstName()
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "patient", "", "Patient", "test@aarogya.dev",
+      null, null, null, null, null, null, null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void RegisterUserRequestValidator_ShouldReject_InvalidEmail()
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "patient", "Test", "Patient", "not-an-email",
+      null, null, null, null, null, null, null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void RegisterUserRequestValidator_ShouldReject_DoctorWithoutDoctorData()
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "doctor", "Test", "Doctor", "doc@aarogya.dev",
+      null, null, null, null, null, null, null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void RegisterUserRequestValidator_ShouldReject_LabTechnicianWithoutLabData()
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "lab_technician", "Test", "Lab", "lab@aarogya.dev",
+      null, null, null, null, null, null, null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Theory]
+  [InlineData("A+")]
+  [InlineData("O-")]
+  [InlineData("AB+")]
+  public void RegisterUserRequestValidator_ShouldAccept_ValidBloodGroup(string bloodGroup)
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "patient", "Test", "Patient", "test@aarogya.dev",
+      null, null, null, null, bloodGroup, null, null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void RegisterUserRequestValidator_ShouldReject_InvalidBloodGroup()
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "patient", "Test", "Patient", "test@aarogya.dev",
+      null, null, null, null, "X+", null, null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Theory]
+  [InlineData("male")]
+  [InlineData("female")]
+  [InlineData("other")]
+  public void RegisterUserRequestValidator_ShouldAccept_ValidGender(string gender)
+  {
+    var validator = new RegisterUserRequestValidator();
+    var request = new RegisterUserRequest(
+      "patient", "Test", "Patient", "test@aarogya.dev",
+      null, null, gender, null, null, null, null, null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  #endregion
+
+  #region RejectRegistrationRequestValidator
+
+  [Fact]
+  public void RejectRegistrationRequestValidator_ShouldAccept_ValidRequest()
+  {
+    var validator = new RejectRegistrationRequestValidator();
+    var result = validator.Validate(new RejectRegistrationRequest("Missing credentials"));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void RejectRegistrationRequestValidator_ShouldReject_EmptyReason()
+  {
+    var validator = new RejectRegistrationRequestValidator();
+    var result = validator.Validate(new RejectRegistrationRequest(""));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void RejectRegistrationRequestValidator_ShouldReject_TooLongReason()
+  {
+    var validator = new RejectRegistrationRequestValidator();
+    var result = validator.Validate(new RejectRegistrationRequest(new string('x', 501)));
+    result.IsValid.Should().BeFalse();
+  }
+
+  #endregion
+
+  #region ApproveRegistrationRequestValidator
+
+  [Fact]
+  public void ApproveRegistrationRequestValidator_ShouldAccept_NullNotes()
+  {
+    var validator = new ApproveRegistrationRequestValidator();
+    var result = validator.Validate(new ApproveRegistrationRequest(null));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void ApproveRegistrationRequestValidator_ShouldAccept_ValidNotes()
+  {
+    var validator = new ApproveRegistrationRequestValidator();
+    var result = validator.Validate(new ApproveRegistrationRequest("Approved after review"));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void ApproveRegistrationRequestValidator_ShouldReject_TooLongNotes()
+  {
+    var validator = new ApproveRegistrationRequestValidator();
+    var result = validator.Validate(new ApproveRegistrationRequest(new string('x', 501)));
+    result.IsValid.Should().BeFalse();
+  }
+
+  #endregion
 }
