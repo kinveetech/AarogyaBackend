@@ -107,7 +107,8 @@ public sealed class UserProfileServiceTests
     var aadhaarVaultService = new Mock<IAadhaarVaultService>();
     var referenceToken = Guid.NewGuid();
     aadhaarVaultService
-      .Setup(x => x.VerifyAndCreateReferenceTokenAsync("123456789012", user.Id, It.IsAny<CancellationToken>()))
+      .Setup(x => x.VerifyAndCreateReferenceTokenAsync(
+        "123456789012", user.Id, "Ravi", "Kumar", new DateOnly(1990, 5, 15), It.IsAny<CancellationToken>()))
       .ReturnsAsync(new AadhaarVerificationResult(
         referenceToken,
         false,
@@ -120,7 +121,7 @@ public sealed class UserProfileServiceTests
 
     var response = await service.VerifyCurrentUserAadhaarAsync(
       "seed-PATIENT-1",
-      new VerifyAadhaarRequest("123456789012"),
+      new VerifyAadhaarRequest("123456789012", "Ravi", "Kumar", new DateOnly(1990, 5, 15)),
       CancellationToken.None);
 
     response.ReferenceToken.Should().Be(referenceToken);
@@ -158,7 +159,7 @@ public sealed class UserProfileServiceTests
 
     var action = async () => await service.VerifyCurrentUserAadhaarAsync(
       "seed-DOCTOR-1",
-      new VerifyAadhaarRequest("123456789012"),
+      new VerifyAadhaarRequest("123456789012", "Doctor", "One", new DateOnly(1985, 3, 10)),
       CancellationToken.None);
 
     await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*patient profiles*");

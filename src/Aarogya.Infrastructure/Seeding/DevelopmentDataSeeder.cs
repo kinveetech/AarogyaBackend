@@ -49,7 +49,8 @@ public sealed class DevelopmentDataSeeder(
     {
       var aadhaar = aadhaarFaker.Random.ReplaceNumbers("############");
       var normalizedAadhaar = AadhaarHashing.Normalize(aadhaar);
-      patient.AadhaarRefToken = await aadhaarVaultService.CreateOrGetReferenceTokenAsync(normalizedAadhaar, adminUserId, cancellationToken);
+      patient.AadhaarRefToken = await aadhaarVaultService.CreateOrGetReferenceTokenAsync(
+        normalizedAadhaar, adminUserId, cancellationToken: cancellationToken);
       patient.AadhaarSha256 = AadhaarHashing.ComputeSha256(normalizedAadhaar);
     }
 

@@ -36,7 +36,7 @@ public sealed record UpdateUserProfileRequest(
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public API action signature.")]
-public sealed record VerifyAadhaarRequest(string AadhaarNumber);
+public sealed record VerifyAadhaarRequest(string AadhaarNumber, string FirstName, string LastName, DateOnly DateOfBirth);
 
 [SuppressMessage(
   "Performance",

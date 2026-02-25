@@ -505,10 +505,10 @@ public sealed class RequestValidatorsTests
   #region VerifyAadhaarRequestValidator
 
   [Fact]
-  public void VerifyAadhaarRequestValidator_ShouldAccept_ValidAadhaar()
+  public void VerifyAadhaarRequestValidator_ShouldAccept_ValidRequest()
   {
     var validator = new VerifyAadhaarRequestValidator();
-    var result = validator.Validate(new VerifyAadhaarRequest("234567890123"));
+    var result = validator.Validate(new VerifyAadhaarRequest("234567890123", "Ravi", "Kumar", new DateOnly(1990, 5, 15)));
     result.IsValid.Should().BeTrue();
   }
 
@@ -516,7 +516,44 @@ public sealed class RequestValidatorsTests
   public void VerifyAadhaarRequestValidator_ShouldReject_InvalidAadhaar()
   {
     var validator = new VerifyAadhaarRequestValidator();
-    var result = validator.Validate(new VerifyAadhaarRequest("123456789012"));
+    var result = validator.Validate(new VerifyAadhaarRequest("123456789012", "Ravi", "Kumar", new DateOnly(1990, 5, 15)));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Theory]
+  [InlineData("", "Kumar", "1990-05-15")]
+  [InlineData("Ravi", "", "1990-05-15")]
+  public void VerifyAadhaarRequestValidator_ShouldReject_EmptyNames(string firstName, string lastName, string dobString)
+  {
+    var dob = DateOnly.Parse(dobString, System.Globalization.CultureInfo.InvariantCulture);
+    var validator = new VerifyAadhaarRequestValidator();
+    var result = validator.Validate(new VerifyAadhaarRequest("234567890123", firstName, lastName, dob));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void VerifyAadhaarRequestValidator_ShouldReject_FutureDateOfBirth()
+  {
+    var validator = new VerifyAadhaarRequestValidator();
+    var futureDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+    var result = validator.Validate(new VerifyAadhaarRequest("234567890123", "Ravi", "Kumar", futureDate));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void VerifyAadhaarRequestValidator_ShouldReject_DateOfBirthBefore1900()
+  {
+    var validator = new VerifyAadhaarRequestValidator();
+    var result = validator.Validate(new VerifyAadhaarRequest("234567890123", "Ravi", "Kumar", new DateOnly(1899, 12, 31)));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void VerifyAadhaarRequestValidator_ShouldReject_NameExceedingMaxLength()
+  {
+    var validator = new VerifyAadhaarRequestValidator();
+    var longName = new string('A', 121);
+    var result = validator.Validate(new VerifyAadhaarRequest("234567890123", longName, "Kumar", new DateOnly(1990, 5, 15)));
     result.IsValid.Should().BeFalse();
   }
 

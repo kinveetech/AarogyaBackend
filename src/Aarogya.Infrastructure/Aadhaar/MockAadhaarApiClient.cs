@@ -8,7 +8,12 @@ public sealed class MockAadhaarApiClient(HttpClient httpClient, IOptions<Aadhaar
 {
   private readonly AadhaarVaultOptions _options = options.Value;
 
-  public async Task<MockAadhaarValidationResponse> ValidateAsync(string aadhaarNumber, CancellationToken cancellationToken = default)
+  public async Task<MockAadhaarValidationResponse> ValidateAsync(
+    string aadhaarNumber,
+    string? firstName = null,
+    string? lastName = null,
+    DateOnly? dateOfBirth = null,
+    CancellationToken cancellationToken = default)
   {
     if (string.IsNullOrWhiteSpace(aadhaarNumber))
     {
@@ -22,12 +27,12 @@ public sealed class MockAadhaarApiClient(HttpClient httpClient, IOptions<Aadhaar
         $"local-{Guid.NewGuid():N}",
         "Mock API disabled.",
         "LOCAL",
-        CreateFallbackDemographics(aadhaarNumber));
+        CreateFallbackDemographics(aadhaarNumber, firstName, lastName, dateOfBirth));
     }
 
     try
     {
-      var request = new MockAadhaarValidationRequest(aadhaarNumber);
+      var request = new MockAadhaarValidationRequest(aadhaarNumber, firstName, lastName, dateOfBirth);
       var response = await httpClient.PostAsJsonAsync(_options.ValidateEndpoint, request, cancellationToken);
       if (!response.IsSuccessStatusCode)
       {
@@ -49,7 +54,7 @@ public sealed class MockAadhaarApiClient(HttpClient httpClient, IOptions<Aadhaar
         $"local-{Guid.NewGuid():N}",
         "Fallback local validation used.",
         "LOCAL",
-        CreateFallbackDemographics(aadhaarNumber));
+        CreateFallbackDemographics(aadhaarNumber, firstName, lastName, dateOfBirth));
     }
   }
 
@@ -89,12 +94,20 @@ public sealed class MockAadhaarApiClient(HttpClient httpClient, IOptions<Aadhaar
     return new Guid(tokenBytes);
   }
 
-  private static MockAadhaarDemographics CreateFallbackDemographics(string normalizedAadhaar)
+  private static MockAadhaarDemographics CreateFallbackDemographics(
+    string normalizedAadhaar,
+    string? firstName = null,
+    string? lastName = null,
+    DateOnly? dateOfBirth = null)
   {
-    var suffix = normalizedAadhaar[^4..];
+    var hasName = !string.IsNullOrWhiteSpace(firstName) || !string.IsNullOrWhiteSpace(lastName);
+    var fullName = hasName
+      ? $"{firstName} {lastName}".Trim()
+      : $"Verified Holder {normalizedAadhaar[^4..]}";
+
     return new MockAadhaarDemographics(
-      $"Verified Holder {suffix}",
-      null,
+      fullName,
+      dateOfBirth,
       null,
       "India");
   }
