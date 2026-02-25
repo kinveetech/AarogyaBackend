@@ -181,9 +181,7 @@ public sealed class UsersControllerTests
     return new UsersController(
       userProfileService,
       userDataRightsService ?? Mock.Of<IUserDataRightsService>(),
-      consentService.Object,
-      Mock.Of<IUserRegistrationService>(),
-      Mock.Of<IRegistrationApprovalService>())
+      consentService.Object)
     {
       ControllerContext = new ControllerContext
       {
