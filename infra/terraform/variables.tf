@@ -29,6 +29,42 @@ variable "google_client_secret" {
   sensitive   = true
 }
 
+variable "apple_client_id" {
+  description = "Apple Services ID for Cognito social sign-in"
+  type        = string
+  sensitive   = true
+}
+
+variable "apple_team_id" {
+  description = "Apple Developer Team ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "apple_key_id" {
+  description = "Apple Sign In key ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "apple_private_key" {
+  description = "Apple Sign In private key (.p8 contents)"
+  type        = string
+  sensitive   = true
+}
+
+variable "facebook_app_id" {
+  description = "Facebook App ID for Cognito social sign-in"
+  type        = string
+  sensitive   = true
+}
+
+variable "facebook_app_secret" {
+  description = "Facebook App Secret for Cognito social sign-in"
+  type        = string
+  sensitive   = true
+}
+
 variable "cognito_callback_urls" {
   description = "Allowed callback URLs for Cognito app client"
   type        = list(string)
