@@ -55,6 +55,8 @@ data "aws_iam_policy_document" "api" {
       "sqs:DeleteMessage",
       "sqs:GetQueueUrl",
       "sqs:GetQueueAttributes",
+      "sqs:SetQueueAttributes",
+      "sqs:CreateQueue",
       "sqs:ChangeMessageVisibility",
     ]
     resources = [var.sqs_queue_arn]
