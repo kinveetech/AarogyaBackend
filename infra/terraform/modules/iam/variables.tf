@@ -13,6 +13,11 @@ variable "s3_bucket_arn" {
   type        = string
 }
 
+variable "s3_quarantine_bucket_arn" {
+  description = "S3 quarantine bucket ARN (virus scanning)"
+  type        = string
+}
+
 variable "sqs_queue_arn" {
   description = "SQS queue ARN"
   type        = string

@@ -136,6 +136,7 @@ module "iam" {
   environment                 = var.environment
   project                     = var.project
   s3_bucket_arn               = module.s3.bucket_arn
+  s3_quarantine_bucket_arn    = "arn:aws:s3:::${module.s3.bucket_id}-quarantine"
   sqs_queue_arn               = module.sqs.queue_arn
   kms_key_arn                 = module.kms.key_arn
   cognito_pool_arn            = module.cognito.user_pool_arn
