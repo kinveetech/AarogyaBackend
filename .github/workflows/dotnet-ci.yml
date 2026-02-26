@@ -12,7 +12,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      dotnet: ${{ steps.filter.outputs.dotnet }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Detect .NET file changes
+      id: filter
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          BASE="origin/${{ github.base_ref }}"
+        else
+          BASE="${{ github.event.before }}"
+        fi
+
+        CHANGES=$(git diff --name-only "$BASE"...HEAD 2>/dev/null || git diff --name-only "$BASE" HEAD)
+
+        if echo "$CHANGES" | grep -qE '^(src/|tests/|.*\.csproj$|.*\.sln$|Directory\.|global\.json$|nuget\.config$|\.editorconfig$|\.github/workflows/dotnet-ci\.yml$)'; then
+          echo "dotnet=true" >> "$GITHUB_OUTPUT"
+          echo "Detected .NET file changes."
+        else
+          echo "dotnet=false" >> "$GITHUB_OUTPUT"
+          echo "No .NET file changes detected."
+        fi
+
   build-and-test:
+    needs: changes
+    if: >-
+      always() &&
+      (github.event_name == 'workflow_dispatch' || needs.changes.outputs.dotnet == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -157,6 +194,10 @@ jobs:
         path: ./publish
 
   lint:
+    needs: changes
+    if: >-
+      always() &&
+      (github.event_name == 'workflow_dispatch' || needs.changes.outputs.dotnet == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -180,15 +221,20 @@ jobs:
 
   ci:
     if: always()
-    needs: [build-and-test, lint]
+    needs: [changes, build-and-test, lint]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
     - name: Check required jobs
       env:
+        DOTNET_CHANGED: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.dotnet == 'true' }}
         BUILD_RESULT: ${{ needs.build-and-test.result }}
         LINT_RESULT: ${{ needs.lint.result }}
       run: |
+        if [[ "$DOTNET_CHANGED" != "true" ]]; then
+          echo "No .NET file changes — skipping CI checks."
+          exit 0
+        fi
         if [[ "$BUILD_RESULT" != "success" || "$LINT_RESULT" != "success" ]]; then
           echo "Required jobs failed: build-and-test=$BUILD_RESULT, lint=$LINT_RESULT"
           exit 1
