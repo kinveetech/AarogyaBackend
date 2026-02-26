@@ -33,6 +33,18 @@ data "aws_iam_policy_document" "api" {
     resources = [var.s3_bucket_arn, "${var.s3_bucket_arn}/*"]
   }
 
+  # S3 — quarantine bucket (virus scanning)
+  statement {
+    sid    = "S3QuarantineBucket"
+    effect = "Allow"
+    actions = [
+      "s3:GetBucketAcl",
+      "s3:CreateBucket",
+      "s3:PutObject",
+    ]
+    resources = [var.s3_quarantine_bucket_arn, "${var.s3_quarantine_bucket_arn}/*"]
+  }
+
   # SQS — report upload event processing
   statement {
     sid    = "SQSQueue"
