@@ -34,7 +34,7 @@ internal sealed class SocialAuthorizeCommandValidator : AbstractValidator<Social
   public SocialAuthorizeCommandValidator()
   {
     RuleFor(x => x.Provider).NotEmpty().Must(BeSupportedProvider);
-    RuleFor(x => x.RedirectUri).NotNull().Must(uri => uri.IsAbsoluteUri);
+    RuleFor(x => x.RedirectUri).NotNull().Must(uri => uri is not null && uri.IsAbsoluteUri);
     RuleFor(x => x.CodeChallengeMethod)
       .Must(method => string.IsNullOrWhiteSpace(method) || string.Equals(method, "S256", StringComparison.OrdinalIgnoreCase))
       .WithMessage("CodeChallengeMethod must be S256 when provided.");
@@ -51,7 +51,7 @@ internal sealed class SocialTokenCommandValidator : AbstractValidator<SocialToke
   public SocialTokenCommandValidator()
   {
     RuleFor(x => x.Provider).NotEmpty();
-    RuleFor(x => x.RedirectUri).NotNull().Must(uri => uri.IsAbsoluteUri);
+    RuleFor(x => x.RedirectUri).NotNull().Must(uri => uri is not null && uri.IsAbsoluteUri);
     RuleFor(x => x.AuthorizationCode).NotEmpty();
   }
 }
@@ -61,7 +61,7 @@ internal sealed class PkceAuthorizeCommandValidator : AbstractValidator<PkceAuth
   public PkceAuthorizeCommandValidator()
   {
     RuleFor(x => x.ClientId).NotEmpty();
-    RuleFor(x => x.RedirectUri).NotNull().Must(uri => uri.IsAbsoluteUri);
+    RuleFor(x => x.RedirectUri).NotNull().Must(uri => uri is not null && uri.IsAbsoluteUri);
     RuleFor(x => x.CodeChallenge).NotEmpty();
     RuleFor(x => x.CodeChallengeMethod).Equal("S256").WithMessage("Only S256 is supported.");
     RuleFor(x => x.Platform)
@@ -76,7 +76,7 @@ internal sealed class PkceTokenCommandValidator : AbstractValidator<PkceTokenCom
   public PkceTokenCommandValidator()
   {
     RuleFor(x => x.ClientId).NotEmpty();
-    RuleFor(x => x.RedirectUri).NotNull().Must(uri => uri.IsAbsoluteUri);
+    RuleFor(x => x.RedirectUri).NotNull().Must(uri => uri is not null && uri.IsAbsoluteUri);
     RuleFor(x => x.AuthorizationCode).NotEmpty();
     RuleFor(x => x.CodeVerifier)
       .NotEmpty()
