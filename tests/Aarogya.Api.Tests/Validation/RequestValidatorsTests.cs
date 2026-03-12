@@ -336,6 +336,24 @@ public sealed class RequestValidatorsTests
     result.IsValid.Should().BeFalse();
   }
 
+  [Fact]
+  public void CreateReportRequestValidator_ShouldAccept_MinimalUploadRequest()
+  {
+    var validator = new CreateReportRequestValidator();
+    var request = new CreateReportRequest(
+      ReportType: "blood_test",
+      ObjectKey: "reports/test-file.pdf",
+      LabName: null,
+      LabCode: null,
+      CollectedAt: null,
+      ReportedAt: null,
+      Notes: null,
+      PatientSub: null,
+      Parameters: []);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
   [Theory]
   [MemberData(nameof(AllReportTypeDescriptions))]
   public void CreateReportRequestValidator_ShouldAccept_AllReportTypeEnumValues(string reportType)

@@ -150,7 +150,7 @@ internal sealed class CreateReportRequestValidator : AbstractValidator<CreateRep
       .MaximumLength(1024)
       .Must(value => value.Trim().StartsWith("reports/", StringComparison.Ordinal));
 
-    RuleFor(x => x.LabName).NotEmpty().MaximumLength(200);
+    RuleFor(x => x.LabName).NotEmpty().MaximumLength(200).When(x => x.LabName is not null);
     RuleFor(x => x.LabCode).MaximumLength(100).When(x => x.LabCode is not null);
     RuleFor(x => x.Notes).MaximumLength(2000).When(x => x.Notes is not null);
     RuleFor(x => x.PatientSub).NotEmpty().MaximumLength(200).When(x => x.PatientSub is not null);
