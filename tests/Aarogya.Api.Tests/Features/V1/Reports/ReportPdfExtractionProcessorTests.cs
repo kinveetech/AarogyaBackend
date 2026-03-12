@@ -288,6 +288,49 @@ public sealed class ReportPdfExtractionProcessorTests
     report.Extraction!.RawExtractedText.Should().NotBeNull();
   }
 
+  [Fact]
+  public async Task ProcessReportAsync_ShouldSetExtractionFailed_WhenLlmTimesOutAsync()
+  {
+    var report = CreateReport();
+    SetupReportLookup(report);
+    SetupS3Download("Hemoglobin: 14.5 g/dL with enough text to pass min threshold per page");
+    SetupPdfPigExtraction("Hemoglobin: 14.5 g/dL with enough text to pass min threshold per page", 1);
+
+    var timeoutException = new TaskCanceledException(
+      "The request was canceled due to the configured HttpClient.Timeout of 100 seconds elapsing.",
+      new TimeoutException("The operation was canceled."));
+
+    _llmExtractorMock
+      .Setup(x => x.ExtractParametersAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+      .ThrowsAsync(timeoutException);
+
+    await _processor.ProcessReportAsync(report.Id);
+
+    report.Status.Should().Be(ReportStatus.ExtractionFailed);
+    report.Extraction!.ErrorMessage.Should().Contain("timed out");
+  }
+
+  [Fact]
+  public async Task ProcessReportAsync_ShouldRethrow_WhenCancellationIsRequestedAsync()
+  {
+    var report = CreateReport();
+    SetupReportLookup(report);
+    SetupS3Download("Hemoglobin: 14.5 g/dL with enough text to pass min threshold per page");
+    SetupPdfPigExtraction("Hemoglobin: 14.5 g/dL with enough text to pass min threshold per page", 1);
+
+    using var cts = new CancellationTokenSource();
+    await cts.CancelAsync();
+
+    _llmExtractorMock
+      .Setup(x => x.ExtractParametersAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+    var act = () => _processor.ProcessReportAsync(report.Id, cancellationToken: cts.Token);
+
+    await act.Should().ThrowAsync<OperationCanceledException>();
+    report.Status.Should().Be(ReportStatus.Extracting);
+  }
+
   private static Report CreateReport(
     ReportStatus status = ReportStatus.Clean,
     string? fileStorageKey = "reports/test.pdf")

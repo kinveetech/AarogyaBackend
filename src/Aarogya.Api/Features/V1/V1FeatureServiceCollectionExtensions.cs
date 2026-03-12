@@ -82,7 +82,12 @@ internal static class V1FeatureServiceCollectionExtensions
       services.AddSingleton<IChatClient>(sp =>
       {
         var options = sp.GetRequiredService<IOptions<PdfExtractionOptions>>().Value;
-        return new OllamaApiClient(new Uri(options.OllamaEndpoint), options.OllamaModelId);
+        var httpClient = new HttpClient
+        {
+          BaseAddress = new Uri(options.OllamaEndpoint),
+          Timeout = TimeSpan.FromMinutes(options.LlmRequestTimeoutMinutes)
+        };
+        return new OllamaApiClient(httpClient, options.OllamaModelId);
       });
     }
 

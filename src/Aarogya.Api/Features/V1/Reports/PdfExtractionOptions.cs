@@ -39,6 +39,9 @@ public sealed class PdfExtractionOptions
 
   public string? BedrockRegion { get; set; }
 
+  [Range(2, 30)]
+  public int LlmRequestTimeoutMinutes { get; set; } = 10;
+
   [Range(100, 8000)]
   public int MaxTokens { get; set; } = 4096;
 
