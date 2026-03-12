@@ -235,7 +235,7 @@ public sealed class DevelopmentDataSeeder(
         {
           CanReadReports = true,
           CanDownloadReports = true,
-          AllowedReportTypes = ["blood_test", "urine_test", "radiology"]
+          AllowedReportTypes = Enum.GetValues<ReportType>().Select(EnumUtils.ToDescription).ToList()
         },
         Status = AccessGrantStatus.Active,
         StartsAt = startsAt,

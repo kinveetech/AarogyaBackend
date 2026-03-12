@@ -6,6 +6,7 @@ using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Features.V1.Users;
 using Aarogya.Api.Validation;
+using Aarogya.Domain.Enums;
 using FluentAssertions;
 using Xunit;
 
@@ -333,6 +334,45 @@ public sealed class RequestValidatorsTests
       Parameters: [new CreateReportParameterRequest("HGB", "Hemoglobin", 14.5m, null, "g/dL", "12.0-16.0", null)]);
     var result = validator.Validate(request);
     result.IsValid.Should().BeFalse();
+  }
+
+  [Theory]
+  [MemberData(nameof(AllReportTypeDescriptions))]
+  public void CreateReportRequestValidator_ShouldAccept_AllReportTypeEnumValues(string reportType)
+  {
+    var validator = new CreateReportRequestValidator();
+    var request = new CreateReportRequest(
+      ReportType: reportType,
+      ObjectKey: "reports/test-file.pdf",
+      LabName: "Apollo Lab",
+      LabCode: null,
+      CollectedAt: null,
+      ReportedAt: null,
+      Notes: null,
+      PatientSub: null,
+      Parameters: [new CreateReportParameterRequest("HB", "Hemoglobin", 14.5m, null, "g/dL", "12-16", false)]);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Theory]
+  [MemberData(nameof(AllReportTypeDescriptions))]
+  public void ReportListQueryRequestValidator_ShouldAccept_AllReportTypeEnumValues(string reportType)
+  {
+    var validator = new ReportListQueryRequestValidator();
+    var result = validator.Validate(new ReportListQueryRequest(ReportType: reportType));
+    result.IsValid.Should().BeTrue();
+  }
+
+  public static TheoryData<string> AllReportTypeDescriptions()
+  {
+    var data = new TheoryData<string>();
+    foreach (var value in Enum.GetValues<ReportType>())
+    {
+      data.Add(EnumUtils.ToDescription(value));
+    }
+
+    return data;
   }
 
   #endregion

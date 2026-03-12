@@ -6,6 +6,7 @@ using Aarogya.Api.Features.V1.EmergencyContacts;
 using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Features.V1.Users;
+using Aarogya.Domain.Enums;
 using FluentValidation;
 
 namespace Aarogya.Api.Validation;
@@ -133,13 +134,7 @@ internal sealed class ApiKeyRotateCommandValidator : AbstractValidator<ApiKeyRot
 internal sealed class CreateReportRequestValidator : AbstractValidator<CreateReportRequest>
 {
   private static readonly string[] AllowedReportTypes =
-  [
-    "blood_test",
-    "urine_test",
-    "radiology",
-    "cardiology",
-    "other"
-  ];
+    Enum.GetValues<ReportType>().Select(EnumUtils.ToDescription).ToArray();
 
   public CreateReportRequestValidator()
   {
@@ -147,7 +142,7 @@ internal sealed class CreateReportRequestValidator : AbstractValidator<CreateRep
       .Cascade(CascadeMode.Stop)
       .NotEmpty()
       .Must(value => AllowedReportTypes.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase))
-      .WithMessage("ReportType must be one of blood_test, urine_test, radiology, cardiology, other.");
+      .WithMessage($"ReportType must be one of {string.Join(", ", AllowedReportTypes)}.");
 
     RuleFor(x => x.ObjectKey)
       .Cascade(CascadeMode.Stop)
@@ -202,13 +197,7 @@ internal sealed class CreateReportParameterRequestValidator : AbstractValidator<
 internal sealed class ReportListQueryRequestValidator : AbstractValidator<ReportListQueryRequest>
 {
   private static readonly string[] AllowedReportTypes =
-  [
-    "blood_test",
-    "urine_test",
-    "radiology",
-    "cardiology",
-    "other"
-  ];
+    Enum.GetValues<ReportType>().Select(EnumUtils.ToDescription).ToArray();
 
   private static readonly string[] AllowedStatuses =
   [
