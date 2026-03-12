@@ -100,9 +100,10 @@ jobs:
     - name: Run tests
       run: |
         dotnet test --no-build --configuration Release --verbosity normal \
-          --collect:"XPlat Code Coverage;Format=opencover" \
+          --collect:"XPlat Code Coverage" \
           --logger "trx;LogFileName=test-results.trx" \
-          --results-directory ./.testresults
+          --results-directory ./.testresults \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
     - name: SonarCloud scan end
       if: always()
