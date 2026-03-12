@@ -159,7 +159,7 @@ public sealed class ReportsController : ControllerBase
       return Unauthorized();
     }
 
-    var canUpload = User.IsInRole(AarogyaRoles.Patient) || User.IsInRole(AarogyaRoles.LabTechnician);
+    var canUpload = User.HasRole(AarogyaRoles.Patient) || User.HasRole(AarogyaRoles.LabTechnician);
     if (!canUpload)
     {
       return Forbid();
