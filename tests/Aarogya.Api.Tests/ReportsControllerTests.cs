@@ -176,6 +176,29 @@ public sealed class ReportsControllerTests
     result.Should().BeOfType<ForbidResult>();
   }
 
+  [Theory]
+  [InlineData("Patient")]
+  [InlineData("LabTechnician")]
+  public async Task CreateReportAsync_ShouldReturnCreated_ForAllowedRolesAsync(string role)
+  {
+    var expected = new ReportSummaryResponse(Guid.NewGuid(), "blood_test", "uploaded", DateTimeOffset.UtcNow);
+    var reportService = new Mock<IReportService>();
+    reportService
+      .Setup(x => x.AddForUserAsync(It.IsAny<string>(), It.IsAny<CreateReportRequest>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(expected);
+
+    var controller = CreateController(
+      user: CreateUser("seed-test-1", ClaimTypes.Role, role),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: reportService.Object,
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = await controller.CreateReportAsync(CreateReportRequest(), CancellationToken.None);
+
+    var created = result.Should().BeOfType<CreatedResult>().Subject;
+    created.Value.Should().BeEquivalentTo(expected);
+  }
+
   [Fact]
   public async Task CreateReportAsync_ShouldReturnBadRequest_WhenServiceThrowsValidationErrorAsync()
   {
