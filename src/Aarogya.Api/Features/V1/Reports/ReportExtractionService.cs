@@ -106,7 +106,7 @@ internal sealed class ReportExtractionService(
     var extraction = report.Extraction!;
     return new ExtractionStatusResponse(
       report.Id,
-      report.Status.ToString(),
+      ReportStatusMapper.ToStatusString(report.Status),
       extraction.ExtractionMethod,
       extraction.StructuringModel,
       extraction.ExtractedParameterCount,
