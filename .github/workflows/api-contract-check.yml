@@ -1,0 +1,272 @@
+name: API Contract Change Detector
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+
+concurrency:
+  group: api-contract-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  detect-contract-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed contract files
+        id: detect
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          CHANGED=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- \
+            'src/Aarogya.Api/Features/V1/Reports/ReportContracts.cs' \
+            'src/Aarogya.Api/Features/V1/Users/UserContracts.cs' \
+            'src/Aarogya.Api/Features/V1/Users/RegistrationContracts.cs' \
+            'src/Aarogya.Api/Features/V1/Users/UserDataRightsContracts.cs' \
+            'src/Aarogya.Api/Features/V1/AccessGrants/AccessGrantContracts.cs' \
+            'src/Aarogya.Api/Features/V1/EmergencyContacts/EmergencyContactContracts.cs' \
+            'src/Aarogya.Api/Features/V1/EmergencyAccess/EmergencyAccessContracts.cs' \
+            'src/Aarogya.Api/Features/V1/EmergencyAccess/EmergencyAccessAuditContracts.cs' \
+            'src/Aarogya.Api/Features/V1/Consents/ConsentContracts.cs' \
+            'src/Aarogya.Api/Features/V1/Notifications/NotificationPreferenceContracts.cs' \
+            'src/Aarogya.Api/Features/V1/Notifications/NotificationContracts.cs' \
+            2>/dev/null || true)
+
+          if [ -z "$CHANGED" ]; then
+            echo "No contract files changed."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "files<<EOF"
+            echo "$CHANGED"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post contract change comment
+        if: steps.detect.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        env:
+          CHANGED_FILES: ${{ steps.detect.outputs.files }}
+        with:
+          script: |
+            const changedFiles = process.env.CHANGED_FILES.trim().split('\n');
+
+            // Map backend contracts to frontend/iOS consumer files
+            const contractMap = {
+              'Reports/ReportContracts.cs': {
+                feature: 'Reports',
+                frontend: [
+                  '`src/types/reports.ts`',
+                  '`src/hooks/reports/use-report.ts`',
+                  '`src/hooks/reports/use-extraction-status.ts`',
+                  '`src/hooks/reports/use-verified-download.ts`',
+                  '`src/components/reports/extraction-status-card.tsx`',
+                  '`src/components/reports/report-detail-parameters.tsx`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/Reports/ReportDTO.swift`',
+                  '`Data/Network/DTOs/Reports/ExtractionDTO.swift`',
+                ],
+              },
+              'Users/UserContracts.cs': {
+                feature: 'Users/Profile',
+                frontend: [
+                  '`src/types/profile.ts`',
+                  '`src/hooks/profile/use-profile.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/Users/UserProfileDTO.swift`',
+                ],
+              },
+              'Users/RegistrationContracts.cs': {
+                feature: 'Registration',
+                frontend: [
+                  '`src/types/registration.ts`',
+                  '`src/hooks/registration/use-registration.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/Users/RegistrationDTO.swift`',
+                ],
+              },
+              'Users/UserDataRightsContracts.cs': {
+                feature: 'Data Rights',
+                frontend: [
+                  '`src/types/deletion.ts`',
+                  '`src/types/data-export.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/Users/DataRightsDTO.swift`',
+                ],
+              },
+              'AccessGrants/AccessGrantContracts.cs': {
+                feature: 'Access Grants',
+                frontend: [
+                  '`src/types/access.ts`',
+                  '`src/hooks/access/use-access-grants.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/AccessGrants/AccessGrantDTO.swift`',
+                ],
+              },
+              'EmergencyContacts/EmergencyContactContracts.cs': {
+                feature: 'Emergency Contacts',
+                frontend: [
+                  '`src/types/emergency.ts`',
+                  '`src/hooks/emergency/use-emergency-contacts.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/EmergencyContacts/EmergencyContactDTO.swift`',
+                ],
+              },
+              'EmergencyAccess/EmergencyAccessContracts.cs': {
+                feature: 'Emergency Access',
+                frontend: [
+                  '`src/types/emergency.ts`',
+                  '`src/hooks/emergency/use-emergency-access.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/EmergencyAccess/EmergencyAccessDTO.swift`',
+                ],
+              },
+              'EmergencyAccess/EmergencyAccessAuditContracts.cs': {
+                feature: 'Emergency Access Audit',
+                frontend: [
+                  '`src/types/emergency.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/EmergencyAccess/EmergencyAccessAuditDTO.swift`',
+                ],
+              },
+              'Consents/ConsentContracts.cs': {
+                feature: 'Consents',
+                frontend: [
+                  '`src/types/consent.ts`',
+                  '`src/hooks/settings/use-consents.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/Consents/ConsentDTO.swift`',
+                ],
+              },
+              'Notifications/NotificationPreferenceContracts.cs': {
+                feature: 'Notification Preferences',
+                frontend: [
+                  '`src/types/notification.ts`',
+                  '`src/hooks/settings/use-notification-preferences.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/Notifications/NotificationPreferenceDTO.swift`',
+                ],
+              },
+              'Notifications/NotificationContracts.cs': {
+                feature: 'Notifications',
+                frontend: [
+                  '`src/types/notification.ts`',
+                ],
+                ios: [
+                  '`Data/Network/DTOs/Notifications/NotificationDTO.swift`',
+                ],
+              },
+            };
+
+            // Build affected areas
+            const affected = [];
+            for (const file of changedFiles) {
+              for (const [pattern, mapping] of Object.entries(contractMap)) {
+                if (file.includes(pattern)) {
+                  affected.push({ file, ...mapping });
+                }
+              }
+            }
+
+            if (affected.length === 0) return;
+
+            // Build comment
+            let body = '## API Contract Change Detected\n\n';
+            body += 'This PR modifies backend API contracts. ';
+            body += 'Please ensure the corresponding frontend and iOS types are updated.\n\n';
+
+            for (const area of affected) {
+              body += `### ${area.feature}\n`;
+              body += `**Changed:** \`${area.file}\`\n\n`;
+              body += '**Frontend** ([AarogyaFrontend](https://github.com/kinveetech/AarogyaFrontend)):\n';
+              for (const f of area.frontend) {
+                body += `- [ ] ${f}\n`;
+              }
+              body += '\n**iOS** ([AarogyaiOS](https://github.com/kinveetech/AarogyaiOS)):\n';
+              for (const f of area.ios) {
+                body += `- [ ] ${f}\n`;
+              }
+              body += '\n';
+            }
+
+            body += '---\n';
+            body += '*This check is automated. ';
+            body += 'If the contract change is additive (new optional fields, new endpoints), ';
+            body += 'consumer updates may not be immediately required.*\n';
+
+            // Check for existing comment to update instead of duplicates
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const marker = '## API Contract Change Detected';
+            const existing = comments.find(c => c.body?.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+            // Add label
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['api-contract'],
+              });
+            } catch {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'api-contract',
+                  color: 'D93F0B',
+                  description: 'PR modifies API contracts — check frontend/iOS consumers',
+                });
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  labels: ['api-contract'],
+                });
+              } catch (e) {
+                core.warning(`Could not create/add label: ${e.message}`);
+              }
+            }
