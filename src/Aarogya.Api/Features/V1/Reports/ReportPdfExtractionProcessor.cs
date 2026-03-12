@@ -128,7 +128,11 @@ internal sealed class ReportPdfExtractionProcessor(
         reportId,
         structuredResult.OverallConfidence);
     }
-    catch (Exception ex) when (ex is not OperationCanceledException)
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    {
+      throw;
+    }
+    catch (Exception ex)
     {
       logger.LogError(
         ex,
@@ -137,9 +141,11 @@ internal sealed class ReportPdfExtractionProcessor(
         report.Extraction.AttemptCount);
 
       report.Status = ReportStatus.ExtractionFailed;
-      report.Extraction.ErrorMessage = ex.Message;
+      report.Extraction.ErrorMessage = ex.InnerException is TimeoutException
+        ? $"LLM request timed out after {extractionOptions.Value.LlmRequestTimeoutMinutes} minutes."
+        : ex.Message;
 
-      await unitOfWork.SaveChangesAsync(cancellationToken);
+      await unitOfWork.SaveChangesAsync(CancellationToken.None);
     }
   }
 
