@@ -265,7 +265,7 @@ public sealed class RequestValidatorsTests
   }
 
   [Fact]
-  public void CreateReportRequestValidator_ShouldReject_EmptyParameters()
+  public void CreateReportRequestValidator_ShouldAccept_EmptyParameters()
   {
     var validator = new CreateReportRequestValidator();
     var request = new CreateReportRequest(
@@ -279,7 +279,7 @@ public sealed class RequestValidatorsTests
       PatientSub: null,
       Parameters: []);
     var result = validator.Validate(request);
-    result.IsValid.Should().BeFalse();
+    result.IsValid.Should().BeTrue();
   }
 
   [Fact]

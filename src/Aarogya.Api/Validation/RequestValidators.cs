@@ -169,10 +169,7 @@ internal sealed class CreateReportRequestValidator : AbstractValidator<CreateRep
       .When(x => x.CollectedAt.HasValue && x.ReportedAt.HasValue);
 
     RuleFor(x => x.Parameters)
-      .Cascade(CascadeMode.Stop)
-      .NotNull()
-      .Must(parameters => parameters.Count > 0)
-      .WithMessage("At least one parameter is required.");
+      .NotNull();
 
     RuleForEach(x => x.Parameters).SetValidator(new CreateReportParameterRequestValidator());
   }
