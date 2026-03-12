@@ -188,3 +188,15 @@ public sealed record VerifiedReportDownloadResponse(
   Uri DownloadUrl,
   DateTimeOffset ExpiresAt,
   bool ChecksumVerified);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record ReportTypeMetadataItem(string Value, string Label);
+
+[SuppressMessage(
+  "Performance",
+  "CA1515:Consider making public types internal",
+  Justification = "Referenced by public API action signature.")]
+public sealed record ReportTypesMetadataResponse(IReadOnlyList<ReportTypeMetadataItem> ReportTypes);

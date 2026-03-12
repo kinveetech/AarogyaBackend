@@ -916,6 +916,430 @@ public sealed class RequestValidatorsTests
 
   #endregion
 
+  #region CreateReportDownloadUrlRequestValidator
+
+  [Fact]
+  public void CreateReportDownloadUrlRequestValidator_ShouldAccept_ValidRequest()
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest("reports/user/2026/02/report.pdf"));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void CreateReportDownloadUrlRequestValidator_ShouldAccept_WithExpiryMinutes()
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest("reports/user/report.pdf", 60));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void CreateReportDownloadUrlRequestValidator_ShouldReject_EmptyObjectKey()
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest(""));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void CreateReportDownloadUrlRequestValidator_ShouldReject_NullObjectKey()
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest(null!));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void CreateReportDownloadUrlRequestValidator_ShouldReject_ObjectKeyExceedingMaxLength()
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest(new string('a', 1025)));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void CreateReportDownloadUrlRequestValidator_ShouldAccept_ObjectKeyAtMaxLength()
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest(new string('a', 1024)));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void CreateReportDownloadUrlRequestValidator_ShouldReject_ExpiryMinutesZero()
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest("reports/report.pdf", 0));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void CreateReportDownloadUrlRequestValidator_ShouldReject_ExpiryMinutesOver10080()
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest("reports/report.pdf", 10081));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Theory]
+  [InlineData(1)]
+  [InlineData(10080)]
+  public void CreateReportDownloadUrlRequestValidator_ShouldAccept_ExpiryMinutesAtBoundary(int expiryMinutes)
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest("reports/report.pdf", expiryMinutes));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void CreateReportDownloadUrlRequestValidator_ShouldAccept_NullExpiryMinutes()
+  {
+    var validator = new CreateReportDownloadUrlRequestValidator();
+    var result = validator.Validate(new CreateReportDownloadUrlRequest("reports/report.pdf", null));
+    result.IsValid.Should().BeTrue();
+  }
+
+  #endregion
+
+  #region CreateVerifiedReportDownloadRequestValidator
+
+  [Fact]
+  public void CreateVerifiedReportDownloadRequestValidator_ShouldAccept_ValidRequest()
+  {
+    var validator = new CreateVerifiedReportDownloadRequestValidator();
+    var result = validator.Validate(new CreateVerifiedReportDownloadRequest(Guid.NewGuid()));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void CreateVerifiedReportDownloadRequestValidator_ShouldAccept_WithExpiryMinutes()
+  {
+    var validator = new CreateVerifiedReportDownloadRequestValidator();
+    var result = validator.Validate(new CreateVerifiedReportDownloadRequest(Guid.NewGuid(), 60));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void CreateVerifiedReportDownloadRequestValidator_ShouldReject_EmptyReportId()
+  {
+    var validator = new CreateVerifiedReportDownloadRequestValidator();
+    var result = validator.Validate(new CreateVerifiedReportDownloadRequest(Guid.Empty));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void CreateVerifiedReportDownloadRequestValidator_ShouldReject_ExpiryMinutesZero()
+  {
+    var validator = new CreateVerifiedReportDownloadRequestValidator();
+    var result = validator.Validate(new CreateVerifiedReportDownloadRequest(Guid.NewGuid(), 0));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void CreateVerifiedReportDownloadRequestValidator_ShouldReject_ExpiryMinutesOver10080()
+  {
+    var validator = new CreateVerifiedReportDownloadRequestValidator();
+    var result = validator.Validate(new CreateVerifiedReportDownloadRequest(Guid.NewGuid(), 10081));
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Theory]
+  [InlineData(1)]
+  [InlineData(10080)]
+  public void CreateVerifiedReportDownloadRequestValidator_ShouldAccept_ExpiryMinutesAtBoundary(int expiryMinutes)
+  {
+    var validator = new CreateVerifiedReportDownloadRequestValidator();
+    var result = validator.Validate(new CreateVerifiedReportDownloadRequest(Guid.NewGuid(), expiryMinutes));
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void CreateVerifiedReportDownloadRequestValidator_ShouldAccept_NullExpiryMinutes()
+  {
+    var validator = new CreateVerifiedReportDownloadRequestValidator();
+    var result = validator.Validate(new CreateVerifiedReportDownloadRequest(Guid.NewGuid(), null));
+    result.IsValid.Should().BeTrue();
+  }
+
+  #endregion
+
+  #region UpdateEmergencyContactRequestValidator
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldAccept_ValidRequest()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest("Jane Doe", "+919876543210", "Sister");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldAccept_ValidRequestWithEmail()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest("Jane Doe", "+919876543210", "Sister", "jane@example.com");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldReject_EmptyName()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest("", "+919876543210", "Sister");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldReject_NameExceedingMaxLength()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest(new string('A', 121), "+919876543210", "Sister");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldReject_InvalidPhone()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest("Jane Doe", "1234567890", "Sister");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldReject_EmptyRelationship()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest("Jane Doe", "+919876543210", "");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldReject_RelationshipExceedingMaxLength()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest("Jane Doe", "+919876543210", new string('R', 61));
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldReject_InvalidEmail()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest("Jane Doe", "+919876543210", "Sister", "not-an-email");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldReject_EmailExceedingMaxLength()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest("Jane Doe", "+919876543210", "Sister", new string('a', 251) + "@b.com");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void UpdateEmergencyContactRequestValidator_ShouldAccept_NullEmail()
+  {
+    var validator = new UpdateEmergencyContactRequestValidator();
+    var request = new UpdateEmergencyContactRequest("Jane Doe", "+919876543210", "Sister", null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  #endregion
+
+  #region SendPushNotificationRequestValidator
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldAccept_ValidRequest()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var request = new SendPushNotificationRequest("Test Title", "Test Body");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldAccept_WithValidData()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var data = new Dictionary<string, string> { ["key1"] = "value1", ["key2"] = "value2" };
+    var request = new SendPushNotificationRequest("Test Title", "Test Body", data);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldAccept_NullData()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var request = new SendPushNotificationRequest("Test Title", "Test Body", null);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldReject_EmptyTitle()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var request = new SendPushNotificationRequest("", "Test Body");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldReject_TitleExceedingMaxLength()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var request = new SendPushNotificationRequest(new string('T', 201), "Test Body");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldReject_EmptyBody()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var request = new SendPushNotificationRequest("Test Title", "");
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldReject_BodyExceedingMaxLength()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var request = new SendPushNotificationRequest("Test Title", new string('B', 2001));
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldReject_DataExceeding25Items()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var data = Enumerable.Range(1, 26).ToDictionary(i => $"key{i}", i => $"value{i}");
+    var request = new SendPushNotificationRequest("Test Title", "Test Body", data);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldAccept_DataWith25Items()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var data = Enumerable.Range(1, 25).ToDictionary(i => $"key{i}", i => $"value{i}");
+    var request = new SendPushNotificationRequest("Test Title", "Test Body", data);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldReject_DataWithEmptyKey()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var data = new Dictionary<string, string> { [""] = "value" };
+    var request = new SendPushNotificationRequest("Test Title", "Test Body", data);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldReject_DataWithKeyExceeding100Chars()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var data = new Dictionary<string, string> { [new string('k', 101)] = "value" };
+    var request = new SendPushNotificationRequest("Test Title", "Test Body", data);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void SendPushNotificationRequestValidator_ShouldReject_DataWithValueExceeding2000Chars()
+  {
+    var validator = new SendPushNotificationRequestValidator();
+    var data = new Dictionary<string, string> { ["key"] = new string('v', 2001) };
+    var request = new SendPushNotificationRequest("Test Title", "Test Body", data);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  #endregion
+
+  #region UpdateNotificationPreferencesRequestValidator
+
+  [Fact]
+  public void UpdateNotificationPreferencesRequestValidator_ShouldAccept_ValidRequest()
+  {
+    var validator = new UpdateNotificationPreferencesRequestValidator();
+    var request = new UpdateNotificationPreferencesRequest(
+      new NotificationChannelPreferences(true, true, false),
+      new NotificationChannelPreferences(true, false, true),
+      new NotificationChannelPreferences(false, true, true));
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void UpdateNotificationPreferencesRequestValidator_ShouldAccept_AllDisabled()
+  {
+    var validator = new UpdateNotificationPreferencesRequestValidator();
+    var request = new UpdateNotificationPreferencesRequest(
+      new NotificationChannelPreferences(false, false, false),
+      new NotificationChannelPreferences(false, false, false),
+      new NotificationChannelPreferences(false, false, false));
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
+  }
+
+  [Fact]
+  public void UpdateNotificationPreferencesRequestValidator_ShouldReject_NullReportUploaded()
+  {
+    var validator = new UpdateNotificationPreferencesRequestValidator();
+    var request = new UpdateNotificationPreferencesRequest(
+      null!,
+      new NotificationChannelPreferences(true, false, true),
+      new NotificationChannelPreferences(false, true, true));
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void UpdateNotificationPreferencesRequestValidator_ShouldReject_NullAccessGranted()
+  {
+    var validator = new UpdateNotificationPreferencesRequestValidator();
+    var request = new UpdateNotificationPreferencesRequest(
+      new NotificationChannelPreferences(true, true, false),
+      null!,
+      new NotificationChannelPreferences(false, true, true));
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void UpdateNotificationPreferencesRequestValidator_ShouldReject_NullEmergencyAccess()
+  {
+    var validator = new UpdateNotificationPreferencesRequestValidator();
+    var request = new UpdateNotificationPreferencesRequest(
+      new NotificationChannelPreferences(true, true, false),
+      new NotificationChannelPreferences(true, false, true),
+      null!);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  #endregion
+
   #region ApproveRegistrationRequestValidator
 
   [Fact]
