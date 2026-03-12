@@ -169,7 +169,7 @@ public sealed class ReportsController : ControllerBase
     {
       await _consentService.EnsureGrantedAsync(userSub, ConsentPurposeCatalog.MedicalRecordsProcessing, cancellationToken);
       var created = await _reportService.AddForUserAsync(userSub, request, cancellationToken);
-      return Created(new Uri($"/api/v1/reports/{created.ReportId}", UriKind.Relative), created);
+      return Created(new Uri($"/api/v1/reports/{created.Id}", UriKind.Relative), created);
     }
     catch (ConsentRequiredException ex)
     {
@@ -549,7 +549,7 @@ public sealed class ReportsController : ControllerBase
 
     foreach (var item in response.Items)
     {
-      builder.Append('|').Append(item.ReportId.ToString("D"));
+      builder.Append('|').Append(item.Id.ToString("D"));
       builder.Append('|').Append(item.Title);
       builder.Append('|').Append(item.Status);
       builder.Append('|').Append(item.CreatedAt.ToUniversalTime().ToString("O"));

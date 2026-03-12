@@ -75,7 +75,7 @@ public sealed class ReportServiceTests
     createdReport.Metadata.Tags.Should().ContainKey("lab-name");
     createdReport.Results.Parameters.Should().HaveCount(1);
 
-    response.ReportId.Should().Be(createdReport.Id);
+    response.Id.Should().Be(createdReport.Id);
     response.Status.Should().Be("uploaded");
 
     unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -282,7 +282,7 @@ public sealed class ReportServiceTests
 
     var response = await service.GetDetailForUserAsync("seed-PATIENT-1", report.Id, CancellationToken.None);
 
-    response.ReportId.Should().Be(report.Id);
+    response.Id.Should().Be(report.Id);
     response.Download.Provider.Should().Be("s3");
     response.Download.DownloadUrl.Should().Be(new Uri("https://example.com/signed-download"));
     response.Parameters.Should().HaveCount(1);
@@ -533,6 +533,261 @@ public sealed class ReportServiceTests
     var deleted = await service.SoftDeleteForUserAsync("seed-PATIENT-1", Guid.NewGuid(), CancellationToken.None);
 
     deleted.Should().BeFalse();
+  }
+
+  [Fact]
+  public async Task GetForUserAsync_ShouldBuildSummaryTitle_WithLabNameAsync()
+  {
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient,
+      FirstName = "Seed",
+      LastName = "Patient",
+      Email = "seed.patient@aarogya.dev"
+    };
+
+    var report = CreateReportEntity(patient.Id, ReportType.BloodTest, labName: "HealthCare Labs");
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.ListByPatientAsync(patient.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([report]);
+
+    var service = CreateServiceInstance(userRepository.Object, reportRepo: reportRepository.Object);
+
+    var response = await service.GetForUserAsync("seed-PATIENT-1", new ReportListQueryRequest(), CancellationToken.None);
+
+    response.Items.Should().HaveCount(1);
+    response.Items[0].Title.Should().Be("BloodTest - HealthCare Labs");
+    response.Items[0].LabName.Should().Be("HealthCare Labs");
+    response.Items[0].ReportType.Should().Be("blood_test");
+  }
+
+  [Fact]
+  public async Task GetForUserAsync_ShouldBuildSummaryTitle_WithReportNumber_WhenNoLabNameAsync()
+  {
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient,
+      FirstName = "Seed",
+      LastName = "Patient",
+      Email = "seed.patient@aarogya.dev"
+    };
+
+    var report = CreateReportEntity(patient.Id, ReportType.Radiology, labName: null);
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.ListByPatientAsync(patient.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([report]);
+
+    var service = CreateServiceInstance(userRepository.Object, reportRepo: reportRepository.Object);
+
+    var response = await service.GetForUserAsync("seed-PATIENT-1", new ReportListQueryRequest(), CancellationToken.None);
+
+    response.Items.Should().HaveCount(1);
+    response.Items[0].Title.Should().Be($"Radiology - {report.ReportNumber}");
+    response.Items[0].LabName.Should().BeNull();
+  }
+
+  [Fact]
+  public async Task GetForUserAsync_ShouldBuildHighlightParameter_WithAbnormalNumericValueAsync()
+  {
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient,
+      FirstName = "Seed",
+      LastName = "Patient",
+      Email = "seed.patient@aarogya.dev"
+    };
+
+    var report = CreateReportEntity(patient.Id, ReportType.BloodTest, labName: "Lab",
+      parameters:
+      [
+        new ReportParameter
+        {
+          ParameterCode = "HGB",
+          ParameterName = "Hemoglobin",
+          MeasuredValueNumeric = 8.2m,
+          Unit = "g/dL",
+          ReferenceRangeText = "12-16",
+          IsAbnormal = true
+        },
+        new ReportParameter
+        {
+          ParameterCode = "WBC",
+          ParameterName = "WBC Count",
+          MeasuredValueNumeric = 6.0m,
+          Unit = "K/uL",
+          IsAbnormal = false
+        }
+      ]);
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.ListByPatientAsync(patient.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([report]);
+
+    var service = CreateServiceInstance(userRepository.Object, reportRepo: reportRepository.Object);
+
+    var response = await service.GetForUserAsync("seed-PATIENT-1", new ReportListQueryRequest(), CancellationToken.None);
+
+    response.Items[0].HighlightParameter.Should().Be("Hemoglobin: 8.2 g/dL");
+  }
+
+  [Fact]
+  public async Task GetForUserAsync_ShouldBuildHighlightParameter_WithTextValue_WhenNoNumericAsync()
+  {
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient,
+      FirstName = "Seed",
+      LastName = "Patient",
+      Email = "seed.patient@aarogya.dev"
+    };
+
+    var report = CreateReportEntity(patient.Id, ReportType.Other, labName: "Lab",
+      parameters:
+      [
+        new ReportParameter
+        {
+          ParameterCode = "RH",
+          ParameterName = "RH Factor",
+          MeasuredValueNumeric = null,
+          MeasuredValueText = "Positive",
+          Unit = null,
+          IsAbnormal = true
+        }
+      ]);
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.ListByPatientAsync(patient.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([report]);
+
+    var service = CreateServiceInstance(userRepository.Object, reportRepo: reportRepository.Object);
+
+    var response = await service.GetForUserAsync("seed-PATIENT-1", new ReportListQueryRequest(), CancellationToken.None);
+
+    response.Items[0].HighlightParameter.Should().Be("RH Factor: Positive");
+  }
+
+  [Fact]
+  public async Task GetForUserAsync_ShouldReturnNullHighlightParameter_WhenNoAbnormalParametersAsync()
+  {
+    var patient = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient,
+      FirstName = "Seed",
+      LastName = "Patient",
+      Email = "seed.patient@aarogya.dev"
+    };
+
+    var report = CreateReportEntity(patient.Id, ReportType.BloodTest, labName: "Lab",
+      parameters:
+      [
+        new ReportParameter
+        {
+          ParameterCode = "HGB",
+          ParameterName = "Hemoglobin",
+          MeasuredValueNumeric = 14.0m,
+          Unit = "g/dL",
+          IsAbnormal = false
+        }
+      ]);
+
+    var userRepository = new Mock<IUserRepository>();
+    userRepository
+      .Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(patient);
+
+    var reportRepository = new Mock<IReportRepository>();
+    reportRepository
+      .Setup(x => x.ListByPatientAsync(patient.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([report]);
+
+    var service = CreateServiceInstance(userRepository.Object, reportRepo: reportRepository.Object);
+
+    var response = await service.GetForUserAsync("seed-PATIENT-1", new ReportListQueryRequest(), CancellationToken.None);
+
+    response.Items[0].HighlightParameter.Should().BeNull();
+  }
+
+  private static ReportService CreateServiceInstance(
+    IUserRepository userRepo,
+    IReportRepository? reportRepo = null,
+    IAuditLoggingService? auditLogging = null)
+  {
+    return new ReportService(
+      Mock.Of<IAmazonS3>(),
+      Mock.Of<ICloudFrontInvalidationService>(),
+      userRepo,
+      Mock.Of<IAccessGrantRepository>(),
+      reportRepo ?? Mock.Of<IReportRepository>(),
+      auditLogging ?? Mock.Of<IAuditLoggingService>(),
+      Mock.Of<IPatientNotificationService>(),
+      Mock.Of<IUnitOfWork>(),
+      Options.Create(CreateAwsOptions()),
+      new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 10, 0, 0, TimeSpan.Zero)));
+  }
+
+  private static Report CreateReportEntity(
+    Guid patientId,
+    ReportType reportType,
+    string? labName,
+    IReadOnlyList<ReportParameter>? parameters = null)
+  {
+    var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    if (labName is not null)
+    {
+      tags["lab-name"] = labName;
+    }
+
+    return new Report
+    {
+      Id = Guid.NewGuid(),
+      ReportNumber = $"RPT-{Guid.NewGuid().ToString("N")[..10].ToUpperInvariant()}",
+      PatientId = patientId,
+      UploadedByUserId = patientId,
+      ReportType = reportType,
+      Status = ReportStatus.Clean,
+      UploadedAt = new DateTimeOffset(2026, 2, 20, 8, 0, 0, TimeSpan.Zero),
+      CreatedAt = new DateTimeOffset(2026, 2, 20, 8, 0, 0, TimeSpan.Zero),
+      FileStorageKey = "reports/test/report.pdf",
+      Metadata = new ReportMetadata { Tags = tags },
+      Results = new ReportResults(),
+      Parameters = parameters?.ToList() ?? []
+    };
   }
 
   private static CreateReportRequest CreateRequest()

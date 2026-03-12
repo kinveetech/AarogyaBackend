@@ -124,11 +124,18 @@ internal sealed class ReportService(
     var paged = filtered.Skip(skip).Take(pageSize);
 
     var items = paged
-      .Select(report => new ReportSummaryResponse(
-        report.Id,
-        BuildSummaryTitle(report),
-        ToStatusString(report.Status),
-        report.CreatedAt))
+      .Select(report =>
+      {
+        report.Metadata.Tags.TryGetValue("lab-name", out var labName);
+        return new ReportSummaryResponse(
+          report.Id,
+          BuildSummaryTitle(report),
+          ToReportTypeCode(report.ReportType),
+          ToStatusString(report.Status),
+          report.CreatedAt,
+          labName,
+          BuildHighlightParameter(report));
+      })
       .ToArray();
 
     await auditLoggingService.LogDataAccessAsync(
@@ -318,11 +325,15 @@ internal sealed class ReportService(
       await patientNotificationService.NotifyReportUploadedAsync(patient, report, cancellationToken);
     }
 
+    report.Metadata.Tags.TryGetValue("lab-name", out var createdLabName);
     return new ReportSummaryResponse(
       report.Id,
       BuildSummaryTitle(report),
+      ToReportTypeCode(report.ReportType),
       ToStatusString(report.Status),
-      report.CreatedAt);
+      report.CreatedAt,
+      createdLabName,
+      BuildHighlightParameter(report));
   }
 
   public async Task<ReportSignedUploadUrlResponse> GetSignedUploadUrlAsync(
@@ -421,6 +432,25 @@ internal sealed class ReportService(
     }
 
     return $"{report.ReportType} - {report.ReportNumber}";
+  }
+
+  private static string? BuildHighlightParameter(Report report)
+  {
+    var highlight = report.Parameters
+      .Where(p => p.IsAbnormal == true)
+      .OrderBy(p => p.ParameterName, StringComparer.OrdinalIgnoreCase)
+      .FirstOrDefault();
+
+    if (highlight is null)
+    {
+      return null;
+    }
+
+    var value = highlight.MeasuredValueNumeric?.ToString("G", CultureInfo.InvariantCulture)
+      ?? highlight.MeasuredValueText
+      ?? "—";
+    var unit = string.IsNullOrWhiteSpace(highlight.Unit) ? "" : $" {highlight.Unit}";
+    return $"{highlight.ParameterName}: {value}{unit}";
   }
 
   private async Task<bool> CanAccessReportAsync(

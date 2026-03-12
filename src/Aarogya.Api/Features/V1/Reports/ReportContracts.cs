@@ -38,7 +38,14 @@ public sealed record CreateReportParameterRequest(
   "Performance",
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public API action signature.")]
-public sealed record ReportSummaryResponse(Guid ReportId, string Title, string Status, DateTimeOffset CreatedAt);
+public sealed record ReportSummaryResponse(
+  Guid Id,
+  string Title,
+  string ReportType,
+  string Status,
+  DateTimeOffset CreatedAt,
+  string? LabName,
+  string? HighlightParameter);
 
 [SuppressMessage(
   "Performance",
@@ -80,7 +87,7 @@ public sealed record ReportDetailParameterResponse(
   "CA1515:Consider making public types internal",
   Justification = "Referenced by public API action signature.")]
 public sealed record ReportDetailResponse(
-  Guid ReportId,
+  Guid Id,
   string ReportNumber,
   string ReportType,
   string Status,
