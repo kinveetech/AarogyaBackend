@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Aarogya.Api.Authorization;
@@ -7,6 +8,7 @@ using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.RateLimiting;
 using Aarogya.Api.Validation;
+using Aarogya.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -454,6 +456,27 @@ public sealed class ReportsController : ControllerBase
           ["extraction"] = [ex.Message]
         }));
     }
+  }
+
+  private static readonly ReportTypesMetadataResponse CachedReportTypesMetadata = BuildReportTypesMetadata();
+
+  [HttpGet("metadata/types")]
+  [AllowAnonymous]
+  [ProducesResponseType(typeof(ReportTypesMetadataResponse), StatusCodes.Status200OK)]
+  public IActionResult GetReportTypes()
+    => Ok(CachedReportTypesMetadata);
+
+  private static ReportTypesMetadataResponse BuildReportTypesMetadata()
+  {
+    var items = Enum.GetValues<ReportType>()
+      .Select(value =>
+      {
+        var description = EnumUtils.ToDescription(value);
+        var label = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(description.Replace('_', ' '));
+        return new ReportTypeMetadataItem(description, label);
+      })
+      .ToArray();
+    return new ReportTypesMetadataResponse(items);
   }
 
   private ObjectResult ForbidWithConsentError(string purpose)

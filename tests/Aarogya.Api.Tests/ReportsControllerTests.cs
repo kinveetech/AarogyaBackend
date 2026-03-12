@@ -3,6 +3,7 @@ using Aarogya.Api.Controllers.V1;
 using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Validation;
+using Aarogya.Domain.Enums;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -375,6 +376,81 @@ public sealed class ReportsControllerTests
 
     var ok = result.Should().BeOfType<OkObjectResult>().Subject;
     ok.Value.Should().BeEquivalentTo(response);
+  }
+
+  [Fact]
+  public void GetReportTypes_ShouldReturnOk_WithAllReportTypes()
+  {
+    var controller = CreateController(
+      user: new ClaimsPrincipal(new ClaimsIdentity()),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = controller.GetReportTypes();
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    var response = ok.Value.Should().BeOfType<ReportTypesMetadataResponse>().Subject;
+    response.ReportTypes.Should().HaveCount(Enum.GetValues<ReportType>().Length);
+  }
+
+  [Fact]
+  public void GetReportTypes_ShouldReturnExpectedValuesAndLabels()
+  {
+    var controller = CreateController(
+      user: new ClaimsPrincipal(new ClaimsIdentity()),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = controller.GetReportTypes();
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    var response = ok.Value.Should().BeOfType<ReportTypesMetadataResponse>().Subject;
+
+    response.ReportTypes.Should().Contain(item => item.Value == "blood_test" && item.Label == "Blood Test");
+    response.ReportTypes.Should().Contain(item => item.Value == "urine_test" && item.Label == "Urine Test");
+    response.ReportTypes.Should().Contain(item => item.Value == "radiology" && item.Label == "Radiology");
+    response.ReportTypes.Should().Contain(item => item.Value == "cardiology" && item.Label == "Cardiology");
+    response.ReportTypes.Should().Contain(item => item.Value == "other" && item.Label == "Other");
+  }
+
+  [Fact]
+  public void GetReportTypes_ShouldReturnConsistentResults_AcrossMultipleCalls()
+  {
+    var controller = CreateController(
+      user: new ClaimsPrincipal(new ClaimsIdentity()),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result1 = controller.GetReportTypes();
+    var result2 = controller.GetReportTypes();
+
+    var ok1 = result1.Should().BeOfType<OkObjectResult>().Subject;
+    var ok2 = result2.Should().BeOfType<OkObjectResult>().Subject;
+    ok1.Value.Should().BeSameAs(ok2.Value);
+  }
+
+  [Fact]
+  public void GetReportTypes_ShouldDeriveValuesFromEnumDescriptions()
+  {
+    var controller = CreateController(
+      user: new ClaimsPrincipal(new ClaimsIdentity()),
+      uploadService: Mock.Of<IReportFileUploadService>(),
+      reportService: Mock.Of<IReportService>(),
+      checksumService: Mock.Of<IReportChecksumVerificationService>());
+
+    var result = controller.GetReportTypes();
+
+    var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+    var response = ok.Value.Should().BeOfType<ReportTypesMetadataResponse>().Subject;
+
+    var expectedValues = Enum.GetValues<ReportType>()
+      .Select(EnumUtils.ToDescription)
+      .ToArray();
+
+    response.ReportTypes.Select(item => item.Value).Should().BeEquivalentTo(expectedValues);
   }
 
   private static ReportsController CreateController(
