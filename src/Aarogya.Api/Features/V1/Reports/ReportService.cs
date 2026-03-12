@@ -446,7 +446,7 @@ internal sealed class ReportService(
       return null;
     }
 
-    var value = highlight.MeasuredValueNumeric?.ToString("G", System.Globalization.CultureInfo.InvariantCulture)
+    var value = highlight.MeasuredValueNumeric?.ToString("G", CultureInfo.InvariantCulture)
       ?? highlight.MeasuredValueText
       ?? "—";
     var unit = string.IsNullOrWhiteSpace(highlight.Unit) ? "" : $" {highlight.Unit}";
