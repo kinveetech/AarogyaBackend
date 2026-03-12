@@ -265,7 +265,7 @@ public sealed class RequestValidatorsTests
   }
 
   [Fact]
-  public void CreateReportRequestValidator_ShouldReject_EmptyParameters()
+  public void CreateReportRequestValidator_ShouldAccept_EmptyParameters()
   {
     var validator = new CreateReportRequestValidator();
     var request = new CreateReportRequest(
@@ -279,7 +279,7 @@ public sealed class RequestValidatorsTests
       PatientSub: null,
       Parameters: []);
     var result = validator.Validate(request);
-    result.IsValid.Should().BeFalse();
+    result.IsValid.Should().BeTrue();
   }
 
   [Fact]
@@ -334,6 +334,24 @@ public sealed class RequestValidatorsTests
       Parameters: [new CreateReportParameterRequest("HGB", "Hemoglobin", 14.5m, null, "g/dL", "12.0-16.0", null)]);
     var result = validator.Validate(request);
     result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void CreateReportRequestValidator_ShouldAccept_MinimalUploadRequest()
+  {
+    var validator = new CreateReportRequestValidator();
+    var request = new CreateReportRequest(
+      ReportType: "blood_test",
+      ObjectKey: "reports/test-file.pdf",
+      LabName: null,
+      LabCode: null,
+      CollectedAt: null,
+      ReportedAt: null,
+      Notes: null,
+      PatientSub: null,
+      Parameters: []);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeTrue();
   }
 
   [Theory]
