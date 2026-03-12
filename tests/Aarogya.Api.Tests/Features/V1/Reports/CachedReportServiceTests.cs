@@ -21,7 +21,7 @@ public sealed class CachedReportServiceTests
 
   private static readonly ReportListResponse SampleListResponse = new(
     1, 20, 1,
-    [new ReportSummaryResponse(Guid.NewGuid(), "Blood Report", "processing", FixedNow)]);
+    [new ReportSummaryResponse(Guid.NewGuid(), "Blood Report", "blood_test", "processing", FixedNow, null, null)]);
 
   [Fact]
   public async Task GetForUserAsync_ShouldReturnCachedResponse_WhenCacheHitAsync()

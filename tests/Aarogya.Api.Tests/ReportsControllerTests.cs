@@ -69,7 +69,7 @@ public sealed class ReportsControllerTests
 
     var reportService = new Mock<IReportService>();
     reportService
-      .Setup(x => x.GetDetailForUserAsync("seed-PATIENT-1", response.ReportId, It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetDetailForUserAsync("seed-PATIENT-1", response.Id, It.IsAny<CancellationToken>()))
       .ReturnsAsync(response);
 
     var controller = CreateController(
@@ -78,7 +78,7 @@ public sealed class ReportsControllerTests
       reportService: reportService.Object,
       checksumService: Mock.Of<IReportChecksumVerificationService>());
 
-    var result = await controller.GetReportDetailAsync(response.ReportId, CancellationToken.None);
+    var result = await controller.GetReportDetailAsync(response.Id, CancellationToken.None);
 
     var ok = result.Should().BeOfType<OkObjectResult>().Subject;
     ok.Value.Should().BeEquivalentTo(response);
@@ -96,8 +96,11 @@ public sealed class ReportsControllerTests
         new ReportSummaryResponse(
           Guid.NewGuid(),
           "blood_test - Aarogya Diagnostics",
+          "blood_test",
           "uploaded",
-          new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero))
+          new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero),
+          "Aarogya Diagnostics",
+          null)
       ]);
 
     var reportService = new Mock<IReportService>();
@@ -131,8 +134,11 @@ public sealed class ReportsControllerTests
         new ReportSummaryResponse(
           Guid.NewGuid(),
           "blood_test - Aarogya Diagnostics",
+          "blood_test",
           "uploaded",
-          new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero))
+          new DateTimeOffset(2026, 2, 20, 0, 0, 0, TimeSpan.Zero),
+          "Aarogya Diagnostics",
+          null)
       ]);
 
     var reportService = new Mock<IReportService>();
@@ -181,7 +187,7 @@ public sealed class ReportsControllerTests
   [InlineData("LabTechnician")]
   public async Task CreateReportAsync_ShouldReturnCreated_ForAllowedRolesAsync(string role)
   {
-    var expected = new ReportSummaryResponse(Guid.NewGuid(), "blood_test", "uploaded", DateTimeOffset.UtcNow);
+    var expected = new ReportSummaryResponse(Guid.NewGuid(), "blood_test", "blood_test", "uploaded", DateTimeOffset.UtcNow, null, null);
     var reportService = new Mock<IReportService>();
     reportService
       .Setup(x => x.AddForUserAsync(It.IsAny<string>(), It.IsAny<CreateReportRequest>(), It.IsAny<CancellationToken>()))

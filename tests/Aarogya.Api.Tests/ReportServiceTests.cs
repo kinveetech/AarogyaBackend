@@ -75,7 +75,7 @@ public sealed class ReportServiceTests
     createdReport.Metadata.Tags.Should().ContainKey("lab-name");
     createdReport.Results.Parameters.Should().HaveCount(1);
 
-    response.ReportId.Should().Be(createdReport.Id);
+    response.Id.Should().Be(createdReport.Id);
     response.Status.Should().Be("uploaded");
 
     unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -282,7 +282,7 @@ public sealed class ReportServiceTests
 
     var response = await service.GetDetailForUserAsync("seed-PATIENT-1", report.Id, CancellationToken.None);
 
-    response.ReportId.Should().Be(report.Id);
+    response.Id.Should().Be(report.Id);
     response.Download.Provider.Should().Be("s3");
     response.Download.DownloadUrl.Should().Be(new Uri("https://example.com/signed-download"));
     response.Parameters.Should().HaveCount(1);
