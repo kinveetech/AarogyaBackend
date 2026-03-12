@@ -144,11 +144,16 @@ internal sealed class CreateReportRequestValidator : AbstractValidator<CreateRep
   public CreateReportRequestValidator()
   {
     RuleFor(x => x.ReportType)
+      .Cascade(CascadeMode.Stop)
       .NotEmpty()
       .Must(value => AllowedReportTypes.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase))
       .WithMessage("ReportType must be one of blood_test, urine_test, radiology, cardiology, other.");
 
-    RuleFor(x => x.ObjectKey).NotEmpty().MaximumLength(1024).Must(value => value.Trim().StartsWith("reports/", StringComparison.Ordinal));
+    RuleFor(x => x.ObjectKey)
+      .Cascade(CascadeMode.Stop)
+      .NotEmpty()
+      .MaximumLength(1024)
+      .Must(value => value.Trim().StartsWith("reports/", StringComparison.Ordinal));
 
     RuleFor(x => x.LabName).NotEmpty().MaximumLength(200);
     RuleFor(x => x.LabCode).MaximumLength(100).When(x => x.LabCode is not null);
@@ -169,6 +174,7 @@ internal sealed class CreateReportRequestValidator : AbstractValidator<CreateRep
       .When(x => x.CollectedAt.HasValue && x.ReportedAt.HasValue);
 
     RuleFor(x => x.Parameters)
+      .Cascade(CascadeMode.Stop)
       .NotNull()
       .Must(parameters => parameters.Count > 0)
       .WithMessage("At least one parameter is required.");

@@ -281,6 +281,60 @@ public sealed class RequestValidatorsTests
     result.IsValid.Should().BeFalse();
   }
 
+  [Fact]
+  public void CreateReportRequestValidator_ShouldReject_NullParameters()
+  {
+    var validator = new CreateReportRequestValidator();
+    var request = new CreateReportRequest(
+      ReportType: "blood_test",
+      ObjectKey: "reports/test-file.pdf",
+      LabName: "Apollo Lab",
+      LabCode: null,
+      CollectedAt: null,
+      ReportedAt: null,
+      Notes: null,
+      PatientSub: null,
+      Parameters: null!);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void CreateReportRequestValidator_ShouldReject_NullReportType()
+  {
+    var validator = new CreateReportRequestValidator();
+    var request = new CreateReportRequest(
+      ReportType: null!,
+      ObjectKey: "reports/test-file.pdf",
+      LabName: "Apollo Lab",
+      LabCode: null,
+      CollectedAt: null,
+      ReportedAt: null,
+      Notes: null,
+      PatientSub: null,
+      Parameters: [new CreateReportParameterRequest("HGB", "Hemoglobin", 14.5m, null, "g/dL", "12.0-16.0", null)]);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
+  [Fact]
+  public void CreateReportRequestValidator_ShouldReject_NullObjectKey()
+  {
+    var validator = new CreateReportRequestValidator();
+    var request = new CreateReportRequest(
+      ReportType: "blood_test",
+      ObjectKey: null!,
+      LabName: "Apollo Lab",
+      LabCode: null,
+      CollectedAt: null,
+      ReportedAt: null,
+      Notes: null,
+      PatientSub: null,
+      Parameters: [new CreateReportParameterRequest("HGB", "Hemoglobin", 14.5m, null, "g/dL", "12.0-16.0", null)]);
+    var result = validator.Validate(request);
+    result.IsValid.Should().BeFalse();
+  }
+
   #endregion
 
   #region CreateReportParameterRequestValidator
