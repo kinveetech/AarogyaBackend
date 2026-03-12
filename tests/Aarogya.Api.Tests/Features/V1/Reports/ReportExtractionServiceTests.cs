@@ -107,9 +107,29 @@ public sealed class ReportExtractionServiceTests
 
     result.Should().NotBeNull();
     result!.ReportId.Should().Be(ReportId);
+    result.Status.Should().Be("extracted");
     result.ExtractionMethod.Should().Be("pdfpig");
     result.ExtractedParameterCount.Should().Be(5);
     result.OverallConfidence.Should().Be(0.85);
+  }
+
+  [Fact]
+  public async Task GetExtractionStatusAsync_ShouldReturnSnakeCaseStatus_WhenExtractionFailedAsync()
+  {
+    var user = SetupUser(UserRole.Patient);
+    var extraction = new ExtractionMetadata
+    {
+      ExtractionMethod = "pdfpig",
+      ErrorMessage = "Name does not resolve",
+      AttemptCount = 1
+    };
+    SetupReport(patientId: user.Id, extraction: extraction, status: ReportStatus.ExtractionFailed);
+
+    var result = await _sut.GetExtractionStatusAsync(UserSub, ReportId);
+
+    result.Should().NotBeNull();
+    result!.Status.Should().Be("extraction_failed");
+    result.ErrorMessage.Should().Be("Name does not resolve");
   }
 
   [Fact]
