@@ -302,14 +302,6 @@ internal sealed class UpdateEmergencyContactRequestValidator : AbstractValidator
   }
 }
 
-internal sealed class AadhaarNumberValidator : AbstractValidator<string>
-{
-  public AadhaarNumberValidator()
-  {
-    RuleFor(x => x).MustBeAadhaarNumber();
-  }
-}
-
 internal sealed class VerifyAadhaarRequestValidator : AbstractValidator<VerifyAadhaarRequest>
 {
   private static readonly DateOnly MinimumBirthDate = new(1900, 1, 1);
