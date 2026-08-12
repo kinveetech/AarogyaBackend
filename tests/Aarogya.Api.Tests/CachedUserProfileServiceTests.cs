@@ -29,7 +29,8 @@ public sealed class CachedUserProfileServiceTests
     new DateOnly(1990, 5, 15),
     null,
     "approved",
-    ["Patient"]);
+    ["Patient"],
+    false);
 
   [Fact]
   public async Task GetCurrentUserAsync_ShouldReturnCachedResponse_WhenCacheHitAsync()

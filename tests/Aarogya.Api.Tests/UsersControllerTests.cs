@@ -37,7 +37,8 @@ public sealed class UsersControllerTests
       new DateOnly(1995, 6, 5),
       null,
       "approved",
-      ["Patient"]);
+      ["Patient"],
+      false);
 
     var userProfileService = new Mock<IUserProfileService>();
     userProfileService.Setup(x => x.GetCurrentUserAsync("seed-PATIENT-1", It.IsAny<CancellationToken>())).ReturnsAsync(response);

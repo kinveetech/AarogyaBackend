@@ -18,7 +18,8 @@ public sealed record UserProfileResponse(
   DateOnly? DateOfBirth,
   string? Gender,
   string RegistrationStatus,
-  IReadOnlyList<string> Roles);
+  IReadOnlyList<string> Roles,
+  bool AadhaarVerified);
 
 [SuppressMessage(
   "Performance",

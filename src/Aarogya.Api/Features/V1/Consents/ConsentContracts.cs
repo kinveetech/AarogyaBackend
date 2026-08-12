@@ -10,7 +10,9 @@ namespace Aarogya.Api.Features.V1.Consents;
   Justification = "Used by public API action signature for model binding.")]
 public sealed record UpsertConsentRequest(
   [property: JsonRequired] bool IsGranted,
-  [property: MaxLength(80)] string Source = "api");
+  // Validation attributes on record types must target the constructor parameter, not the
+  // property — MVC's record validation throws InvalidOperationException otherwise
+  [MaxLength(80)] string Source = "api");
 
 [SuppressMessage(
   "Performance",
