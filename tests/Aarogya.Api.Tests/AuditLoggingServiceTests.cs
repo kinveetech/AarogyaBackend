@@ -4,7 +4,7 @@ using Aarogya.Api.Authentication;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -60,7 +60,7 @@ public sealed class AuditLoggingServiceTests
       CancellationToken.None);
 
     created.Should().NotBeNull();
-    created!.ActorUserId.Should().Be(actor.Id);
+    created.ActorUserId.Should().Be(actor.Id);
     created.Action.Should().Be("user_profile.read");
     created.EntityType.Should().Be("user");
     created.ClientIp.Should().Be(IPAddress.Parse("10.0.0.24"));

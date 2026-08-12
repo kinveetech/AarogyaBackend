@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Authorization;
 using Aarogya.Api.Controllers;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;

@@ -1,5 +1,5 @@
 using Aarogya.Api.Validation;
-using FluentAssertions;
+using AwesomeAssertions;
 using FluentValidation;
 using Xunit;
 

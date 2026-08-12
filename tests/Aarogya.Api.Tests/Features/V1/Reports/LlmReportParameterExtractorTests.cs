@@ -1,5 +1,5 @@
 using Aarogya.Api.Features.V1.Reports;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

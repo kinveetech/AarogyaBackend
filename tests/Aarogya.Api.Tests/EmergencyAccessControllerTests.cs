@@ -1,6 +1,6 @@
 using Aarogya.Api.Controllers.V1;
 using Aarogya.Api.Features.V1.EmergencyAccess;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;

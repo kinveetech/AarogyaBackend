@@ -7,7 +7,7 @@ using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Features.V1.Users;
 using Aarogya.Api.Validation;
 using Aarogya.Domain.Enums;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Api.Tests.Validation;

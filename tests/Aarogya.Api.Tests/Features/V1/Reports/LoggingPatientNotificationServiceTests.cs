@@ -2,7 +2,7 @@ using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;

@@ -2,7 +2,7 @@ using Aarogya.Api.Configuration;
 using Aarogya.Api.Features.V1.Notifications;
 using Amazon.SimpleEmailV2;
 using Amazon.SimpleEmailV2.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;

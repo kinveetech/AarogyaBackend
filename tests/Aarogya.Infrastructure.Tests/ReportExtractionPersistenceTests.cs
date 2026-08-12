@@ -3,7 +3,7 @@ using Aarogya.Domain.Enums;
 using Aarogya.Domain.ValueObjects;
 using Aarogya.Infrastructure.Persistence;
 using Aarogya.Infrastructure.Tests.Fixtures;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -59,7 +59,7 @@ public sealed class ReportExtractionPersistenceTests(PostgreSqlContainerFixture 
       var report = await dbContext.Reports.AsNoTracking().SingleAsync(r => r.Id == reportId);
 
       report.Extraction.Should().NotBeNull();
-      report.Extraction!.ExtractionMethod.Should().Be("pdfpig");
+      report.Extraction.ExtractionMethod.Should().Be("pdfpig");
       report.Extraction.StructuringModel.Should().Be("qwen2.5:14b-instruct");
       report.Extraction.ExtractedParameterCount.Should().Be(5);
       report.Extraction.OverallConfidence.Should().Be(0.92);

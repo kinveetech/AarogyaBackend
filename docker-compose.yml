@@ -46,7 +46,7 @@ services:
       - aarogya-net
 
   postgres:
-    image: postgres:16
+    image: postgres:18
     container_name: aarogya-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-aarogya}
@@ -66,7 +66,7 @@ services:
       - aarogya-net
 
   postgres-init:
-    image: postgres:16
+    image: postgres:18
     container_name: aarogya-postgres-init
     depends_on:
       postgres:
@@ -81,7 +81,7 @@ services:
       - aarogya-net
 
   redis:
-    image: redis:7
+    image: redis:8
     container_name: aarogya-redis
     ports:
       - "6379:6379"
@@ -97,7 +97,7 @@ services:
       - aarogya-net
 
   localstack:
-    image: localstack/localstack:3
+    image: localstack/localstack:4
     container_name: aarogya-localstack
     environment:
       SERVICES: s3,sqs,cognito,kms,ses
@@ -129,7 +129,7 @@ services:
       - aarogya-net
 
   pgadmin:
-    image: dpage/pgadmin4:8
+    image: dpage/pgadmin4:9
     container_name: aarogya-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@aarogya.com}

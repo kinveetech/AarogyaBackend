@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Aarogya.Api.Health;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Xunit;

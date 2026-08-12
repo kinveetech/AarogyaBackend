@@ -7,7 +7,7 @@ using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -94,7 +94,7 @@ public sealed class BreachDetectionHostedServiceTests
       && message.Subject.Contains("Security Incident Alert", StringComparison.OrdinalIgnoreCase));
     pushService.Verify(
       x => x.SendToUserAsync(
-        actor.ExternalAuthId!,
+        actor.ExternalAuthId,
         "security_alert",
         It.IsAny<SendPushNotificationRequest>(),
         It.IsAny<CancellationToken>()),

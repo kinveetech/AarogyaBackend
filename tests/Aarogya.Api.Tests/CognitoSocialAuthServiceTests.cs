@@ -1,6 +1,6 @@
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -22,7 +22,7 @@ public sealed class CognitoSocialAuthServiceTests
 
     result.Success.Should().BeTrue();
     result.AuthorizeUrl.Should().NotBeNull();
-    result.AuthorizeUrl!.ToString().Should().Contain("identity_provider=Google");
+    result.AuthorizeUrl.ToString().Should().Contain("identity_provider=Google");
     result.AuthorizeUrl.ToString().Should().Contain("redirect_uri=aarogya%3A%2F%2Fauth%2Fcallback");
     result.AuthorizeUrl.ToString().Should().Contain("aarogya-dev.auth.ap-south-1.amazoncognito.com");
     result.State.Should().Be("state-123");

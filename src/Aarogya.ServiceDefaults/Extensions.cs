@@ -15,7 +15,7 @@ public static class Extensions
     return builder;
   }
 
-  private static IHostApplicationBuilder ConfigureOpenTelemetry(this IHostApplicationBuilder builder)
+  private static void ConfigureOpenTelemetry(this IHostApplicationBuilder builder)
   {
     builder.Logging.AddOpenTelemetry(logging =>
     {
@@ -44,8 +44,6 @@ public static class Extensions
       });
 
     AddOpenTelemetryExporters(builder);
-
-    return builder;
   }
 
   private static void AddOpenTelemetryExporters(IHostApplicationBuilder builder)

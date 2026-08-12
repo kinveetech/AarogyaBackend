@@ -3,7 +3,7 @@ using Aarogya.Api.Configuration;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;

@@ -1,7 +1,7 @@
 # Aarogya Backend API
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kinveetech_AarogyaBackend&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kinveetech_AarogyaBackend)
 
-ASP.NET Core 9.0 REST API following Clean Architecture principles.
+ASP.NET Core 10.0 REST API following Clean Architecture principles.
 
 ## 🏗️ Architecture
 
@@ -627,7 +627,7 @@ curl http://localhost:8080/swagger/index.html
 
 Compose services:
 - API: `aarogya-api` (`8080`)
-- PostgreSQL 16 + `pgcrypto`: `aarogya-postgres` (`5432`)
+- PostgreSQL 18 + `pgcrypto`: `aarogya-postgres` (`5432`)
 - PostgreSQL extension bootstrap: `aarogya-postgres-init` (one-shot `CREATE EXTENSION IF NOT EXISTS pgcrypto`)
 - Redis 7: `aarogya-redis` (`6379`)
 - LocalStack 3: `aarogya-localstack` (`4566`) with init script for S3/SQS/Cognito/KMS
@@ -670,7 +670,7 @@ dotnet run --project AppHost
 
 AppHost services:
 - `api` (Aarogya API)
-- `postgres` (PostgreSQL 16)
+- `postgres` (PostgreSQL 18)
 - `redis` (Redis 7)
 - `localstack` (S3 + SQS + Cognito + KMS + SES emulation)
 

@@ -5,7 +5,7 @@ using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
 using Aarogya.Domain.ValueObjects;
-using FluentAssertions;
+using AwesomeAssertions;
 using Moq;
 using Xunit;
 
@@ -106,7 +106,7 @@ public sealed class ReportExtractionServiceTests
     var result = await _sut.GetExtractionStatusAsync(UserSub, ReportId);
 
     result.Should().NotBeNull();
-    result!.ReportId.Should().Be(ReportId);
+    result.ReportId.Should().Be(ReportId);
     result.Status.Should().Be("extracted");
     result.ExtractionMethod.Should().Be("pdfpig");
     result.ExtractedParameterCount.Should().Be(5);
@@ -128,7 +128,7 @@ public sealed class ReportExtractionServiceTests
     var result = await _sut.GetExtractionStatusAsync(UserSub, ReportId);
 
     result.Should().NotBeNull();
-    result!.Status.Should().Be("extraction_failed");
+    result.Status.Should().Be("extraction_failed");
     result.ErrorMessage.Should().Be("Name does not resolve");
   }
 

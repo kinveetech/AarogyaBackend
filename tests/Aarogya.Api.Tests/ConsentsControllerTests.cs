@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Aarogya.Api.Controllers.V1;
 using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Validation;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;

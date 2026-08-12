@@ -6,7 +6,7 @@ using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Amazon.S3;
 using Amazon.S3.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -197,7 +197,7 @@ public sealed class S3ReportFileUploadServiceTests
     await sut.UploadAsync(TestUserSub, file, CancellationToken.None);
 
     capturedReport.Should().NotBeNull();
-    capturedReport!.ReportType.Should().Be(ReportType.Radiology);
+    capturedReport.ReportType.Should().Be(ReportType.Radiology);
   }
 
   [Fact]
@@ -240,7 +240,7 @@ public sealed class S3ReportFileUploadServiceTests
     await sut.UploadAsync(TestUserSub, file, CancellationToken.None);
 
     capturedReport.Should().NotBeNull();
-    capturedReport!.ReportType.Should().Be(ReportType.Other);
+    capturedReport.ReportType.Should().Be(ReportType.Other);
   }
 
   [Theory]
@@ -321,7 +321,7 @@ public sealed class S3ReportFileUploadServiceTests
 
     result.ChecksumSha256.Should().NotBeNullOrWhiteSpace();
     capturedRequest.Should().NotBeNull();
-    capturedRequest!.Metadata["sha256"].Should().Be(result.ChecksumSha256);
+    capturedRequest.Metadata["sha256"].Should().Be(result.ChecksumSha256);
   }
 
   private static (S3ReportFileUploadService Sut, Mocks Mocks) CreateService(

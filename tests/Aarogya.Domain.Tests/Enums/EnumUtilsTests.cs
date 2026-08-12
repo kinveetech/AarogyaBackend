@@ -1,5 +1,5 @@
 using Aarogya.Domain.Enums;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Domain.Tests.Enums;

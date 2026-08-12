@@ -4,7 +4,7 @@ using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Api.Features.V1.Reports;
 using Aarogya.Api.Validation;
 using Aarogya.Domain.Enums;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;

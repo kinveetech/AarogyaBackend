@@ -1,7 +1,7 @@
 using Aarogya.Api.Features.V1.Reports;
 using Amazon.Textract;
 using Amazon.Textract.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;

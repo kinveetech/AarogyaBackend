@@ -2,7 +2,7 @@ using Aarogya.Api.Configuration;
 using Aarogya.Api.Features.V1.Reports;
 using Amazon.CloudFront;
 using Amazon.CloudFront.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -42,7 +42,7 @@ public sealed class CloudFrontInvalidationServiceTests
     await service.InvalidateObjectAsync("reports/seed-PATIENT-1/report.pdf", CancellationToken.None);
 
     submittedRequest.Should().NotBeNull();
-    submittedRequest!.DistributionId.Should().Be("E123ABC456XYZ");
+    submittedRequest.DistributionId.Should().Be("E123ABC456XYZ");
     submittedRequest.InvalidationBatch.Paths.Items.Should().ContainSingle("/reports/seed-PATIENT-1/report.pdf");
     cloudFrontClient.Verify(
       x => x.CreateInvalidationAsync(It.IsAny<CreateInvalidationRequest>(), It.IsAny<CancellationToken>()),
