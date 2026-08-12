@@ -161,7 +161,8 @@ internal sealed class UserProfileService(
       user.DateOfBirth,
       user.Gender,
       ToRegistrationStatusName(user.RegistrationStatus),
-      [ToRoleName(user.Role)]);
+      [ToRoleName(user.Role)],
+      user.AadhaarRefToken is not null);
   }
 
   private static string ToRegistrationStatusName(RegistrationStatus status)

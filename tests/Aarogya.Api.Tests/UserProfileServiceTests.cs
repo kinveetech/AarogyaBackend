@@ -69,6 +69,37 @@ public sealed class UserProfileServiceTests
     unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
   }
 
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task GetCurrentUserAsync_ShouldReportAadhaarVerified_BasedOnReferenceTokenAsync(bool hasToken)
+  {
+    var user = new User
+    {
+      Id = Guid.NewGuid(),
+      ExternalAuthId = "seed-PATIENT-1",
+      Role = UserRole.Patient,
+      FirstName = "Jane",
+      LastName = "Doe",
+      Email = "jane@aarogya.dev",
+      AadhaarRefToken = hasToken ? Guid.NewGuid() : null
+    };
+
+    var repository = new Mock<IUserRepository>();
+    repository.Setup(x => x.GetByExternalAuthIdAsync("seed-PATIENT-1", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+    var service = new UserProfileService(
+      repository.Object,
+      Mock.Of<IUnitOfWork>(),
+      Mock.Of<IAadhaarVaultService>(),
+      Mock.Of<IAuditLoggingService>(),
+      new FixedUtcClock(new DateTimeOffset(2026, 2, 20, 9, 0, 0, TimeSpan.Zero)));
+
+    var response = await service.GetCurrentUserAsync("seed-PATIENT-1", CancellationToken.None);
+
+    response.AadhaarVerified.Should().Be(hasToken);
+  }
+
   [Fact]
   public async Task GetCurrentUserAsync_ShouldThrow_WhenUserNotFoundAsync()
   {

@@ -11,8 +11,10 @@ internal static class EntityCacheNamespaces
 
 internal static class EntityCacheKeys
 {
+  // v2: UserProfileResponse gained AadhaarVerified — entries cached under the old key
+  // deserialize with the default (false), so the schema change requires a new key
   public static string UserProfile(string userSub)
-    => $"cache:user-profile:{Hash(userSub)}";
+    => $"cache:user-profile:v2:{Hash(userSub)}";
 
   public static string AccessGrantListForPatient(string patientSub, string version)
     => $"cache:access-grants:patient:{version}:{Hash(patientSub)}";
