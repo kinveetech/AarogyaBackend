@@ -55,6 +55,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # postgres:18+ layout — data lives in a version subdirectory under this mount.
+      # A pgdata volume created by postgres:16 (mounted at /var/lib/postgresql/data)
+      # is not migrated; recreate it with `docker compose down -v` (dev data is disposable).
       - pgdata:/var/lib/postgresql
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
