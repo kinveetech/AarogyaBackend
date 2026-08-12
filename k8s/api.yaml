@@ -153,6 +153,8 @@ spec:
               value: "ollama"
             - name: PdfExtraction__OllamaEndpoint
               value: "http://ollama:11434"
+            - name: PdfExtraction__OllamaModelId
+              value: "gemma4:e4b"
           livenessProbe:
             httpGet:
               path: /health
