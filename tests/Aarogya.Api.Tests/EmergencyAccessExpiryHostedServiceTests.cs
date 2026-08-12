@@ -7,7 +7,7 @@ using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -119,7 +119,7 @@ public sealed class EmergencyAccessExpiryHostedServiceTests
     sms.Verify(x => x.SendEmergencyAccessExpiringSoonAsync(patient, doctor, preExpiryGrant, It.IsAny<CancellationToken>()), Times.Once);
     push.Verify(
       x => x.SendToUserAsync(
-        patient.ExternalAuthId!,
+        patient.ExternalAuthId,
         NotificationEventTypes.EmergencyAccess,
         It.IsAny<SendPushNotificationRequest>(),
         It.IsAny<CancellationToken>()),

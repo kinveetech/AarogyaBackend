@@ -1,5 +1,5 @@
 using Aarogya.Api.Configuration;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Api.Tests;

@@ -7,7 +7,7 @@ using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Infrastructure.Aadhaar;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;

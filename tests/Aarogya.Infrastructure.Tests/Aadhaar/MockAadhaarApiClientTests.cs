@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using Aarogya.Infrastructure.Aadhaar;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -43,7 +43,7 @@ public sealed class MockAadhaarApiClientTests
     result.RequestId.Should().StartWith("local-");
     result.Provider.Should().Be("LOCAL");
     result.Demographics.Should().NotBeNull();
-    result.Demographics!.FullName.Should().Contain("9012");
+    result.Demographics.FullName.Should().Contain("9012");
     result.Demographics.Address.Should().Be("India");
   }
 
@@ -120,7 +120,7 @@ public sealed class MockAadhaarApiClientTests
 
     result.IsValid.Should().BeTrue();
     result.Demographics.Should().NotBeNull();
-    result.Demographics!.FullName.Should().Be("Ravi Kumar");
+    result.Demographics.FullName.Should().Be("Ravi Kumar");
     result.Demographics.DateOfBirth.Should().Be(new DateOnly(1990, 5, 15));
     result.Demographics.Address.Should().Be("India");
   }
@@ -134,7 +134,7 @@ public sealed class MockAadhaarApiClientTests
 
     result.IsValid.Should().BeTrue();
     result.Demographics.Should().NotBeNull();
-    result.Demographics!.FullName.Should().Contain("9012");
+    result.Demographics.FullName.Should().Contain("9012");
     result.Demographics.DateOfBirth.Should().BeNull();
   }
 

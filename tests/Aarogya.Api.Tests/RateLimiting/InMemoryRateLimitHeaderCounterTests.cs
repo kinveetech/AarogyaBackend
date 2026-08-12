@@ -1,5 +1,5 @@
 using Aarogya.Api.RateLimiting;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Api.Tests.RateLimiting;

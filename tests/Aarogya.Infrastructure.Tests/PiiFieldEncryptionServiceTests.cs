@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Security.Cryptography;
 using Aarogya.Infrastructure.Security;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Xunit;
 

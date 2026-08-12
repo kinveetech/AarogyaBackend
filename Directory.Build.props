@@ -73,7 +73,7 @@
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <IsTestProject>true</IsTestProject>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CA1707;CA2007;CA1515</NoWarn> <!-- Allow underscores in test names, don't require ConfigureAwait, allow public test classes -->
+    <NoWarn>$(NoWarn);CA1707;CA2007;CA1515;xUnit1051</NoWarn> <!-- Allow underscores in test names, don't require ConfigureAwait, allow public test classes, don't require TestContext cancellation token -->
   </PropertyGroup>
 
   <!-- InternalsVisibleTo for testing -->

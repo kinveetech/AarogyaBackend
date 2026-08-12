@@ -2,7 +2,7 @@ using System.Text;
 using Aarogya.Api.Features.V1.Reports;
 using Amazon.S3;
 using Amazon.S3.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;

@@ -1,7 +1,7 @@
 using Aarogya.Domain.Entities;
 using Aarogya.Infrastructure.Persistence;
 using Aarogya.Infrastructure.Tests.Fixtures;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

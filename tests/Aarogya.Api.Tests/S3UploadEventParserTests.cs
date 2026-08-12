@@ -1,6 +1,6 @@
 using System.Globalization;
 using Aarogya.Api.Features.V1.Reports;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Api.Tests;

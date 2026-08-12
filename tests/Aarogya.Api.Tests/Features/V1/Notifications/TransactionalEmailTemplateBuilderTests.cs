@@ -1,6 +1,6 @@
 using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Domain.Entities;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Api.Tests.Features.V1.Notifications;

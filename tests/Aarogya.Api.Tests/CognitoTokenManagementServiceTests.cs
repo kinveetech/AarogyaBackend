@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;

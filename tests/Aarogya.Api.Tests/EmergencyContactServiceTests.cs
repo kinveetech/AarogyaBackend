@@ -6,7 +6,7 @@ using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
-using FluentAssertions;
+using AwesomeAssertions;
 using Moq;
 using Xunit;
 
@@ -57,7 +57,7 @@ public sealed class EmergencyContactServiceTests
     response.Name.Should().Be("Kin One");
     response.Email.Should().Be("kin.one@example.com");
     created.Should().NotBeNull();
-    created!.UserId.Should().Be(patient.Id);
+    created.UserId.Should().Be(patient.Id);
   }
 
   [Fact]
@@ -147,7 +147,7 @@ public sealed class EmergencyContactServiceTests
       CancellationToken.None);
 
     updated.Should().NotBeNull();
-    updated!.Name.Should().Be("New");
+    updated.Name.Should().Be("New");
     updated.Email.Should().Be("new@example.com");
   }
 

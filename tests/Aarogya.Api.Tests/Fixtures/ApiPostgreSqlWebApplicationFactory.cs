@@ -31,8 +31,7 @@ namespace Aarogya.Api.Tests.Fixtures;
 
 public sealed class ApiPostgreSqlWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-  private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-    .WithImage("postgres:16-alpine")
+  private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18-alpine")
     .WithDatabase("postgres")
     .WithUsername("postgres")
     .WithPassword("postgres")
@@ -40,7 +39,7 @@ public sealed class ApiPostgreSqlWebApplicationFactory : WebApplicationFactory<P
 
   private string _connectionString = string.Empty;
 
-  public async Task InitializeAsync()
+  public async ValueTask InitializeAsync()
   {
     await _container.StartAsync();
     _connectionString = await CreateIsolatedDatabaseConnectionStringAsync(CancellationToken.None);
@@ -48,13 +47,9 @@ public sealed class ApiPostgreSqlWebApplicationFactory : WebApplicationFactory<P
     await SeedUsersAsync();
   }
 
-  [SuppressMessage(
-    "Style",
-    "IDE0002:Name can be simplified",
-    Justification = "Explicit base dispose call is intentional for WebApplicationFactory cleanup.")]
-  public new async Task DisposeAsync()
+  public override async ValueTask DisposeAsync()
   {
-    base.Dispose();
+    await base.DisposeAsync();
     await _container.DisposeAsync();
   }
 

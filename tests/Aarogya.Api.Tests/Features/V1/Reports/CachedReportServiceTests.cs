@@ -8,7 +8,7 @@ using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Amazon.S3;
 using Amazon.S3.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;

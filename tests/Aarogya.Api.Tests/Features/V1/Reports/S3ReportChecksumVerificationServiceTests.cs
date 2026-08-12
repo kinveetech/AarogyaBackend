@@ -8,7 +8,7 @@ using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
 using Amazon.S3;
 using Amazon.S3.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;

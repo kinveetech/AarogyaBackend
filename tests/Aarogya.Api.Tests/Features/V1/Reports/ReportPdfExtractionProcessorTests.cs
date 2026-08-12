@@ -7,7 +7,7 @@ using Aarogya.Domain.Specifications;
 using Aarogya.Domain.ValueObjects;
 using Amazon.S3;
 using Amazon.S3.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -151,7 +151,7 @@ public sealed class ReportPdfExtractionProcessorTests
     report.Parameters.First().ParameterCode.Should().Be("HGB");
     report.Parameters.First().Source.Should().Be("extracted");
     report.Extraction.Should().NotBeNull();
-    report.Extraction!.ExtractionMethod.Should().Be("pdfpig");
+    report.Extraction.ExtractionMethod.Should().Be("pdfpig");
     report.Extraction.ExtractedParameterCount.Should().Be(1);
     _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.AtLeast(2));
   }

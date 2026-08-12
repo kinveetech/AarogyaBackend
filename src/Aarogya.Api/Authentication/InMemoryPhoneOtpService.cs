@@ -51,7 +51,7 @@ internal sealed class InMemoryPhoneOtpService(
       expiresAt = entry.ExpiresAt;
     }
 
-    var dispatchResult = await otpSender.SendOtpAsync(normalizedPhone, otpToSend!, expiresAt!.Value, cancellationToken);
+    var dispatchResult = await otpSender.SendOtpAsync(normalizedPhone, otpToSend, expiresAt.Value, cancellationToken);
     if (!dispatchResult.Sent)
     {
       return new OtpRequestResult(

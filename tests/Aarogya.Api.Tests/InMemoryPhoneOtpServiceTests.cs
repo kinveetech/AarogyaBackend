@@ -1,6 +1,6 @@
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Xunit;
 

@@ -6,7 +6,7 @@ using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -88,7 +88,7 @@ public sealed class EmergencyAccessServiceTests
     response.DoctorSub.Should().Be("seed-DOCTOR-1");
     response.EmergencyContactId.Should().Be(contact.Id);
     createdGrant.Should().NotBeNull();
-    createdGrant!.GrantReason.Should().StartWith("emergency:");
+    createdGrant.GrantReason.Should().StartWith("emergency:");
 
     email.Verify(
       x => x.SendEmergencyAccessRequestedAsync(

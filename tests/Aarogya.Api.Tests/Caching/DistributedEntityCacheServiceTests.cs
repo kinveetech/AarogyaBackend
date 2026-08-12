@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Aarogya.Api.Caching;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -25,7 +25,7 @@ public sealed class DistributedEntityCacheServiceTests
     var result = await sut.GetAsync<TestDto>(TestKey);
 
     result.Should().NotBeNull();
-    result!.Name.Should().Be("hello");
+    result.Name.Should().Be("hello");
     result.Value.Should().Be(42);
   }
 

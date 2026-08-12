@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Aarogya is an ASP.NET Core 9.0 REST API for a healthcare records management platform (Clean Architecture). Handles sensitive patient data with PII encryption, Aadhaar vault tokenization, medical reports, and access control grants.
+Aarogya is an ASP.NET Core 10.0 REST API for a healthcare records management platform (Clean Architecture). Handles sensitive patient data with PII encryption, Aadhaar vault tokenization, medical reports, and access control grants.
 
 **Company:** Kinvee Technologies | **Region:** India (AWS `ap-south-1`) | **Auth:** AWS Cognito (LocalStack for local dev)
 
@@ -40,7 +40,7 @@ dotnet ef database update \
   --msbuildprojectextensionspath artifacts/obj/Aarogya.Infrastructure/
 ```
 
-**Infrastructure tests require Docker** — Testcontainers spins up PostgreSQL 16 Alpine per test class.
+**Infrastructure tests require Docker** — Testcontainers spins up PostgreSQL 18 Alpine per test class.
 
 ## Architecture
 
@@ -104,7 +104,7 @@ src/Aarogya.Infrastructure/
 
 ## Code Conventions
 
-- **C# 13**, nullable reference types enabled, implicit usings enabled
+- **C# 14**, nullable reference types enabled, implicit usings enabled
 - **2-space indent** (enforced by `.editorconfig`), **120 char max line length**
 - **File-scoped namespaces** throughout
 - **`sealed`** on all concrete classes not designed for inheritance
@@ -145,9 +145,9 @@ refactor: extract specification evaluator
 
 | Project | Type | Notes |
 |---------|------|-------|
-| `Aarogya.Api.Tests` | Unit (xUnit, Moq, FluentAssertions) | Controller + service tests |
+| `Aarogya.Api.Tests` | Unit (xUnit v3, Moq, AwesomeAssertions) | Controller + service tests |
 | `Aarogya.Domain.Tests` | Unit | Domain logic tests |
-| `Aarogya.Infrastructure.Tests` | Integration (Testcontainers) | Real PostgreSQL 16; isolated DB per test class |
+| `Aarogya.Infrastructure.Tests` | Integration (Testcontainers) | Real PostgreSQL 18; isolated DB per test class |
 
 Integration tests use `PostgreSqlContainerFixture` shared via `[Collection]`:
 ```csharp

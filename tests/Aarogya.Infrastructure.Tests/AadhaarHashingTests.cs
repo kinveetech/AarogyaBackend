@@ -1,5 +1,5 @@
 using Aarogya.Infrastructure.Aadhaar;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Infrastructure.Tests;

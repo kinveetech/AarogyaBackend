@@ -1,6 +1,6 @@
 using Aarogya.Api.Authentication;
 using Aarogya.Api.RateLimiting;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using Xunit;

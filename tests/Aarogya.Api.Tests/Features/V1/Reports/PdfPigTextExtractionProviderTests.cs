@@ -1,5 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using Aarogya.Api.Features.V1.Reports;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using UglyToad.PdfPig.Writer;
@@ -77,6 +78,10 @@ public sealed class PdfPigTextExtractionProviderTests
   }
 
   [Fact]
+  [SuppressMessage(
+    "Usage",
+    "CA2025:Ensure tasks using 'IDisposable' instances complete before the instances are disposed",
+    Justification = "ThrowAsync awaits the task before the using scope ends.")]
   public async Task ExtractTextAsync_ShouldRespectCancellationTokenAsync()
   {
     using var pdfStream = CreatePdfWithText("Cancel test");

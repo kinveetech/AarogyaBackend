@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Aarogya.Api.Authorization;
-using FluentAssertions;
+using AwesomeAssertions;
 using Moq;
 using Xunit;
 

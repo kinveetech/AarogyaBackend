@@ -3,7 +3,7 @@ using Aarogya.Api.Authentication;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using Xunit;
@@ -241,7 +241,7 @@ public sealed class RegistrationRequiredMiddlewareTests
   {
     context.Response.Body.Seek(0, SeekOrigin.Begin);
     using var reader = new StreamReader(context.Response.Body);
-    return await reader.ReadToEndAsync();
+    return await reader.ReadToEndAsync(context.RequestAborted);
   }
 
   #endregion

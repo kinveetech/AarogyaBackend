@@ -3,7 +3,7 @@ using Aarogya.Api.Authentication;
 using Aarogya.Api.Features.V1.Consents;
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Repositories;
-using FluentAssertions;
+using AwesomeAssertions;
 using Moq;
 using Xunit;
 
@@ -19,7 +19,7 @@ public sealed class ConsentServiceTests
 
     var userRepository = new Mock<IUserRepository>();
     userRepository
-      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId!, It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(user);
 
     ConsentRecord? created = null;
@@ -38,7 +38,7 @@ public sealed class ConsentServiceTests
       new FixedUtcClock(now));
 
     var result = await service.UpsertForUserAsync(
-      user.ExternalAuthId!,
+      user.ExternalAuthId,
       ConsentPurposeCatalog.ProfileManagement,
       new UpsertConsentRequest(true, "settings"),
       CancellationToken.None);
@@ -47,7 +47,7 @@ public sealed class ConsentServiceTests
     result.IsGranted.Should().BeTrue();
     result.Source.Should().Be("settings");
     created.Should().NotBeNull();
-    created!.UserId.Should().Be(user.Id);
+    created.UserId.Should().Be(user.Id);
     created.Purpose.Should().Be(ConsentPurposeCatalog.ProfileManagement);
     created.IsGranted.Should().BeTrue();
     unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -59,7 +59,7 @@ public sealed class ConsentServiceTests
     var user = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-user-1" };
     var userRepository = new Mock<IUserRepository>();
     userRepository
-      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId!, It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(user);
 
     var consentRepository = new Mock<IConsentRecordRepository>();
@@ -75,7 +75,7 @@ public sealed class ConsentServiceTests
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var action = async () => await service.EnsureGrantedAsync(
-      user.ExternalAuthId!,
+      user.ExternalAuthId,
       ConsentPurposeCatalog.MedicalRecordsProcessing,
       CancellationToken.None);
 
@@ -88,7 +88,7 @@ public sealed class ConsentServiceTests
     var user = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-user-1" };
     var userRepository = new Mock<IUserRepository>();
     userRepository
-      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId!, It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(user);
 
     var now = DateTimeOffset.UtcNow;
@@ -124,7 +124,7 @@ public sealed class ConsentServiceTests
       Mock.Of<IAuditLoggingService>(),
       new FixedUtcClock(now));
 
-    var result = await service.GetCurrentForUserAsync(user.ExternalAuthId!, CancellationToken.None);
+    var result = await service.GetCurrentForUserAsync(user.ExternalAuthId, CancellationToken.None);
 
     result.Should().HaveCount(2);
     result.Should().Contain(x => x.Purpose == ConsentPurposeCatalog.ProfileManagement && x.IsGranted);
@@ -137,7 +137,7 @@ public sealed class ConsentServiceTests
     var user = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-user-1" };
     var userRepository = new Mock<IUserRepository>();
     userRepository
-      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId!, It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(user);
 
     ConsentRecord? created = null;
@@ -155,14 +155,14 @@ public sealed class ConsentServiceTests
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var result = await service.UpsertForUserAsync(
-      user.ExternalAuthId!,
+      user.ExternalAuthId,
       ConsentPurposeCatalog.MedicalDataSharing,
       new UpsertConsentRequest(true, "   "),
       CancellationToken.None);
 
     result.Source.Should().Be("api");
     created.Should().NotBeNull();
-    created!.Source.Should().Be("api");
+    created.Source.Should().Be("api");
   }
 
   [Fact]
@@ -171,7 +171,7 @@ public sealed class ConsentServiceTests
     var user = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-user-1" };
     var userRepository = new Mock<IUserRepository>();
     userRepository
-      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId!, It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(user);
 
     var consentRepository = new Mock<IConsentRecordRepository>();
@@ -187,7 +187,7 @@ public sealed class ConsentServiceTests
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var action = async () => await service.EnsureGrantedAsync(
-      user.ExternalAuthId!,
+      user.ExternalAuthId,
       ConsentPurposeCatalog.ProfileManagement,
       CancellationToken.None);
 
@@ -200,7 +200,7 @@ public sealed class ConsentServiceTests
     var user = new User { Id = Guid.NewGuid(), ExternalAuthId = "seed-user-1" };
     var userRepository = new Mock<IUserRepository>();
     userRepository
-      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId!, It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetByExternalAuthIdAsync(user.ExternalAuthId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(user);
 
     var service = new ConsentService(
@@ -211,7 +211,7 @@ public sealed class ConsentServiceTests
       new FixedUtcClock(DateTimeOffset.UtcNow));
 
     var action = async () => await service.EnsureGrantedAsync(
-      user.ExternalAuthId!,
+      user.ExternalAuthId,
       "unsupported-purpose",
       CancellationToken.None);
 

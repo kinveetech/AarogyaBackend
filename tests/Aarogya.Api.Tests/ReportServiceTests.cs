@@ -9,7 +9,7 @@ using Aarogya.Domain.Specifications;
 using Aarogya.Domain.ValueObjects;
 using Amazon.S3;
 using Amazon.S3.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -68,7 +68,7 @@ public sealed class ReportServiceTests
     var response = await service.AddForUserAsync("seed-PATIENT-1", CreateRequest(), CancellationToken.None);
 
     createdReport.Should().NotBeNull();
-    createdReport!.PatientId.Should().Be(uploader.Id);
+    createdReport.PatientId.Should().Be(uploader.Id);
     createdReport.UploadedByUserId.Should().Be(uploader.Id);
     createdReport.FileStorageKey.Should().Be("reports/seed-PATIENT-1/2026/02/report.pdf");
     createdReport.Parameters.Should().HaveCount(1);
@@ -190,7 +190,7 @@ public sealed class ReportServiceTests
     _ = await service.AddForUserAsync("seed-LABTECH-1", request, CancellationToken.None);
 
     createdReport.Should().NotBeNull();
-    createdReport!.PatientId.Should().Be(patient.Id);
+    createdReport.PatientId.Should().Be(patient.Id);
     createdReport.SourceSystem.Should().Be("lab-upload");
     notificationService.Verify(
       x => x.NotifyReportUploadedAsync(
@@ -484,7 +484,7 @@ public sealed class ReportServiceTests
     report.DeletedAt.Should().Be(now);
     unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     cloudFrontInvalidationService.Verify(
-      x => x.InvalidateObjectAsync(report.FileStorageKey!, It.IsAny<CancellationToken>()),
+      x => x.InvalidateObjectAsync(report.FileStorageKey, It.IsAny<CancellationToken>()),
       Times.Once);
     auditLoggingService.Verify(
       x => x.LogDataAccessAsync(

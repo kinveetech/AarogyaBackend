@@ -11,19 +11,18 @@ namespace Aarogya.Infrastructure.Tests.Fixtures;
 
 public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 {
-  private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-    .WithImage("postgres:16-alpine")
+  private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18-alpine")
     .WithDatabase("postgres")
     .WithUsername("postgres")
     .WithPassword("postgres")
     .Build();
 
-  public async Task InitializeAsync()
+  public async ValueTask InitializeAsync()
   {
     await _container.StartAsync();
   }
 
-  public async Task DisposeAsync()
+  public async ValueTask DisposeAsync()
   {
     await _container.DisposeAsync();
   }

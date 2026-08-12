@@ -1,6 +1,6 @@
 using Aarogya.Api.Security;
 using Aarogya.Infrastructure.Security;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;

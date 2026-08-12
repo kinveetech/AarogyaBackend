@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Aarogya.Domain.ValueObjects;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Infrastructure.Tests.Converters;
@@ -78,7 +78,7 @@ public sealed class JsonbValueConverterTests
     var scope = JsonSerializer.Deserialize<AccessGrantScope>("{}", Options);
 
     scope.Should().NotBeNull();
-    scope!.CanReadReports.Should().BeTrue();
+    scope.CanReadReports.Should().BeTrue();
     scope.CanDownloadReports.Should().BeTrue();
     scope.AllowedReportIds.Should().BeEmpty();
     scope.AllowedReportTypes.Should().BeEmpty();
@@ -90,7 +90,7 @@ public sealed class JsonbValueConverterTests
     var metadata = JsonSerializer.Deserialize<ReportMetadata>("{}", Options);
 
     metadata.Should().NotBeNull();
-    metadata!.SourceSystem.Should().BeNull();
+    metadata.SourceSystem.Should().BeNull();
     metadata.Tags.Should().BeEmpty();
   }
 
@@ -100,7 +100,7 @@ public sealed class JsonbValueConverterTests
     var results = JsonSerializer.Deserialize<ReportResults>("{}", Options);
 
     results.Should().NotBeNull();
-    results!.ReportVersion.Should().Be(1);
+    results.ReportVersion.Should().Be(1);
     results.Notes.Should().BeNull();
     results.Parameters.Should().BeEmpty();
   }
@@ -176,7 +176,7 @@ public sealed class JsonbValueConverterTests
     var metadata = JsonSerializer.Deserialize<ExtractionMetadata>("{}", Options);
 
     metadata.Should().NotBeNull();
-    metadata!.ExtractionMethod.Should().BeNull();
+    metadata.ExtractionMethod.Should().BeNull();
     metadata.StructuringModel.Should().BeNull();
     metadata.ExtractedParameterCount.Should().Be(0);
     metadata.OverallConfidence.Should().BeNull();

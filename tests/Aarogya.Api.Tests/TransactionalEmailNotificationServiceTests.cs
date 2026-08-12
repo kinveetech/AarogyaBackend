@@ -1,7 +1,7 @@
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Features.V1.Notifications;
 using Aarogya.Domain.Entities;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Xunit;
 

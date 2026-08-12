@@ -1,7 +1,7 @@
 using Aarogya.Api.Authentication;
 using Aarogya.Api.Configuration;
 using Aarogya.Api.Features.V1.Notifications;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;

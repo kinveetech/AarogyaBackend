@@ -7,7 +7,7 @@ using Aarogya.Domain.Entities;
 using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -66,7 +66,7 @@ public sealed class AccessGrantServiceTests
     result.Purpose.Should().Be("care-coordination");
     result.ExpiresAt.Should().Be(now.AddDays(30));
     created.Should().NotBeNull();
-    created!.Scope.AllowedReportIds.Should().BeEmpty();
+    created.Scope.AllowedReportIds.Should().BeEmpty();
   }
 
   [Fact]

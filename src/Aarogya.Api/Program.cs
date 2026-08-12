@@ -18,11 +18,10 @@ using Aarogya.Infrastructure;
 using Aarogya.Infrastructure.Security;
 using Aarogya.ServiceDefaults;
 using FluentValidation;
-using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -153,7 +152,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // Add services to the container
 builder.Services
-  .AddControllers()
+  .AddControllers(options => options.Filters.Add<FluentValidationAutoValidationFilter>())
   .AddJsonOptions(options =>
   {
     // Keep JSON payload handling locked to declared DTO contracts.
@@ -173,7 +172,6 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
   options.MultipartBodyLengthLimit = MaxReportUploadSizeBytes;
 });
 
-builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<OtpRequestCommandValidator>(includeInternalTypes: true);
 builder.Services.AddMemoryCache();
 builder.Services.AddResponseCaching();
@@ -223,18 +221,11 @@ builder.Services.AddSwaggerGen(c =>
     BearerFormat = "JWT"
   });
 
-  c.AddSecurityRequirement(new OpenApiSecurityRequirement
+  c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
   {
     {
-      new OpenApiSecurityScheme
-      {
-        Reference = new OpenApiReference
-        {
-          Type = ReferenceType.SecurityScheme,
-          Id = "Bearer"
-        }
-      },
-      Array.Empty<string>()
+      new OpenApiSecuritySchemeReference("Bearer", document),
+      []
     }
   });
 });

@@ -1,5 +1,5 @@
 using Aarogya.Api.Caching;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Api.Tests.Caching;

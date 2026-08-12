@@ -4,7 +4,7 @@ using Aarogya.Domain.Enums;
 using Aarogya.Domain.Repositories;
 using Aarogya.Domain.Specifications;
 using Aarogya.Domain.ValueObjects;
-using FluentAssertions;
+using AwesomeAssertions;
 using Moq;
 using Xunit;
 

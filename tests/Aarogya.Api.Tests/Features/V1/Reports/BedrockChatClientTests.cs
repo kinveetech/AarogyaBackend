@@ -1,7 +1,7 @@
 using Aarogya.Api.Features.V1.Reports;
 using Amazon.BedrockRuntime;
 using Amazon.BedrockRuntime.Model;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.AI;
 using Moq;
 using Xunit;
@@ -103,7 +103,7 @@ public sealed class BedrockChatClientTests : IDisposable
     var response = await _client.GetResponseAsync(messages);
 
     response.Usage.Should().NotBeNull();
-    response.Usage!.InputTokenCount.Should().Be(100);
+    response.Usage.InputTokenCount.Should().Be(100);
     response.Usage.OutputTokenCount.Should().Be(50);
   }
 

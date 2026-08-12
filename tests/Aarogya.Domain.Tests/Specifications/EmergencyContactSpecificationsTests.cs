@@ -1,6 +1,6 @@
 using Aarogya.Domain.Entities;
 using Aarogya.Domain.Specifications;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace Aarogya.Domain.Tests.Specifications;
